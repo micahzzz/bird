@@ -381,18 +381,33 @@
                     <h3 class="text-lg font-bold text-white mb-4">System Telemetry</h3>
                     <div class="grid grid-cols-2 gap-4">
                         <div class="bg-[var(--bn-bg)] p-4 rounded-lg border border-[var(--bn-border)]">
-                            <span class="block text-xs font-bold text-slate-400 uppercase mb-1">Temperature</span>
-                            <span id="sys-temp" class="text-xl font-bold text-white">--.-°C</span>
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="block text-xs font-bold text-slate-400 uppercase">Temperature</span>
+                                <span id="sys-temp" class="text-lg font-bold text-white">--.-°F</span>
+                            </div>
+                            <div class="w-full bg-[#111a14] h-2 rounded-full overflow-hidden border border-[var(--bn-border)]">
+                                <div id="sys-temp-bar" class="bg-red-500 h-full w-0 transition-all duration-500"></div>
+                            </div>
                         </div>
                         <div class="bg-[var(--bn-bg)] p-4 rounded-lg border border-[var(--bn-border)]">
-                            <span class="block text-xs font-bold text-slate-400 uppercase mb-1">Memory</span>
-                            <span id="sys-mem" class="text-xl font-bold text-white">--%</span>
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="block text-xs font-bold text-slate-400 uppercase">Memory</span>
+                                <span id="sys-mem" class="text-lg font-bold text-white">--%</span>
+                            </div>
+                            <div class="w-full bg-[#111a14] h-2 rounded-full overflow-hidden border border-[var(--bn-border)]">
+                                <div id="sys-mem-bar" class="bg-[var(--bn-highlight)] h-full w-0 transition-all duration-500"></div>
+                            </div>
                         </div>
                         <div class="bg-[var(--bn-bg)] p-4 rounded-lg border border-[var(--bn-border)]">
-                            <span class="block text-xs font-bold text-slate-400 uppercase mb-1">Disk</span>
-                            <span id="sys-disk" class="text-xl font-bold text-white">--%</span>
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="block text-xs font-bold text-slate-400 uppercase">Disk</span>
+                                <span id="sys-disk" class="text-lg font-bold text-white">--%</span>
+                            </div>
+                            <div class="w-full bg-[#111a14] h-2 rounded-full overflow-hidden border border-[var(--bn-border)]">
+                                <div id="sys-disk-bar" class="bg-[var(--bn-highlight)] h-full w-0 transition-all duration-500"></div>
+                            </div>
                         </div>
-                        <div class="bg-[var(--bn-bg)] p-4 rounded-lg border border-[var(--bn-border)]">
+                        <div class="bg-[var(--bn-bg)] p-4 rounded-lg border border-[var(--bn-border)] flex flex-col justify-center">
                             <span class="block text-xs font-bold text-slate-400 uppercase mb-1">Uptime</span>
                             <span id="sys-uptime" class="text-sm font-bold text-white truncate block">--</span>
                         </div>
@@ -529,11 +544,13 @@
                         <div id="modal-settings-popup" class="hidden absolute bottom-full right-0 mb-4 w-72 bg-[var(--bn-panel)] border border-[var(--bn-border)] rounded-xl shadow-2xl p-4 flex flex-col gap-4 transform origin-bottom-right">
                             <div>
                                 <span class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">Gain</span>
-                                <div class="flex gap-1" id="gain-controls">
-                                    <button class="filter-btn flex-1 py-1 px-1 text-xs rounded bg-[var(--bn-bg)] border border-transparent text-slate-300 hover:border-[var(--bn-highlight)] active" data-val="1">Off</button>
-                                    <button class="filter-btn flex-1 py-1 px-1 text-xs rounded bg-[var(--bn-bg)] border border-transparent text-slate-300 hover:border-[var(--bn-highlight)]" data-val="2">+6</button>
-                                    <button class="filter-btn flex-1 py-1 px-1 text-xs rounded bg-[var(--bn-bg)] border border-transparent text-slate-300 hover:border-[var(--bn-highlight)]" data-val="4">+12</button>
-                                    <button class="filter-btn flex-1 py-1 px-1 text-xs rounded bg-[var(--bn-bg)] border border-transparent text-slate-300 hover:border-[var(--bn-highlight)]" data-val="8">+18</button>
+                                <div class="grid grid-cols-3 gap-1" id="gain-controls">
+                                    <button class="filter-btn py-1 px-1 text-xs rounded bg-[var(--bn-bg)] border border-transparent text-slate-300 hover:border-[var(--bn-highlight)] active" data-val="1">Off</button>
+                                    <button class="filter-btn py-1 px-1 text-xs rounded bg-[var(--bn-bg)] border border-transparent text-slate-300 hover:border-[var(--bn-highlight)]" data-val="2">+6 dB</button>
+                                    <button class="filter-btn py-1 px-1 text-xs rounded bg-[var(--bn-bg)] border border-transparent text-slate-300 hover:border-[var(--bn-highlight)]" data-val="4">+12 dB</button>
+                                    <button class="filter-btn py-1 px-1 text-xs rounded bg-[var(--bn-bg)] border border-transparent text-slate-300 hover:border-[var(--bn-highlight)]" data-val="8">+18 dB</button>
+                                    <button class="filter-btn py-1 px-1 text-xs rounded bg-[var(--bn-bg)] border border-transparent text-slate-300 hover:border-[var(--bn-highlight)]" data-val="16">+24 dB</button>
+                                    <button class="filter-btn py-1 px-1 text-xs rounded bg-[var(--bn-bg)] border border-transparent text-slate-300 hover:border-[var(--bn-highlight)]" data-val="32">+30 dB</button>
                                 </div>
                             </div>
                             <div class="h-px w-full bg-[var(--bn-border)]"></div>
@@ -877,12 +894,14 @@
             e.target.className="px-2 py-1 rounded text-xs font-bold bg-[var(--bn-highlight)] text-[#122617] transition-colors"; 
             document.getElementById('unit-imperial').className="px-2 py-1 rounded text-xs font-bold text-slate-300 hover:text-white transition-colors"; 
             switchAnalytics('weather'); 
+            updateSystemStats();
         });
         document.getElementById('unit-imperial').addEventListener('click', (e) => { 
             isMetric = false; 
             e.target.className="px-2 py-1 rounded text-xs font-bold bg-[var(--bn-highlight)] text-[#122617] transition-colors"; 
             document.getElementById('unit-metric').className="px-2 py-1 rounded text-xs font-bold text-slate-300 hover:text-white transition-colors"; 
             switchAnalytics('weather'); 
+            updateSystemStats();
         });
 
         async function renderAnalytics(data) {
@@ -1642,11 +1661,27 @@
             try {
                 const res = await fetch('/api/system');
                 const data = await res.json();
-                document.getElementById('sys-temp').innerText = `${data.temp}°C`;
+                
+                const isImperial = !isMetric;
+                const tempVal = isImperial ? (data.temp * 1.8 + 32) : data.temp;
+                const tempUnit = isImperial ? '°F' : '°C';
+                
+                document.getElementById('sys-temp').innerText = `${tempVal.toFixed(1)}${tempUnit}`;
+                
+                const tempBar = document.getElementById('sys-temp-bar');
+                if (tempBar) {
+                    const tempPct = Math.max(0, Math.min(100, ((data.temp - 0) / 85) * 100));
+                    tempBar.style.width = `${tempPct}%`;
+                }
+                
                 document.getElementById('sys-mem').innerText = `${data.memory}%`;
-                document.getElementById('sys-mem-bar').style.width = `${data.memory}%`;
+                const memBar = document.getElementById('sys-mem-bar');
+                if (memBar) memBar.style.width = `${data.memory}%`;
+                
                 document.getElementById('sys-disk').innerText = `${data.disk}%`;
-                document.getElementById('sys-disk-bar').style.width = `${data.disk}%`;
+                const diskBar = document.getElementById('sys-disk-bar');
+                if (diskBar) diskBar.style.width = `${data.disk}%`;
+                
                 document.getElementById('sys-uptime').innerText = `System Uptime: ${data.uptime}`;
             } catch(e) {}
         }
