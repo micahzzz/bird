@@ -1,0 +1,1769 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BirdNET-Pi Interface</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bn-bg: #2b6a43;       
+            --bn-panel: #1b452b;    
+            --bn-card: #153822;     
+            --bn-border: #0f2b19;   
+            --bn-text: #ffffff;
+            --bn-subtext: #cbd5e1;
+            --bn-link: #60a5fa;
+            --bn-red: #ef4444;
+            --bn-highlight: #4ade80;
+        }
+
+        body { background-color: var(--bn-bg); color: var(--bn-text); font-family: 'Inter', sans-serif; overflow: hidden; }
+        .sidebar { background-color: var(--bn-panel); border-right: 1px solid var(--bn-border); }
+        .nav-item { padding: 0.75rem 1.25rem; margin: 0.25rem 1rem; border-radius: 0.5rem; cursor: pointer; transition: all 0.2s; color: var(--bn-subtext); display: flex; align-items: center; gap: 0.75rem; font-weight: 500; }
+        .nav-item:hover { background-color: var(--bn-card); color: white; }
+        .nav-item.active { background-color: var(--bn-card); color: var(--bn-highlight); border-left: 3px solid var(--bn-highlight); }
+        
+        .bird-card { background: var(--bn-card); border: 1px solid var(--bn-border); border-radius: 0.75rem; }
+        .tab-content { display: none; height: 100%; overflow-y: auto; padding: 2rem; }
+        .tab-content.active { display: block; animation: fadeIn 0.2s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: var(--bn-border); border-radius: 4px; }
+        
+        .toggle-btn { background: var(--bn-panel); color: var(--bn-subtext); padding: 0.35rem 0.85rem; border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.2s; border: 1px solid var(--bn-border); }
+        .toggle-btn.active { background: var(--bn-highlight); color: #111a14; border-color: var(--bn-highlight); }
+        
+        .filter-btn.active { border-color: var(--bn-highlight); color: white; }
+
+        .live-log-font { font-family: monospace; font-size: 0.8rem; line-height: 1.4; color: #cbd5e1; }
+        .text-link { color: var(--bn-link); cursor: pointer; text-decoration: none; font-weight: 600; }
+        .text-link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body class="flex h-screen">
+
+    <div id="lightbox" class="fixed inset-0 bg-black/90 z-[60] hidden flex items-center justify-center p-4 cursor-pointer" onclick="this.classList.add('hidden')">
+        <img id="lightbox-img" src="" class="max-w-full max-h-full object-contain rounded-lg shadow-2xl">
+        <div class="absolute top-6 right-6 text-white bg-black/50 w-10 h-10 flex items-center justify-center rounded-full hover:bg-white hover:text-black transition-colors font-bold text-xl">&times;</div>
+    </div>
+
+    <aside class="sidebar w-64 flex flex-col h-full flex-shrink-0 z-20">
+        <div class="p-6 mb-2 flex items-center gap-3">
+            <svg class="w-10 h-10" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M50 90 L20 50 L50 10 L80 50 Z" fill="#ef4444"/>
+                <path d="M50 90 L20 50 L50 10 L50 50 Z" fill="#1f2937"/>
+                <path d="M80 50 L100 30 L50 10 Z" fill="#ef4444"/>
+                <circle cx="40" cy="40" r="4" fill="white"/>
+            </svg>
+            <h1 class="text-xl font-bold tracking-tight text-white">BirdNET/Pi</h1>
+        </div>
+
+        <nav class="flex-grow space-y-1">
+            <div class="nav-item active" data-tab="dashboard">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg> Dashboard
+            </div>
+            <div class="nav-item" data-tab="database">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"></path></svg> Database
+            </div>
+            <div class="nav-item" data-tab="analytics">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg> Analytics
+            </div>
+            <div class="nav-item" data-tab="gallery">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg> Media Gallery
+            </div>
+            <div class="nav-item" data-tab="compiler">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg> Audio Compiler
+            </div>
+            <div class="nav-item" data-tab="log">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg> Live Log
+            </div>
+        </nav>
+        
+        <div class="p-4 mx-4 mb-2 bg-[var(--bn-panel)] rounded-xl border border-[var(--bn-border)] space-y-2 text-sm font-semibold">
+            <div class="flex justify-between items-center"><span class="text-white">Total</span><span id="sb-total" class="text-link">0</span></div>
+            <div class="flex justify-between items-center"><span class="text-white">Today</span><span id="sb-today" class="text-link cursor-pointer" onclick="switchGallery('today'); document.querySelector('[data-tab=\'gallery\']').click();">0</span></div>
+            <div class="flex justify-between items-center"><span class="text-white">Last Hour</span><span id="sb-hour" class="text-link">0</span></div>
+            <div class="flex justify-between items-center"><span class="text-white text-xs w-24 leading-tight">Species Detected Today</span><span id="sb-species-today" class="text-link">0</span></div>
+            <div class="flex justify-between items-center border-t border-[var(--bn-border)] pt-2 mt-2"><span class="text-white text-xs w-20 leading-tight">Total Number of Species</span><span id="sb-species-total" class="text-link">0</span></div>
+        </div>
+
+        <div class="mt-auto border-t border-[var(--bn-border)] pt-4 pb-2 px-4 bg-[var(--bn-panel)] flex flex-col">
+            <h3 class="text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2 flex justify-between">Live Stream <span id="stream-status-dot" class="w-2 h-2 rounded-full bg-slate-500 mt-1"></span></h3>
+            
+            <div class="h-16 w-full mb-3 rounded overflow-hidden bg-black border border-[var(--bn-border)] relative">
+                <canvas id="live-spectro-canvas" class="absolute inset-0 w-full h-full"></canvas>
+            </div>
+
+            <audio id="sidebar-audio" controls crossorigin="anonymous" class="w-full h-8 mb-2"></audio>
+            <button id="sidebar-audio-btn" class="w-full bg-[var(--bn-card)] hover:bg-[#3d7a4b] text-white border border-[var(--bn-border)] text-xs font-bold py-1.5 rounded transition-colors flex items-center justify-center gap-1">
+                Connect Audio
+            </button>
+        </div>
+        
+        <div class="border-t border-[var(--bn-border)] py-2 bg-[var(--bn-panel)]">
+            <div class="nav-item" data-tab="tools">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg> System Tools
+            </div>
+        </div>
+    </aside>
+
+    <main class="flex-1 h-full flex flex-col relative z-10">
+        <header class="h-16 flex items-center justify-between px-8 bg-[var(--bn-panel)] border-b border-[var(--bn-border)] shrink-0">
+            <h2 id="current-tab-title" class="text-xl font-bold text-white capitalize">Dashboard</h2>
+            <div class="flex items-center gap-4">
+                <span id="loading-indicator" class="text-sm text-yellow-400 font-bold hidden">Processing...</span>
+                <select id="global-date-filter" class="bg-[var(--bn-card)] text-sm text-white border border-[var(--bn-border)] rounded-lg px-3 py-1.5 focus:outline-none focus:border-[var(--bn-highlight)]">
+                    <option value="today">Today</option>
+                    <option value="7">Last 7 Days</option>
+                    <option value="30" selected>Last 30 Days</option>
+                    <option value="180">Last 6 Months</option>
+                    <option value="all">All Time</option>
+                </select>
+            </div>
+        </header>
+
+        <!-- DASHBOARD TAB -->
+        <div id="tab-dashboard" class="tab-content active custom-scrollbar">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <div class="bird-card p-6">
+                    <h3 class="text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Total Detections</h3>
+                    <p id="dash-total" class="text-3xl font-bold text-link">0</p>
+                </div>
+                <div class="bird-card p-6">
+                    <h3 class="text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Today's Detections</h3>
+                    <p id="dash-today" class="text-3xl font-bold text-link">0</p>
+                </div>
+                <div class="bird-card p-6">
+                    <h3 class="text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Last Hour</h3>
+                    <p id="dash-hour" class="text-3xl font-bold text-white">0</p>
+                </div>
+                <div class="bird-card p-6">
+                    <h3 class="text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Total Species</h3>
+                    <p id="dash-species-total" class="text-3xl font-bold text-link">0</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-2 bird-card p-6 flex flex-col">
+                    <h3 class="text-lg font-bold text-white mb-4">24-Hour Activity</h3>
+                    <div class="flex-grow min-h-[250px] relative">
+                        <canvas id="dash-hourly-chart"></canvas>
+                    </div>
+                </div>
+                <div class="bird-card p-6 flex flex-col h-[400px]">
+                    <h3 class="text-lg font-bold text-white mb-4">Recent Detections</h3>
+                    <div id="dash-feed" class="flex-grow overflow-y-auto custom-scrollbar pr-2 space-y-3">
+                        <p class="text-slate-400 text-sm">Loading recent feed...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- DATABASE TAB -->
+        <div id="tab-database" class="tab-content custom-scrollbar">
+            <div class="bird-card p-6 mb-6">
+                <h3 class="text-lg font-bold text-white mb-4">Search & Filter</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Species</label>
+                        <select id="db-filter-species" class="w-full bg-[var(--bn-bg)] text-white border border-[var(--bn-border)] rounded-lg px-3 py-2 focus:outline-none focus:border-[var(--bn-highlight)]">
+                            <option value="all">All Species</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Date Range</label>
+                        <div class="flex items-center gap-2">
+                            <input type="date" id="db-filter-date-start" class="w-full bg-[var(--bn-bg)] text-white text-xs border border-[var(--bn-border)] rounded-lg px-2 py-2 focus:outline-none focus:border-[var(--bn-highlight)]">
+                            <span class="text-slate-400">to</span>
+                            <input type="date" id="db-filter-date-end" class="w-full bg-[var(--bn-bg)] text-white text-xs border border-[var(--bn-border)] rounded-lg px-2 py-2 focus:outline-none focus:border-[var(--bn-highlight)]">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Time of Day</label>
+                        <div class="flex items-center gap-2">
+                            <input type="time" id="db-filter-time-start" class="w-full bg-[var(--bn-bg)] text-white text-xs border border-[var(--bn-border)] rounded-lg px-2 py-2 focus:outline-none focus:border-[var(--bn-highlight)]">
+                            <span class="text-slate-400">to</span>
+                            <input type="time" id="db-filter-time-end" class="w-full bg-[var(--bn-bg)] text-white text-xs border border-[var(--bn-border)] rounded-lg px-2 py-2 focus:outline-none focus:border-[var(--bn-highlight)]">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Min Confidence</label>
+                        <select id="db-filter-conf" class="w-full bg-[var(--bn-bg)] text-white border border-[var(--bn-border)] rounded-lg px-3 py-2 focus:outline-none focus:border-[var(--bn-highlight)]">
+                            <option value="0">Any</option>
+                            <option value="0.5">50%</option>
+                            <option value="0.7">70%</option>
+                            <option value="0.8">80%</option>
+                            <option value="0.9">90%</option>
+                        </select>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="filterDatabase()" class="w-full bg-[var(--bn-highlight)] hover:bg-[#3d7a4b] text-[#111a14] font-bold py-2 rounded-lg transition-colors">Search</button>
+                        <button onclick="exportDatabaseCSV()" class="w-full bg-transparent border border-[var(--bn-border)] hover:bg-[var(--bn-bg)] text-white font-bold py-2 rounded-lg transition-colors" title="Export to CSV">
+                            <svg class="w-5 h-5 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bird-card overflow-hidden flex flex-col">
+                <div class="p-4 border-b border-[var(--bn-border)] bg-[var(--bn-panel)] flex justify-between items-center">
+                    <h3 class="text-sm font-bold text-white uppercase tracking-wider">Detection Records</h3>
+                    <span id="db-results-count" class="text-xs font-mono text-[var(--bn-highlight)]">0 Results</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm whitespace-nowrap">
+                        <thead class="bg-[var(--bn-bg)] text-slate-300">
+                            <tr>
+                                <th class="p-3 font-semibold">Date</th>
+                                <th class="p-3 font-semibold">Time</th>
+                                <th class="p-3 font-semibold">Common Name</th>
+                                <th class="p-3 font-semibold">Scientific Name</th>
+                                <th class="p-3 font-semibold">Confidence</th>
+                                <th class="p-3 font-semibold text-right">Listen</th>
+                            </tr>
+                        </thead>
+                        <tbody id="db-table-body" class="divide-y divide-[var(--bn-border)]">
+                            <tr><td colspan="6" class="p-4 text-center text-slate-400">Loading data...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ANALYTICS TAB -->
+        <div id="tab-analytics" class="tab-content custom-scrollbar">
+            <div class="flex justify-between items-center mb-6">
+                <div class="flex gap-2">
+                    <button class="toggle-btn active" onclick="switchAnalytics('acc')">Accumulation</button>
+                    <button class="toggle-btn" onclick="switchAnalytics('weather')">Weather Impact</button>
+                    <button class="toggle-btn" onclick="switchAnalytics('matrix')">Time Matrix</button>
+                    <button class="toggle-btn" onclick="switchAnalytics('health')">System Health</button>
+                </div>
+                <div id="weather-unit-toggle" class="hidden flex gap-1 bg-[var(--bn-card)] p-1 rounded-md border border-[var(--bn-border)]">
+                    <button id="unit-metric" class="px-2 py-1 rounded text-xs font-bold text-slate-200 hover:text-white transition-colors">°C/mm</button>
+                    <button id="unit-imperial" class="px-2 py-1 rounded text-xs font-bold bg-[var(--bn-highlight)] text-[#122617] transition-colors">°F/in</button>
+                </div>
+            </div>
+            
+            <div id="analytics-chart-container" class="bird-card bg-white p-6 h-[500px] relative rounded-lg">
+                <canvas id="analytics-chart"></canvas>
+            </div>
+            
+            <div id="analytics-health-container" class="hidden grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bird-card p-6">
+                    <h3 class="text-sm font-bold text-white uppercase tracking-wider mb-2">Database Insights</h3>
+                    <p class="text-xs text-slate-300 mb-4">General activity metrics derived from the selected timeframe.</p>
+                    <div id="health-stats" class="space-y-4"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MEDIA GALLERY TAB -->
+        <div id="tab-gallery" class="tab-content custom-scrollbar">
+            <div class="flex gap-2 mb-6 border-b border-[var(--bn-border)] pb-4">
+                <button class="toggle-btn active" onclick="switchGallery('recent')">Recent Captures</button>
+                <button class="toggle-btn" onclick="switchGallery('today')">Today's List</button>
+                <button class="toggle-btn" onclick="switchGallery('best')">Best Recordings</button>
+            </div>
+
+            <div id="gallery-recent" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"></div>
+            
+            <div id="gallery-today" class="hidden bird-card overflow-hidden">
+                <table class="w-full text-left text-sm">
+                    <thead class="bg-[var(--bn-panel)] text-white">
+                        <tr><th class="p-4 font-semibold">Species</th><th class="p-4 font-semibold">Detections Today</th><th class="p-4 font-semibold">Last Heard</th></tr>
+                    </thead>
+                    <tbody id="gallery-today-body" class="divide-y divide-[var(--bn-border)]"></tbody>
+                </table>
+            </div>
+
+            <div id="gallery-best" class="hidden">
+                <div class="flex gap-2 mb-4">
+                    <span class="text-xs text-white font-bold uppercase tracking-wider py-1 mr-2">Sort By:</span>
+                    <button class="toggle-btn active sort-btn" data-sort="name">Alphabetical</button>
+                    <button class="toggle-btn sort-btn" data-sort="hits">Occurrences</button>
+                    <button class="toggle-btn sort-btn" data-sort="conf">Confidence</button>
+                    <button class="toggle-btn sort-btn" data-sort="date">Date</button>
+                </div>
+                <div id="gallery-best-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"></div>
+            </div>
+        </div>
+
+        <!-- AUDIO COMPILER TAB -->
+        <div id="tab-compiler" class="tab-content custom-scrollbar">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-lg font-bold text-white">Smart Suggestions</h3>
+                <div class="flex items-center gap-3">
+                    <select id="compiler-timeframe" class="bg-[var(--bn-card)] text-sm text-white border border-[var(--bn-border)] rounded-lg px-3 py-1.5 focus:outline-none focus:border-[var(--bn-highlight)]">
+                        <option value="1">Last 24 Hours</option>
+                        <option value="7">Last 7 Days</option>
+                        <option value="30" selected>Last 30 Days</option>
+                        <option value="180">Last 6 Months</option>
+                        <option value="all">All Time</option>
+                        <option value="custom">Custom Range</option>
+                    </select>
+
+                    <div id="compiler-custom-dates" class="hidden gap-2 items-center">
+                        <input type="date" id="comp-date-start" class="bg-[var(--bn-bg)] text-xs text-white border border-[var(--bn-border)] rounded px-2 py-1.5 focus:outline-none focus:border-[var(--bn-highlight)]">
+                        <span class="text-slate-400 text-xs">to</span>
+                        <input type="date" id="comp-date-end" class="bg-[var(--bn-bg)] text-xs text-white border border-[var(--bn-border)] rounded px-2 py-1.5 focus:outline-none focus:border-[var(--bn-highlight)]">
+                    </div>
+                </div>
+            </div>
+            
+            <div id="compiler-suggestions" class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            </div>
+            
+            <div class="bird-card p-6">
+                <h3 class="text-lg font-bold text-white mb-4">Custom Compilation</h3>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Target Species</label>
+                        <select id="compile-species" class="w-full bg-[var(--bn-bg)] text-white border border-[var(--bn-border)] rounded-lg px-3 py-2 focus:outline-none focus:border-[var(--bn-highlight)]">
+                            <option value="">Select a species...</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Min Confidence</label>
+                        <select id="compile-conf" class="w-full bg-[var(--bn-bg)] text-white border border-[var(--bn-border)] rounded-lg px-3 py-2 focus:outline-none focus:border-[var(--bn-highlight)]">
+                            <option value="0.9">90%</option>
+                            <option value="0.8" selected>80%</option>
+                            <option value="0.7">70%</option>
+                            <option value="0.5">50%</option>
+                        </select>
+                    </div>
+                    <div>
+                        <button id="compile-btn" class="w-full bg-[var(--bn-highlight)] hover:bg-[#3d7a4b] text-[#111a14] font-bold py-2 px-4 rounded-lg transition-colors">Compile Audio</button>
+                    </div>
+                </div>
+                <div id="compile-status" class="mt-4 text-sm font-semibold hidden"></div>
+            </div>
+        </div>
+
+        <!-- LIVE LOG TAB -->
+        <div id="tab-log" class="tab-content p-4">
+            <div class="bird-card p-4 h-full bg-[var(--bn-panel)] flex flex-col">
+                <div class="flex justify-between items-center mb-2 shrink-0">
+                    <h3 class="text-white text-xs font-bold uppercase tracking-wider">System Log (birdnet_analysis.service)</h3>
+                    <div class="flex items-center gap-2 text-xs text-[var(--bn-highlight)] font-bold">
+                        <div class="w-2 h-2 rounded-full bg-[var(--bn-highlight)] animate-pulse"></div> Polling
+                    </div>
+                </div>
+                <pre id="log-output" class="live-log-font flex-grow overflow-y-auto whitespace-pre-wrap p-2 custom-scrollbar text-slate-200">-- No entries --</pre>
+            </div>
+        </div>
+
+        <!-- SYSTEM TOOLS TAB -->
+        <div id="tab-tools" class="tab-content custom-scrollbar">
+            <div class="flex gap-4 mb-6 border-b border-[var(--bn-border)] pb-4">
+                <button class="toggle-btn active" onclick="switchTools('config')">Configuration</button>
+                <button class="toggle-btn" onclick="switchTools('services')">Service Control</button>
+                <button class="toggle-btn" onclick="switchTools('species')">Species Lists</button>
+            </div>
+
+            <!-- Configuration Form -->
+            <div id="tools-config" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="bird-card p-6">
+                    <h3 class="text-lg font-bold text-white mb-4">Core Settings</h3>
+                    <div class="space-y-4" id="config-form-container">
+                        <p class="text-slate-400 text-sm">Loading configuration...</p>
+                    </div>
+                    <button id="btn-save-config" class="mt-6 w-full bg-[var(--bn-highlight)] hover:bg-[#3d7a4b] text-[#111a14] font-bold py-2 px-4 rounded-lg transition-colors">Save Configuration</button>
+                    <p id="config-save-status" class="mt-2 text-sm hidden"></p>
+                </div>
+                <div class="bird-card p-6 flex flex-col justify-start">
+                    <h3 class="text-lg font-bold text-white mb-4">System Telemetry</h3>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-[var(--bn-bg)] p-4 rounded-lg border border-[var(--bn-border)]">
+                            <span class="block text-xs font-bold text-slate-400 uppercase mb-1">Temperature</span>
+                            <span id="sys-temp" class="text-xl font-bold text-white">--.-°C</span>
+                        </div>
+                        <div class="bg-[var(--bn-bg)] p-4 rounded-lg border border-[var(--bn-border)]">
+                            <span class="block text-xs font-bold text-slate-400 uppercase mb-1">Memory</span>
+                            <span id="sys-mem" class="text-xl font-bold text-white">--%</span>
+                        </div>
+                        <div class="bg-[var(--bn-bg)] p-4 rounded-lg border border-[var(--bn-border)]">
+                            <span class="block text-xs font-bold text-slate-400 uppercase mb-1">Disk</span>
+                            <span id="sys-disk" class="text-xl font-bold text-white">--%</span>
+                        </div>
+                        <div class="bg-[var(--bn-bg)] p-4 rounded-lg border border-[var(--bn-border)]">
+                            <span class="block text-xs font-bold text-slate-400 uppercase mb-1">Uptime</span>
+                            <span id="sys-uptime" class="text-sm font-bold text-white truncate block">--</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Service Control -->
+            <div id="tools-services" class="hidden grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bird-card p-6">
+                    <div class="flex justify-between items-start mb-2">
+                        <div>
+                            <h3 class="text-lg font-bold text-white">birdnet_analysis.service</h3>
+                            <p class="text-xs text-slate-400">Core audio analysis daemon.</p>
+                        </div>
+                        <span id="status-analysis" class="px-2 py-1 text-xs font-bold rounded bg-slate-700 text-slate-300">UNKNOWN</span>
+                    </div>
+                    <button onclick="restartService('birdnet_analysis.service')" class="mt-4 w-full bg-[var(--bn-bg)] hover:bg-[var(--bn-panel)] border border-[var(--bn-border)] text-white font-bold py-2 rounded transition-colors">Restart Service</button>
+                </div>
+                
+                <div class="bird-card p-6">
+                    <div class="flex justify-between items-start mb-2">
+                        <div>
+                            <h3 class="text-lg font-bold text-white">icecast2.service</h3>
+                            <p class="text-xs text-slate-400">Live audio streaming server.</p>
+                        </div>
+                        <span id="status-icecast" class="px-2 py-1 text-xs font-bold rounded bg-slate-700 text-slate-300">UNKNOWN</span>
+                    </div>
+                    <button onclick="restartService('icecast2.service')" class="mt-4 w-full bg-[var(--bn-bg)] hover:bg-[var(--bn-panel)] border border-[var(--bn-border)] text-white font-bold py-2 rounded transition-colors">Restart Service</button>
+                </div>
+            </div>
+
+            <!-- Species Lists Placeholder -->
+            <div id="tools-species" class="hidden bird-card p-6">
+                <h3 class="text-lg font-bold text-white mb-4">Species Management</h3>
+                <p class="text-sm text-slate-400 mb-6">Manage Custom, Included, and Excluded species lists.</p>
+                <div class="flex gap-2 mb-4">
+                    <button class="bg-[var(--bn-bg)] border border-[var(--bn-highlight)] text-[var(--bn-highlight)] font-bold py-1 px-3 rounded text-sm">Custom Species</button>
+                    <button class="bg-[var(--bn-bg)] border border-[var(--bn-border)] hover:border-[var(--bn-highlight)] text-white font-bold py-1 px-3 rounded text-sm transition-colors">Included List</button>
+                    <button class="bg-[var(--bn-bg)] border border-[var(--bn-border)] hover:border-[var(--bn-highlight)] text-white font-bold py-1 px-3 rounded text-sm transition-colors">Excluded List</button>
+                </div>
+                <textarea class="w-full h-64 bg-[var(--bn-bg)] text-white border border-[var(--bn-border)] rounded-lg p-3 font-mono text-sm focus:outline-none focus:border-[var(--bn-highlight)]" placeholder="One species per line..."></textarea>
+                <button class="mt-4 bg-[var(--bn-highlight)] hover:bg-[#3d7a4b] text-[#111a14] font-bold py-2 px-6 rounded-lg transition-colors">Save List</button>
+            </div>
+        </div>
+    </main>
+
+    <!-- NEW VERTICAL MODAL -->
+    <div id="detection-modal" class="fixed inset-0 bg-[#0a0f0c]/90 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="w-full max-w-5xl h-[85vh] rounded-2xl overflow-visible shadow-2xl flex flex-col relative bg-[var(--bn-card)] border border-[var(--bn-border)]">
+
+            <button onclick="closeModal()" class="absolute -top-4 -right-4 text-slate-400 hover:text-white z-50 bg-[var(--bn-bg)] p-2 rounded-full border border-[var(--bn-border)] transition-colors shadow-lg">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+
+            <!-- Top Info Title Area -->
+            <div class="w-full p-4 border-b border-[var(--bn-border)] bg-[var(--bn-panel)] flex items-center justify-between shrink-0 z-40">
+                <div class="flex items-center gap-4">
+                    <div class="w-16 h-16 shrink-0 rounded-xl overflow-hidden bg-[var(--bn-bg)] border border-[var(--bn-border)] flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity group" onclick="openLightbox()" title="Click to Enlarge">
+                        <img id="modal-bird-img" src="" class="w-full h-full object-cover hidden" alt="Bird Photo">
+                        <svg id="modal-img-placeholder" class="w-8 h-8 text-[var(--bn-highlight)] opacity-50" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd"></path></svg>
+                    </div>
+                    <div class="flex flex-col justify-center">
+                        <h3 id="modal-title" class="text-xl font-bold text-white leading-tight mb-1">Species</h3>
+                        <span id="modal-sciname" class="italic text-slate-400 text-sm">Scientific Name</span>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-4 mr-8">
+                    <span id="modal-conf" class="text-xs font-mono font-bold px-3 py-1.5 rounded bg-[var(--bn-bg)] border border-[var(--bn-border)] text-[var(--bn-highlight)]">99%</span>
+                    <a id="modal-wiki-link" href="#" target="_blank" class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-[var(--bn-highlight)] transition-colors bg-[var(--bn-bg)] rounded-full border border-[var(--bn-border)]" title="Wikipedia">
+                        <span class="font-serif font-bold">W</span>
+                    </a>
+                    <a id="modal-aab-link" href="#" target="_blank" class="w-8 h-8 flex items-center justify-center bg-white text-black rounded-full hover:bg-[var(--bn-highlight)] transition-colors shadow" title="All About Birds Guide">
+                        <span class="font-serif italic font-bold">i</span>
+                    </a>
+                    <button id="modal-stats-btn" class="w-8 h-8 flex items-center justify-center hover:scale-110 transition-transform bg-white rounded-md shadow" title="Detection History">
+                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none">
+                            <path d="M3 3v18h18" stroke="black" stroke-width="2"/>
+                            <path d="M3 21 8 14 12 17 21 7 V21 Z" fill="#ef4444"/>
+                            <path d="M3 21 8 14 12 17 21 7" stroke="black" stroke-width="2"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Floating History Popover -->
+            <div id="history-popover" class="hidden absolute top-24 right-8 bg-[var(--bn-bg)] border border-[var(--bn-border)] p-4 rounded-xl shadow-2xl z-50 w-80">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-xs font-bold text-white uppercase tracking-wider">Detection History</span>
+                    <select id="history-timeframe" class="bg-[var(--bn-card)] text-xs text-slate-300 border border-[var(--bn-border)] rounded-md px-2 py-1 focus:outline-none">
+                        <option value="30">Last 30 Days</option>
+                        <option value="180">Last 6 Months</option>
+                        <option value="365">Last 1 Year</option>
+                        <option value="all">All Time</option>
+                    </select>
+                </div>
+                <div class="h-32 w-full relative">
+                    <canvas id="modal-history-chart"></canvas>
+                </div>
+            </div>
+
+            <!-- Bottom: Spectrogram & Audio -->
+            <div id="audio-panel-container" class="flex-grow w-full relative bg-[#111a14] overflow-hidden group rounded-b-2xl">
+                <div class="absolute inset-0 flex items-center justify-center z-0 cursor-pointer">
+                    <img id="modal-spectro-img" src="" class="w-full h-full object-contain hidden" alt="Spectrogram" title="Click to Play/Pause">
+                    <div id="modal-spectro-error" class="text-slate-400 text-sm font-medium hidden flex-col items-center gap-2">
+                        <svg class="w-8 h-8 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"></path></svg>
+                        Spectrogram Not Found
+                    </div>
+                </div>
+                <div id="modal-playhead" class="absolute top-0 bottom-0 w-[2px] bg-[var(--bn-highlight)] shadow-[0_0_8px_rgba(52,211,153,0.8)] pointer-events-none z-10" style="left: 0%;"></div>
+
+                <div class="absolute top-4 left-4 bg-[var(--bn-bg)]/80 backdrop-blur-sm px-3 py-1.5 rounded-lg border border-[var(--bn-border)] text-xs text-slate-300 font-mono z-20 pointer-events-none" id="modal-filename">filename.mp3</div>
+
+                <!-- Floating Audio Control Bar -->
+                <div id="audio-control-bar" class="absolute bottom-6 left-6 right-6 bg-[var(--bn-panel)]/95 backdrop-blur-md border border-[var(--bn-border)] rounded-2xl p-4 flex items-center gap-4 transition-opacity duration-300 opacity-0 shadow-2xl z-30">
+                    <button id="modal-play-btn" class="w-12 h-12 shrink-0 rounded-full bg-[var(--bn-highlight)] text-[#111a14] flex items-center justify-center hover:scale-105 transition-transform shadow-lg">
+                        <svg id="modal-icon-play" class="w-6 h-6 ml-1" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path></svg>
+                        <svg id="modal-icon-pause" class="w-6 h-6 hidden" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg>
+                    </button>
+
+                    <div class="flex-grow bg-[#0a0f0c] h-3 rounded-full overflow-hidden relative cursor-pointer border border-[var(--bn-border)]" id="modal-progress-container">
+                        <div id="modal-progress" class="absolute top-0 left-0 h-full bg-[var(--bn-highlight)] w-0 pointer-events-none transition-all duration-75"></div>
+                    </div>
+
+                    <span id="modal-time" class="text-sm font-mono text-slate-300 w-12 text-right shrink-0">0:00</span>
+
+                    <div class="relative">
+                        <button id="modal-settings-btn" class="p-2 text-slate-400 hover:text-white transition-colors rounded-full hover:bg-[var(--bn-bg)]">
+                            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z"></path></svg>
+                        </button>
+
+                        <div id="modal-settings-popup" class="hidden absolute bottom-full right-0 mb-4 w-72 bg-[var(--bn-panel)] border border-[var(--bn-border)] rounded-xl shadow-2xl p-4 flex flex-col gap-4 transform origin-bottom-right">
+                            <div>
+                                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">Gain</span>
+                                <div class="flex gap-1" id="gain-controls">
+                                    <button class="filter-btn flex-1 py-1 px-1 text-xs rounded bg-[var(--bn-bg)] border border-transparent text-slate-300 hover:border-[var(--bn-highlight)] active" data-val="1">Off</button>
+                                    <button class="filter-btn flex-1 py-1 px-1 text-xs rounded bg-[var(--bn-bg)] border border-transparent text-slate-300 hover:border-[var(--bn-highlight)]" data-val="2">+6</button>
+                                    <button class="filter-btn flex-1 py-1 px-1 text-xs rounded bg-[var(--bn-bg)] border border-transparent text-slate-300 hover:border-[var(--bn-highlight)]" data-val="4">+12</button>
+                                    <button class="filter-btn flex-1 py-1 px-1 text-xs rounded bg-[var(--bn-bg)] border border-transparent text-slate-300 hover:border-[var(--bn-highlight)]" data-val="8">+18</button>
+                                </div>
+                            </div>
+                            <div class="h-px w-full bg-[var(--bn-border)]"></div>
+                            
+                            <div>
+                                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">High-Pass (Hz)</span>
+                                <div class="flex gap-1" id="hp-controls">
+                                    <button class="filter-btn flex-1 py-1 px-1 text-xs rounded bg-[var(--bn-bg)] border border-transparent text-slate-300 hover:border-[var(--bn-highlight)] active" data-val="0">Off</button>
+                                    <button class="filter-btn flex-1 py-1 px-1 text-xs rounded bg-[var(--bn-bg)] border border-transparent text-slate-300 hover:border-[var(--bn-highlight)]" data-val="250">250</button>
+                                    <button class="filter-btn flex-1 py-1 px-1 text-xs rounded bg-[var(--bn-bg)] border border-transparent text-slate-300 hover:border-[var(--bn-highlight)]" data-val="500">500</button>
+                                    <button class="filter-btn flex-1 py-1 px-1 text-xs rounded bg-[var(--bn-bg)] border border-transparent text-slate-300 hover:border-[var(--bn-highlight)]" data-val="1000">1K</button>
+                                    <button class="filter-btn flex-1 py-1 px-1 text-xs rounded bg-[var(--bn-bg)] border border-transparent text-slate-300 hover:border-[var(--bn-highlight)]" data-val="1500">1.5K</button>
+                                </div>
+                            </div>
+                            <div>
+                                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">Low-Pass (Hz)</span>
+                                <div class="flex gap-1" id="lp-controls">
+                                    <button class="filter-btn flex-1 py-1 px-1 text-xs rounded bg-[var(--bn-bg)] border border-transparent text-slate-300 hover:border-[var(--bn-highlight)] active" data-val="24000">Off</button>
+                                    <button class="filter-btn flex-1 py-1 px-1 text-xs rounded bg-[var(--bn-bg)] border border-transparent text-slate-300 hover:border-[var(--bn-highlight)]" data-val="2000">2K</button>
+                                    <button class="filter-btn flex-1 py-1 px-1 text-xs rounded bg-[var(--bn-bg)] border border-transparent text-slate-300 hover:border-[var(--bn-highlight)]" data-val="4000">4K</button>
+                                    <button class="filter-btn flex-1 py-1 px-1 text-xs rounded bg-[var(--bn-bg)] border border-transparent text-slate-300 hover:border-[var(--bn-highlight)]" data-val="8000">8K</button>
+                                </div>
+                            </div>
+
+                            <div class="h-px w-full bg-[var(--bn-border)]"></div>
+                            <a id="modal-download" href="#" download class="flex items-center justify-center gap-2 w-full py-2 bg-[var(--bn-bg)] hover:bg-[var(--bn-highlight)] hover:text-[#111a14] text-slate-300 rounded-lg text-sm font-semibold transition-colors">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                                Download Audio
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <audio id="modal-audio" crossorigin="anonymous"></audio>
+        </div>
+    </div>
+
+    <script>
+        let dbData = [];
+        let configData = {};
+        let activeChart = null;
+        let isMetric = false; 
+        let galleryCacheRecent = [];
+        let galleryCacheBest = [];
+        let currentBestSort = 'name';
+        window.currentDbExport = [];
+        
+        let modalChart = null;
+
+        let audioCtx;
+        let trackNode;
+        let gainNode;
+        let highpassNode;
+        let lowpassNode;
+        let isAudioSetup = false;
+        let animationFrameId;
+
+        Chart.defaults.font.family = "'Inter', sans-serif";
+
+        function parseCSV(text) {
+            try {
+                const lines = text.trim().split(/\r?\n/);
+                if (lines.length < 2) return [];
+                
+                const parsed = [];
+                for (let i = 1; i < lines.length; i++) {
+                    const row = lines[i].split(',').map(c => c.replace(/['"]/g, '').trim());
+                    if (row.length >= 5) {
+                        parsed.push({
+                            Date: row[0], Time: row[1], Sci_Name: row[2] || '', Com_Name: row[3], Confidence: parseFloat(row[4] || 0)
+                        });
+                    }
+                }
+                return parsed;
+            } catch (e) {
+                return [];
+            }
+        }
+
+        document.querySelectorAll('.nav-item').forEach(el => {
+            el.addEventListener('click', (e) => {
+                document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+                
+                const target = e.currentTarget;
+                target.classList.add('active');
+                const tabId = target.getAttribute('data-tab');
+                document.getElementById(`tab-${tabId}`).classList.add('active');
+                document.getElementById('current-tab-title').innerText = target.innerText.trim();
+                
+                const filter = document.getElementById('global-date-filter');
+                if (['dashboard', 'analytics'].includes(tabId)) filter.classList.remove('hidden');
+                else filter.classList.add('hidden');
+
+                if (tabId === 'analytics') switchAnalytics('acc');
+                if (tabId === 'gallery' && galleryCacheRecent.length === 0) fetchGallery();
+                if (tabId === 'tools') populateConfigForm();
+            });
+        });
+
+        function switchTools(view) {
+            document.querySelectorAll('#tab-tools > div > .toggle-btn').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            ['config', 'services', 'species'].forEach(v => document.getElementById(`tools-${v}`).classList.add('hidden'));
+            document.getElementById(`tools-${view}`).classList.remove('hidden');
+            
+            if(view === 'services') updateServiceStatus();
+        }
+
+        function getTodayStr() { 
+            const d = new Date();
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; 
+        }
+
+        async function init() {
+            const loader = document.getElementById('loading-indicator');
+            loader.classList.remove('hidden');
+            try {
+                const res = await fetch('/api/detections');
+                const text = await res.text();
+                dbData = parseCSV(text);
+                window.currentDbExport = dbData;
+                
+                const confRes = await fetch('/api/config');
+                configData = await confRes.json();
+                
+                updateSystemStats();
+                setInterval(updateSystemStats, 10000);
+                setInterval(pollLog, 3000);
+
+                applyGlobalFilter(); 
+                updateCompilerSuggestions();
+                populateDatabaseFilter();
+                filterDatabase();
+            } catch (e) { 
+                document.getElementById('dash-feed').innerHTML = `<p class="text-red-400 font-bold p-4">Failed to load data. Is backend running?</p>`;
+            } finally {
+                loader.classList.add('hidden');
+            }
+        }
+
+        document.getElementById('global-date-filter').addEventListener('change', applyGlobalFilter);
+        
+        function filterDataByDays(sourceData, daysStr) {
+            if (daysStr === 'all' || sourceData.length === 0) return [...sourceData];
+            if (daysStr === 'today') return sourceData.filter(d => d.Date === getTodayStr());
+            
+            if (daysStr === 'custom') {
+                const start = document.getElementById('comp-date-start').value;
+                const end = document.getElementById('comp-date-end').value;
+                if(!start || !end) return [...sourceData];
+                return sourceData.filter(d => d.Date >= start && d.Date <= end);
+            }
+
+            const latestDate = new Date(sourceData[0].Date);
+            const cutoff = new Date(latestDate);
+            cutoff.setDate(cutoff.getDate() - parseInt(daysStr));
+            return sourceData.filter(d => new Date(d.Date) >= cutoff);
+        }
+
+        function applyGlobalFilter() {
+            if (dbData.length === 0) return;
+            const days = document.getElementById('global-date-filter').value;
+            const filtered = filterDataByDays(dbData, days);
+
+            renderDashboard(filtered);
+            if(document.getElementById('tab-analytics').classList.contains('active')) switchAnalytics(currentAnalyticsMode);
+        }
+
+        let dashChart = null;
+        function renderDashboard(data) {
+            const todayStr = getTodayStr();
+            const currHour = new Date().getHours();
+            
+            const todayData = dbData.filter(d => d.Date === todayStr);
+            const hourData = todayData.filter(d => d.Time && parseInt(d.Time.split(':')[0], 10) === currHour);
+            const totalSpecies = new Set(dbData.map(d => d.Com_Name)).size;
+            
+            const spToday = new Set(todayData.map(d => d.Com_Name)).size;
+
+            document.getElementById('dash-total').innerText = dbData.length.toLocaleString();
+            document.getElementById('dash-today').innerText = todayData.length.toLocaleString();
+            document.getElementById('dash-hour').innerText = hourData.length.toLocaleString();
+            document.getElementById('dash-species-total').innerText = totalSpecies.toLocaleString();
+
+            document.getElementById('sb-total').innerText = dbData.length.toLocaleString();
+            document.getElementById('sb-today').innerText = todayData.length.toLocaleString();
+            document.getElementById('sb-hour').innerText = hourData.length.toLocaleString();
+            document.getElementById('sb-species-today').innerText = spToday.toLocaleString();
+            document.getElementById('sb-species-total').innerText = totalSpecies.toLocaleString();
+
+            const hourCounts = Array(24).fill(0);
+            data.forEach(d => {
+                if (d.Time) {
+                    const hr = parseInt(d.Time.split(':')[0], 10);
+                    if (!isNaN(hr)) hourCounts[hr]++;
+                }
+            });
+
+            const ctx = document.getElementById('dash-hourly-chart').getContext('2d');
+            if (dashChart) dashChart.destroy();
+            dashChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: Array.from({length: 24}, (_, i) => i),
+                    datasets: [{ label: 'Detections', data: hourCounts, backgroundColor: '#4ade80', borderRadius: 2 }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+                    scales: { y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#cbd5e1' } }, x: { grid: { display: false }, ticks: { callback: v => `${v}:00`, color: '#cbd5e1' } } }
+                }
+            });
+
+            const feed = document.getElementById('dash-feed');
+            feed.innerHTML = '';
+            data.slice(0, 30).forEach(d => {
+                const pct = (parseFloat(d.Confidence)*100).toFixed(0);
+                feed.innerHTML += `
+                    <div onclick="searchAndPlay('${d.Com_Name}', '${d.Sci_Name}', '${d.Date}', '${d.Time}', '${pct}')" class="flex justify-between items-center bg-[var(--bn-panel)] p-3 rounded-lg border border-[var(--bn-border)] cursor-pointer hover:bg-[var(--bn-bg)] transition-colors group">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-full bg-[var(--bn-card)] text-[var(--bn-highlight)] flex items-center justify-center border border-[var(--bn-border)] group-hover:bg-[var(--bn-highlight)] group-hover:text-[#122617] transition-colors">
+                                <svg class="w-4 h-4 ml-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path></svg>
+                            </div>
+                            <div>
+                                <h4 class="text-white text-sm font-bold">${d.Com_Name}</h4>
+                                <span class="text-xs text-slate-300">${d.Date} ${d.Time}</span>
+                            </div>
+                        </div>
+                        <span class="text-xs font-mono font-bold ${pct < 70 ? 'text-yellow-400' : 'text-[var(--bn-highlight)]'}">${pct}%</span>
+                    </div>
+                `;
+            });
+        }
+
+        // DATABASE EXPLORER FUNCTIONS
+        function populateDatabaseFilter() {
+            const speciesSet = new Set(dbData.map(d => d.Com_Name));
+            const select = document.getElementById('db-filter-species');
+            select.innerHTML = '<option value="all">All Species</option>' + 
+                Array.from(speciesSet).sort().map(s => `<option value="${s}">${s}</option>`).join('');
+        }
+
+        function filterDatabase() {
+            const sp = document.getElementById('db-filter-species').value;
+            const dStart = document.getElementById('db-filter-date-start').value;
+            const dEnd = document.getElementById('db-filter-date-end').value;
+            const tStart = document.getElementById('db-filter-time-start').value;
+            const tEnd = document.getElementById('db-filter-time-end').value;
+            const minConf = parseFloat(document.getElementById('db-filter-conf').value);
+
+            let res = dbData;
+            if(sp !== 'all') res = res.filter(d => d.Com_Name === sp);
+            if(dStart) res = res.filter(d => d.Date >= dStart);
+            if(dEnd) res = res.filter(d => d.Date <= dEnd);
+            if(tStart) res = res.filter(d => d.Time >= tStart);
+            if(tEnd) res = res.filter(d => d.Time <= tEnd);
+            if(minConf > 0) res = res.filter(d => d.Confidence >= minConf);
+
+            renderDatabaseTable(res);
+            window.currentDbExport = res; 
+        }
+
+        function renderDatabaseTable(data) {
+            const tbody = document.getElementById('db-table-body');
+            const limit = 500;
+            const displayData = data.slice(0, limit);
+            
+            document.getElementById('db-results-count').innerText = `${data.length.toLocaleString()} Results ${data.length > limit ? '(Showing top 500)' : ''}`;
+            
+            if(displayData.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400">No detections found matching these filters.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = displayData.map(d => {
+                const pct = (d.Confidence * 100).toFixed(0);
+                return `<tr class="hover:bg-[var(--bn-bg)] transition-colors border-b border-[var(--bn-border)]">
+                    <td class="p-3 text-slate-300">${d.Date}</td>
+                    <td class="p-3 text-slate-300">${d.Time}</td>
+                    <td class="p-3 font-bold text-white">${d.Com_Name}</td>
+                    <td class="p-3 text-slate-400 italic">${d.Sci_Name}</td>
+                    <td class="p-3 text-[var(--bn-highlight)] font-mono">${pct}%</td>
+                    <td class="p-3 text-right">
+                        <button onclick="searchAndPlay('${d.Com_Name}', '${d.Sci_Name}', '${d.Date}', '${d.Time}', '${pct}')" class="text-[var(--bn-highlight)] hover:text-white transition-colors" title="Play Audio">
+                            <svg class="w-6 h-6 inline" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path></svg>
+                        </button>
+                    </td>
+                </tr>`;
+            }).join('');
+        }
+
+        function exportDatabaseCSV() {
+            const data = window.currentDbExport || dbData;
+            if(data.length === 0) return alert("No data to export.");
+            
+            const headers = ["Date", "Time", "Sci_Name", "Com_Name", "Confidence"];
+            const csvRows = [headers.join(',')];
+            
+            data.forEach(d => {
+                csvRows.push(`${d.Date},${d.Time},"${d.Sci_Name}","${d.Com_Name}",${d.Confidence}`);
+            });
+            
+            const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.setAttribute('href', url);
+            a.setAttribute('download', `BirdNET_Export_${getTodayStr()}.csv`);
+            a.click();
+        }
+
+        let currentAnalyticsMode = 'acc';
+        function switchAnalytics(mode) {
+            currentAnalyticsMode = mode;
+            document.querySelectorAll('#tab-analytics .toggle-btn').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            const uToggle = document.getElementById('weather-unit-toggle');
+            const hContainer = document.getElementById('analytics-health-container');
+            const cContainer = document.getElementById('analytics-chart-container');
+
+            if (mode === 'weather') uToggle.classList.remove('hidden');
+            else uToggle.classList.add('hidden');
+            
+            const days = document.getElementById('global-date-filter').value;
+            const filtered = filterDataByDays(dbData, days);
+
+            if (mode === 'health') {
+                cContainer.classList.add('hidden');
+                hContainer.classList.remove('hidden');
+                renderDiagnostics(filtered);
+            } else {
+                hContainer.classList.add('hidden');
+                cContainer.classList.remove('hidden');
+                renderAnalytics(filtered);
+            }
+        }
+
+        document.getElementById('unit-metric').addEventListener('click', (e) => { 
+            isMetric = true; 
+            e.target.className="px-2 py-1 rounded text-xs font-bold bg-[var(--bn-highlight)] text-[#122617] transition-colors"; 
+            document.getElementById('unit-imperial').className="px-2 py-1 rounded text-xs font-bold text-slate-300 hover:text-white transition-colors"; 
+            switchAnalytics('weather'); 
+        });
+        document.getElementById('unit-imperial').addEventListener('click', (e) => { 
+            isMetric = false; 
+            e.target.className="px-2 py-1 rounded text-xs font-bold bg-[var(--bn-highlight)] text-[#122617] transition-colors"; 
+            document.getElementById('unit-metric').className="px-2 py-1 rounded text-xs font-bold text-slate-300 hover:text-white transition-colors"; 
+            switchAnalytics('weather'); 
+        });
+
+        async function renderAnalytics(data) {
+            if(!data || data.length === 0) return;
+            const ctx = document.getElementById('analytics-chart').getContext('2d');
+            if(activeChart) activeChart.destroy();
+            
+            const commonScales = {
+                y: { grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { color: '#475569' } },
+                x: { grid: { display: false }, ticks: { color: '#475569' } }
+            };
+
+            if (currentAnalyticsMode === 'matrix') {
+                const spCounts = {};
+                data.forEach(d => spCounts[d.Com_Name] = (spCounts[d.Com_Name] || 0) + 1);
+                const topSp = Object.entries(spCounts).sort((a,b)=>b[1]-a[1]).slice(0,25).map(x=>x[0]);
+                
+                const bData = []; let gMax = 0; const wMap = {};
+                data.forEach(d => {
+                    if(topSp.includes(d.Com_Name) && d.Time) {
+                        const h = parseInt(d.Time.split(':')[0],10);
+                        const k = `${d.Com_Name}-${h}`;
+                        wMap[k] = (wMap[k] || 0) + 1;
+                        if(wMap[k] > gMax) gMax = wMap[k];
+                    }
+                });
+                
+                topSp.forEach((sp, yIdx) => {
+                    for(let h=0; h<24; h++){
+                        const v = wMap[`${sp}-${h}`];
+                        if(v) bData.push({x:h, y:yIdx, r: Math.max(3, (v/gMax)*15), _v: v});
+                    }
+                });
+
+                activeChart = new Chart(ctx, {
+                    type: 'bubble', data: { datasets: [{ data: bData, backgroundColor: 'rgba(74, 222, 128, 0.7)', borderColor: '#4ade80', borderWidth: 1 }] },
+                    options: { 
+                        responsive: true, maintainAspectRatio: false, 
+                        plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => `${topSp[c.raw.y]} at ${c.raw.x}:00 = ${c.raw._v} hits` } } }, 
+                        scales: { 
+                            y: { ticks: { callback: v => topSp[v], color: '#475569' }, grid: { color: 'rgba(0,0,0,0.05)' }, reverse: true, min:-0.5, max: topSp.length-0.5 }, 
+                            x: { grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { color: '#475569' }, min: -1, max: 24 } 
+                        } 
+                    }
+                });
+            }
+            else if (currentAnalyticsMode === 'acc') {
+                const daily = {};
+                [...data].reverse().forEach(d => { if(!daily[d.Date]) daily[d.Date] = new Set(); daily[d.Date].add(d.Com_Name); });
+                const sortedDates = Object.keys(daily).sort();
+                const labels = []; const counts = []; const seen = new Set();
+                sortedDates.forEach(dt => { labels.push(dt); daily[dt].forEach(sp => seen.add(sp)); counts.push(seen.size); });
+                
+                const niceLabels = labels.map(l => { const d=new Date(l); return `${d.toLocaleString('default',{month:'short'})} ${d.getDate()}`;});
+
+                activeChart = new Chart(ctx, {
+                    type: 'line', data: { labels: niceLabels, datasets: [{ label: 'Total Unique Species', data: counts, borderColor: '#4ade80', backgroundColor: 'rgba(74, 222, 128, 0.15)', fill: true, tension: 0.4, pointRadius: 2 }] },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: commonScales }
+                });
+            } 
+            else if (currentAnalyticsMode === 'weather') {
+                const daily = {}; data.forEach(d => { daily[d.Date] = (daily[d.Date] || 0) + 1; });
+                const sortedDates = Object.keys(daily).sort();
+                const niceLabels = sortedDates.map(l => { const d=new Date(l); return `${d.toLocaleString('default',{month:'short'})} ${d.getDate()}`;});
+                
+                const lat = configData.LATITUDE || '41.9'; const lon = configData.LONGITUDE || '-73.1';
+                const s = sortedDates[0]; const e = sortedDates[sortedDates.length-1];
+                const unitT = isMetric ? 'celsius' : 'fahrenheit';
+                const unitR = isMetric ? 'mm' : 'inch';
+                const unitW = isMetric ? 'kmh' : 'mph';
+                
+                try {
+                    const res = await fetch(`https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=${s}&end_date=${e}&daily=temperature_2m_max,precipitation_sum,windspeed_10m_max&timezone=auto&temperature_unit=${unitT}&windspeed_unit=${unitW}&precipitation_unit=${unitR}`);
+                    const wData = await res.json();
+                    
+                    const labels = []; const dets = []; const temps = []; const rains = []; const winds = [];
+                    sortedDates.forEach(dt => {
+                        labels.push(dt); dets.push(daily[dt]);
+                        const idx = wData.daily.time.indexOf(dt);
+                        temps.push(idx > -1 ? wData.daily.temperature_2m_max[idx] : null);
+                        rains.push(idx > -1 ? wData.daily.precipitation_sum[idx] : null);
+                        winds.push(idx > -1 ? wData.daily.windspeed_10m_max[idx] : null);
+                    });
+
+                    activeChart = new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: niceLabels,
+                            datasets: [
+                                { type: 'bar', label: 'Detections', data: dets, backgroundColor: '#4ade80', yAxisID: 'y' },
+                                { type: 'line', label: `Max Temp (${isMetric?'°C':'°F'})`, data: temps, borderColor: '#ef4444', tension: 0.4, pointRadius: 2, yAxisID: 'yT' },
+                                { type: 'line', label: `Max Wind (${isMetric?'km/h':'mph'})`, data: winds, borderColor: '#9ca3af', borderDash: [4,4], tension: 0.3, pointRadius: 0, yAxisID: 'yT' },
+                                { type: 'bar', label: `Rain (${isMetric?'mm':'in'})`, data: rains, backgroundColor: 'rgba(59, 130, 246, 0.5)', yAxisID: 'yR' }
+                            ]
+                        },
+                        options: { 
+                            responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, 
+                            plugins: {
+                                legend: { labels: { color: '#475569' } }
+                            },
+                            scales: { 
+                                x: { grid: { display: false }, ticks: { color: '#475569' } }, 
+                                y: { position: 'left', grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { color: '#475569' } }, 
+                                yT: { position: 'right', grid: { display: false }, ticks: { color: '#475569' } }, 
+                                yR: { display: false, min: 0 } 
+                            } 
+                        }
+                    });
+                } catch(e) {}
+            }
+        }
+
+        function renderDiagnostics(data) {
+            const container = document.getElementById('health-stats');
+            container.innerHTML = '';
+            if(!data || data.length === 0) return;
+
+            const total = data.length;
+            const days = new Set(data.map(d => d.Date)).size || 1;
+            const avgDaily = (total / days).toFixed(1);
+            
+            const hourCounts = Array(24).fill(0);
+            data.forEach(d => {
+                if (d.Time) {
+                    const hr = parseInt(d.Time.split(':')[0], 10);
+                    if (!isNaN(hr)) hourCounts[hr]++;
+                }
+            });
+            const peakHour = hourCounts.indexOf(Math.max(...hourCounts));
+            const ampm = peakHour >= 12 ? 'PM' : 'AM';
+            const displayHour = peakHour % 12 || 12;
+
+            container.innerHTML = `
+                <div class="bg-[var(--bn-bg)] p-4 rounded border border-[var(--bn-border)]">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="font-bold text-slate-300">Average Daily Volume</span>
+                        <span class="font-mono font-bold text-[var(--bn-highlight)]">${avgDaily} / day</span>
+                    </div>
+                    <p class="text-xs text-slate-400">Average detections based on the selected timeframe.</p>
+                </div>
+                <div class="bg-[var(--bn-bg)] p-4 rounded border border-[var(--bn-border)]">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="font-bold text-slate-300">Peak Activity Hour</span>
+                        <span class="font-mono font-bold text-[var(--bn-highlight)]">${displayHour}:00 ${ampm}</span>
+                    </div>
+                    <p class="text-xs text-slate-400">The most active time of day for detections.</p>
+                </div>
+            `;
+        }
+
+        async function fetchGallery() {
+            try {
+                const res = await fetch('/api/gallery');
+                const data = await res.json();
+                galleryCacheRecent = data.recent || [];
+                galleryCacheBest = data.best || [];
+                switchGallery('recent');
+            } catch(e) {}
+        }
+
+        function switchGallery(mode) {
+            document.querySelectorAll('#tab-gallery > div > .toggle-btn:not(.sort-btn)').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            ['recent', 'today', 'best'].forEach(t => document.getElementById(`gallery-${t}`).classList.add('hidden'));
+            document.getElementById(`gallery-${mode}`).classList.remove('hidden');
+
+            if (mode === 'recent') renderGalleryGrid(galleryCacheRecent, 'gallery-recent');
+            if (mode === 'today') renderGalleryToday();
+            if (mode === 'best') renderBestRecordings();
+        }
+
+        function renderGalleryGrid(files, containerId) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+            files.slice(0, 100).forEach(f => {
+                const pct = (f.confidence * 100).toFixed(0);
+                const dbMatch = dbData.find(d => d.Com_Name === f.species);
+                const sciName = dbMatch ? dbMatch.Sci_Name : '';
+                
+                container.innerHTML += `
+                    <div class="bird-card p-4 hover:bg-[var(--bn-bg)] transition-colors cursor-pointer flex flex-col group" onclick="openDetectionModal('${f.filepath}', '${f.species}', '${sciName}', '${pct}', '${f.filename}')">
+                        <div class="flex justify-between items-start mb-4">
+                            <h4 class="text-white font-bold text-sm leading-tight group-hover:text-[var(--bn-highlight)] transition-colors">${f.species}</h4>
+                            <span class="text-xs font-mono px-2 py-1 bg-[var(--bn-panel)] border border-[var(--bn-border)] rounded text-[var(--bn-highlight)]">${pct}%</span>
+                        </div>
+                        <div class="mt-auto flex justify-between items-center border-t border-[var(--bn-border)] pt-3">
+                            <span class="text-[10px] text-slate-300">${f.date_str}</span>
+                            <div class="flex items-center gap-1 text-[var(--bn-highlight)] text-xs font-bold uppercase"><svg class="w-4 h-4 ml-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path></svg> PLAY</div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function renderGalleryToday() {
+            const tbody = document.getElementById('gallery-today-body');
+            tbody.innerHTML = '';
+            const todayStr = getTodayStr();
+            const tData = dbData.filter(d => d.Date === todayStr);
+            const stats = {};
+            tData.forEach(d => {
+                if(!stats[d.Com_Name]) stats[d.Com_Name] = { c: 0, last: d.Time, sci: d.Sci_Name };
+                stats[d.Com_Name].c++;
+                if(d.Time > stats[d.Com_Name].last) stats[d.Com_Name].last = d.Time;
+            });
+            Object.entries(stats).sort((a,b)=>b[1].c - a[1].c).forEach(([sp, d]) => {
+                tbody.innerHTML += `<tr class="hover:bg-[var(--bn-bg)] transition-colors cursor-pointer border-b border-[var(--bn-border)]" onclick="searchAndPlay('${sp}', '${d.sci}', '${todayStr}', '${d.last}', '')"><td class="p-4 font-bold text-white">${sp}</td><td class="p-4 text-slate-300">${d.c}</td><td class="p-4 text-slate-300">${d.last}</td></tr>`;
+            });
+        }
+
+        document.querySelectorAll('.sort-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                currentBestSort = e.target.getAttribute('data-sort');
+                renderBestRecordings();
+            });
+        });
+
+        function renderBestRecordings() {
+            let bestArr = [...galleryCacheBest];
+            if (currentBestSort === 'name') bestArr.sort((a, b) => a.species.localeCompare(b.species));
+            else if (currentBestSort === 'hits') {
+                const hitCounts = {}; dbData.forEach(d => hitCounts[d.Com_Name] = (hitCounts[d.Com_Name] || 0) + 1);
+                bestArr.sort((a, b) => (hitCounts[b.species] || 0) - (hitCounts[a.species] || 0));
+            } 
+            else if (currentBestSort === 'conf') bestArr.sort((a, b) => b.confidence - a.confidence);
+            else if (currentBestSort === 'date') bestArr.sort((a, b) => b.mtime - a.mtime);
+            renderGalleryGrid(bestArr, 'gallery-best-grid');
+        }
+
+        function updateCompilerSuggestions() {
+            const tf = document.getElementById('compiler-timeframe').value;
+            let filtered = [];
+            
+            if (tf === 'custom') {
+                const start = document.getElementById('comp-date-start').value;
+                const end = document.getElementById('comp-date-end').value;
+                if (start && end) {
+                    filtered = dbData.filter(d => d.Date >= start && d.Date <= end);
+                } else {
+                    return; 
+                }
+            } else {
+                filtered = filterDataByDays(dbData, tf);
+            }
+            
+            const counts = {};
+            filtered.forEach(d => { counts[d.Com_Name] = (counts[d.Com_Name] || 0) + 1; });
+            
+            const topSpecies = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 3);
+            const container = document.getElementById('compiler-suggestions');
+            container.innerHTML = '';
+            
+            topSpecies.forEach(([species, count]) => {
+                container.innerHTML += `
+                    <div class="bird-card p-6 bg-[var(--bn-panel)] hover:bg-[var(--bn-bg)] cursor-pointer transition-colors border border-[var(--bn-border)] group" onclick="triggerCompile('${species}')">
+                        <h4 class="text-white font-bold text-lg mb-1 group-hover:text-[var(--bn-highlight)] transition-colors">${species}</h4>
+                        <p class="text-slate-400 text-sm mb-4">${count} Detections</p>
+                        <button class="text-xs font-bold bg-[var(--bn-highlight)] text-[#111a14] px-3 py-1.5 rounded flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            Generate Mix
+                        </button>
+                    </div>
+                `;
+            });
+            
+            const select = document.getElementById('compile-species');
+            const allSpecies = Object.keys(counts).sort();
+            select.innerHTML = '<option value="">Select a species...</option>' + allSpecies.map(sp => `<option value="${sp}">${sp}</option>`).join('');
+        }
+
+        document.getElementById('compiler-timeframe').addEventListener('change', (e) => {
+            const customWrapper = document.getElementById('compiler-custom-dates');
+            if (e.target.value === 'custom') {
+                customWrapper.classList.remove('hidden');
+                customWrapper.classList.add('flex');
+            } else {
+                customWrapper.classList.add('hidden');
+                customWrapper.classList.remove('flex');
+                updateCompilerSuggestions();
+            }
+        });
+
+        document.getElementById('comp-date-start').addEventListener('change', updateCompilerSuggestions);
+        document.getElementById('comp-date-end').addEventListener('change', updateCompilerSuggestions);
+
+        function triggerCompile(species) {
+            document.getElementById('compile-species').value = species;
+            document.getElementById('compile-btn').click();
+        }
+
+        document.getElementById('compile-btn').addEventListener('click', async () => {
+            const species = document.getElementById('compile-species').value;
+            const conf = parseFloat(document.getElementById('compile-conf').value);
+            if(!species) return alert('Select a species first');
+            
+            const btn = document.getElementById('compile-btn');
+            const status = document.getElementById('compile-status');
+            
+            btn.disabled = true;
+            btn.innerText = 'Compiling...';
+            status.classList.remove('hidden', 'text-green-400', 'text-red-400');
+            status.classList.add('text-yellow-400');
+            status.innerText = 'Stitching audio files via FFmpeg...';
+            
+            let start_date = "";
+            let end_date = "";
+            const tf = document.getElementById('compiler-timeframe').value;
+            
+            if (tf === 'custom') {
+                start_date = document.getElementById('comp-date-start').value;
+                end_date = document.getElementById('comp-date-end').value;
+            } else if (tf !== 'all') {
+                const d = new Date();
+                end_date = d.toISOString().split('T')[0];
+                d.setDate(d.getDate() - parseInt(tf));
+                start_date = d.toISOString().split('T')[0];
+            }
+
+            try {
+                const res = await fetch('/api/compile', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        species: species, 
+                        min_conf: conf, 
+                        limit: 25, 
+                        start_date: start_date, 
+                        end_date: end_date
+                    })
+                });
+                const data = await res.json();
+                
+                if(data.success) {
+                    status.classList.replace('text-yellow-400', 'text-green-400');
+                    status.innerHTML = `Successfully mixed ${data.count} recordings! <a href="/${data.file}" download class="text-[var(--bn-highlight)] underline ml-2">Download Mix</a>`;
+                } else {
+                    status.classList.replace('text-yellow-400', 'text-red-400');
+                    status.innerText = data.error || 'Compilation failed.';
+                }
+            } catch(e) {
+                status.classList.replace('text-yellow-400', 'text-red-400');
+                status.innerText = 'Server error during compilation.';
+            } finally {
+                btn.disabled = false;
+                btn.innerText = 'Compile Audio';
+            }
+        });
+
+        const modalAudioEl = document.getElementById('modal-audio');
+
+        function initWebAudioAPI() {
+            if (isAudioSetup) return;
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            audioCtx = new AudioContext();
+            
+            trackNode = audioCtx.createMediaElementSource(modalAudioEl);
+            
+            highpassNode = audioCtx.createBiquadFilter();
+            highpassNode.type = 'highpass';
+            highpassNode.frequency.value = 0;
+            
+            lowpassNode = audioCtx.createBiquadFilter();
+            lowpassNode.type = 'lowpass';
+            lowpassNode.frequency.value = 24000;
+            
+            gainNode = audioCtx.createGain();
+            
+            trackNode.connect(highpassNode);
+            highpassNode.connect(lowpassNode);
+            highpassNode.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            
+            isAudioSetup = true;
+        }
+
+        let liveAudioCtx, liveAnalyser, liveSource, liveDataArray;
+        let isLiveAudioSetup = false;
+        let liveAnimId;
+        const liveCanvas = document.getElementById('live-spectro-canvas');
+        const liveCtx = liveCanvas.getContext('2d');
+
+        function initLiveSpectrogram() {
+            if (isLiveAudioSetup) return;
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            liveAudioCtx = new AudioContext();
+            liveAnalyser = liveAudioCtx.createAnalyser();
+            liveAnalyser.fftSize = 512; 
+            const sbAudio = document.getElementById('sidebar-audio');
+            
+            liveSource = liveAudioCtx.createMediaElementSource(sbAudio);
+            liveSource.connect(liveAnalyser);
+            liveAnalyser.connect(liveAudioCtx.destination);
+            
+            liveDataArray = new Uint8Array(liveAnalyser.frequencyBinCount);
+            isLiveAudioSetup = true;
+            
+            liveCanvas.width = liveCanvas.offsetWidth;
+            liveCanvas.height = liveCanvas.offsetHeight;
+        }
+
+        function drawLiveSpectrogram() {
+            if (!document.getElementById('sidebar-audio').paused) {
+                liveAnimId = requestAnimationFrame(drawLiveSpectrogram);
+                liveAnalyser.getByteFrequencyData(liveDataArray);
+                
+                const w = liveCanvas.width;
+                const h = liveCanvas.height;
+                
+                const imgData = liveCtx.getImageData(1, 0, w - 1, h);
+                liveCtx.putImageData(imgData, 0, 0);
+                
+                const validBins = Math.floor(liveDataArray.length * 0.75);
+                const binHeight = h / validBins;
+                
+                for (let i = 0; i < validBins; i++) {
+                    const val = liveDataArray[i];
+                    const r = val > 128 ? 255 : val * 2;
+                    const g = val > 192 ? 255 : (val > 128 ? (val - 128) * 2 : 0);
+                    const b = val > 200 ? 255 : (val < 128 ? val : 0);
+                    
+                    liveCtx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+                    liveCtx.fillRect(w - 1, h - (i * binHeight), 1, binHeight);
+                }
+            } else {
+                cancelAnimationFrame(liveAnimId);
+            }
+        }
+
+        async function fetchBirdImage(species) {
+            try {
+                const url = `https://en.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(species)}&prop=pageimages&format=json&pithumbsize=800&redirects=1&origin=*`;
+                const res = await fetch(url);
+                const data = await res.json();
+                const pages = data.query.pages;
+                const pageId = Object.keys(pages)[0];
+                if (pageId !== "-1" && pages[pageId].thumbnail) return pages[pageId].thumbnail.source;
+            } catch (e) {}
+            return null;
+        }
+
+        function openLightbox() {
+            const imgSrc = document.getElementById('modal-bird-img').src;
+            if (imgSrc && !imgSrc.endsWith('.html')) {
+                document.getElementById('lightbox-img').src = imgSrc;
+                document.getElementById('lightbox').classList.remove('hidden');
+            }
+        }
+
+        function toggleModalAudioPlayback() {
+            document.getElementById('modal-play-btn').click();
+        }
+
+        async function openDetectionModal(url, species, sciName, conf, fname) {
+            document.getElementById('detection-modal').classList.remove('hidden');
+            
+            document.getElementById('modal-title').innerText = species;
+            document.getElementById('modal-sciname').innerText = sciName || '';
+            document.getElementById('modal-conf').innerText = `${conf}%`;
+            document.getElementById('modal-filename').innerText = fname;
+            
+            const wikiUrl = `https://en.wikipedia.org/wiki/${encodeURIComponent(sciName || species)}`;
+            const aabUrl = `https://www.allaboutbirds.org/guide/${species.replace(/ /g, '_')}`;
+            document.getElementById('modal-wiki-link').href = wikiUrl;
+            document.getElementById('modal-aab-link').href = aabUrl;
+            
+            const imgEl = document.getElementById('modal-bird-img');
+            const placeholder = document.getElementById('modal-img-placeholder');
+            imgEl.classList.add('hidden');
+            placeholder.classList.remove('hidden');
+            fetchBirdImage(sciName || species).then(imgUrl => {
+                if(imgUrl) { imgEl.src = imgUrl; imgEl.classList.remove('hidden'); placeholder.classList.add('hidden'); }
+                else {
+                    fetchBirdImage(species).then(imgUrl2 => {
+                        if(imgUrl2) { imgEl.src = imgUrl2; imgEl.classList.remove('hidden'); placeholder.classList.add('hidden'); }
+                    });
+                }
+            });
+            
+            const cleanUrl = url.startsWith('/') ? url : '/' + url;
+            modalAudioEl.src = cleanUrl;
+            document.getElementById('modal-download').href = cleanUrl;
+            
+            document.getElementById('modal-icon-play').classList.remove('hidden');
+            document.getElementById('modal-icon-pause').classList.add('hidden');
+            
+            document.querySelectorAll('#gain-controls .filter-btn').forEach(b => b.classList.remove('active'));
+            document.querySelector('#gain-controls .filter-btn[data-val="1"]').classList.add('active');
+            
+            document.querySelectorAll('#hp-controls .filter-btn').forEach(b => b.classList.remove('active'));
+            document.querySelector('#hp-controls .filter-btn[data-val="0"]').classList.add('active');
+
+            document.querySelectorAll('#lp-controls .filter-btn').forEach(b => b.classList.remove('active'));
+            document.querySelector('#lp-controls .filter-btn[data-val="24000"]').classList.add('active');
+            
+            if (isAudioSetup) {
+                gainNode.gain.value = 1;
+                highpassNode.frequency.value = 0;
+                lowpassNode.frequency.value = 24000;
+            }
+
+            const imgPath = cleanUrl.substring(0, cleanUrl.lastIndexOf('.')) + '.png';
+            const specImg = document.getElementById('modal-spectro-img');
+            const specErr = document.getElementById('modal-spectro-error');
+            specImg.dataset.retried = 'false';
+            specImg.src = imgPath;
+            
+            specImg.onload = () => { 
+                specImg.classList.remove('hidden'); 
+                specErr.classList.add('hidden'); 
+            };
+            
+            specImg.onerror = () => { 
+                if (specImg.dataset.retried === 'false') {
+                    specImg.dataset.retried = 'true';
+                    specImg.src = cleanUrl + '.png'; 
+                } else {
+                    specImg.classList.add('hidden'); 
+                    specErr.classList.remove('hidden'); 
+                }
+            };
+
+            document.getElementById('modal-spectro-img').parentElement.onclick = toggleModalAudioPlayback;
+
+            document.getElementById('history-popover').classList.add('hidden');
+            drawModalHistoryChart(species, document.getElementById('history-timeframe').value);
+
+            document.getElementById('modal-progress').style.width = '0%';
+            document.getElementById('modal-playhead').style.left = '0%';
+            document.getElementById('modal-time').innerText = '0:00';
+            cancelAnimationFrame(animationFrameId);
+        }
+
+        function drawModalHistoryChart(species, days = '30') {
+            const ctx = document.getElementById('modal-history-chart').getContext('2d');
+            if (modalChart) modalChart.destroy();
+            
+            let spData = dbData.filter(d => d.Com_Name === species);
+            
+            if (days !== 'all') {
+                const cutoff = new Date(); 
+                cutoff.setDate(cutoff.getDate() - parseInt(days));
+                spData = spData.filter(d => new Date(d.Date) >= cutoff);
+            }
+            
+            const daily = {};
+            spData.forEach(d => daily[d.Date] = (daily[d.Date] || 0) + 1);
+            
+            const labels = []; const data = [];
+            
+            if (days === 'all' && spData.length > 0) {
+                 const allDates = [...new Set(spData.map(d => d.Date))].sort();
+                 if(allDates.length > 0) {
+                     let curr = new Date(allDates[0]);
+                     const end = new Date();
+                     while (curr <= end) {
+                         const dStr = curr.toISOString().split('T')[0];
+                         labels.push(dStr.substring(5)); 
+                         data.push(daily[dStr] || 0);
+                         curr.setDate(curr.getDate() + 1);
+                     }
+                 }
+            } else {
+                let curr = new Date(); 
+                curr.setDate(curr.getDate() - parseInt(days === 'all' ? 30 : days));
+                while (curr <= new Date()) {
+                    const dStr = curr.toISOString().split('T')[0];
+                    labels.push(dStr.substring(5));
+                    data.push(daily[dStr] || 0);
+                    curr.setDate(curr.getDate() + 1);
+                }
+            }
+            
+            modalChart = new Chart(ctx, {
+                type: 'line', 
+                data: { 
+                    labels: labels, 
+                    datasets: [{ 
+                        data: data, 
+                        borderColor: '#ef4444', 
+                        backgroundColor: 'rgba(239, 68, 68, 0.15)', 
+                        fill: true, 
+                        tension: 0.4, 
+                        pointRadius: 0, 
+                        borderWidth: 2 
+                    }] 
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { enabled: true } }, scales: { x: { display: false }, y: { display: false, min: 0 } } }
+            });
+        }
+
+        async function searchAndPlay(species, sciName, date, time, pct) {
+            if(galleryCacheRecent.length === 0) await fetchGallery();
+            const timeStr = time.replace(/:/g,'');
+            const found = galleryCacheRecent.find(f => f.species === species && f.filename.includes(date) && f.filename.replace(/:/g,'').includes(timeStr.substring(0,4)));
+            if(found) openDetectionModal(found.filepath, found.species, sciName, (found.confidence*100).toFixed(0), found.filename);
+        }
+
+        function closeModal() {
+            document.getElementById('detection-modal').classList.add('hidden');
+            document.getElementById('history-popover').classList.add('hidden');
+            modalAudioEl.pause();
+            cancelAnimationFrame(animationFrameId);
+        }
+
+        function updatePlayhead() {
+            if (!modalAudioEl.paused && modalAudioEl.duration) {
+                const pct = (modalAudioEl.currentTime / modalAudioEl.duration) * 100;
+                document.getElementById('modal-progress').style.width = `${pct}%`;
+                document.getElementById('modal-playhead').style.left = `${pct}%`;
+                document.getElementById('modal-time').innerText = `${Math.floor(modalAudioEl.currentTime)}:${String(Math.floor((modalAudioEl.currentTime%1)*60)).padStart(2,'0')}`;
+                animationFrameId = requestAnimationFrame(updatePlayhead);
+            }
+        }
+
+        document.getElementById('modal-play-btn').addEventListener('click', () => {
+            initWebAudioAPI(); 
+            if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+            
+            if(modalAudioEl.paused) {
+                modalAudioEl.play();
+                document.getElementById('modal-icon-play').classList.add('hidden');
+                document.getElementById('modal-icon-pause').classList.remove('hidden');
+                animationFrameId = requestAnimationFrame(updatePlayhead);
+            } else {
+                modalAudioEl.pause();
+                document.getElementById('modal-icon-play').classList.remove('hidden');
+                document.getElementById('modal-icon-pause').classList.add('hidden');
+                cancelAnimationFrame(animationFrameId);
+            }
+        });
+
+        document.getElementById('modal-progress-container').addEventListener('click', (e) => {
+            if(modalAudioEl.duration) {
+                const rect = e.target.getBoundingClientRect();
+                modalAudioEl.currentTime = ((e.clientX - rect.left) / rect.width) * modalAudioEl.duration;
+                const pct = (modalAudioEl.currentTime / modalAudioEl.duration) * 100;
+                document.getElementById('modal-progress').style.width = `${pct}%`;
+                document.getElementById('modal-playhead').style.left = `${pct}%`;
+            }
+        });
+        
+        modalAudioEl.addEventListener('ended', () => {
+            document.getElementById('modal-icon-play').classList.remove('hidden');
+            document.getElementById('modal-icon-pause').classList.add('hidden');
+            document.getElementById('modal-playhead').style.left = '0%';
+            document.getElementById('modal-progress').style.width = '0%';
+            cancelAnimationFrame(animationFrameId);
+        });
+
+        document.querySelectorAll('#gain-controls .filter-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('#gain-controls .filter-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                if (isAudioSetup) gainNode.gain.value = parseFloat(e.target.dataset.val);
+            });
+        });
+
+        document.querySelectorAll('#hp-controls .filter-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('#hp-controls .filter-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                if (isAudioSetup) highpassNode.frequency.value = parseFloat(e.target.dataset.val);
+            });
+        });
+
+        document.querySelectorAll('#lp-controls .filter-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('#lp-controls .filter-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                if (isAudioSetup) lowpassNode.frequency.value = parseFloat(e.target.dataset.val);
+            });
+        });
+
+        document.getElementById('modal-stats-btn').addEventListener('click', () => {
+            const popover = document.getElementById('history-popover');
+            if (popover.classList.contains('hidden')) {
+                popover.classList.remove('hidden');
+                if (modalChart) modalChart.resize();
+            } else {
+                popover.classList.add('hidden');
+            }
+        });
+
+        document.getElementById('history-timeframe').addEventListener('change', (e) => {
+            drawModalHistoryChart(document.getElementById('modal-title').innerText, e.target.value);
+        });
+
+        let audioInactivityTimer;
+        const audioPanel = document.getElementById('audio-panel-container');
+        const controlBar = document.getElementById('audio-control-bar');
+        const settingsPopup = document.getElementById('modal-settings-popup');
+
+        audioPanel.addEventListener('mousemove', () => {
+            controlBar.classList.remove('opacity-0');
+            clearTimeout(audioInactivityTimer);
+            if(settingsPopup.classList.contains('hidden')) {
+                audioInactivityTimer = setTimeout(() => {
+                    controlBar.classList.add('opacity-0');
+                }, 2500);
+            }
+        });
+
+        audioPanel.addEventListener('mouseleave', () => {
+            if(settingsPopup.classList.contains('hidden')) {
+                controlBar.classList.add('opacity-0');
+            }
+            clearTimeout(audioInactivityTimer);
+        });
+
+        document.getElementById('modal-settings-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            settingsPopup.classList.toggle('hidden');
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!settingsPopup.classList.contains('hidden') && !e.target.closest('#modal-settings-popup') && !e.target.closest('#modal-settings-btn')) {
+                settingsPopup.classList.add('hidden');
+                audioInactivityTimer = setTimeout(() => {
+                    controlBar.classList.add('opacity-0');
+                }, 2500);
+            }
+        });
+
+        document.getElementById('sidebar-audio-btn').addEventListener('click', () => {
+            const audio = document.getElementById('sidebar-audio');
+            const btn = document.getElementById('sidebar-audio-btn');
+            const dot = document.getElementById('stream-status-dot');
+            
+            if (audio.paused || !audio.src) {
+                audio.src = '/api/stream';
+                audio.play().then(() => {
+                    btn.innerHTML = 'Disconnect';
+                    btn.classList.add('bg-red-600', 'text-white');
+                    dot.classList.replace('bg-slate-500', 'bg-[#4ade80]');
+                    dot.classList.add('animate-pulse');
+                    initLiveSpectrogram();
+                    drawLiveSpectrogram();
+                }).catch(e => {
+                    dot.classList.replace('bg-slate-500', 'bg-yellow-500');
+                });
+            } else {
+                audio.pause();
+                audio.src = '';
+                btn.innerHTML = 'Connect Audio';
+                btn.classList.remove('bg-red-600', 'text-white');
+                dot.classList.replace('bg-[#4ade80]', 'bg-slate-500');
+                dot.classList.remove('animate-pulse');
+                cancelAnimationFrame(liveAnimId);
+                liveCtx.clearRect(0, 0, liveCanvas.width, liveCanvas.height);
+            }
+        });
+
+        async function updateSystemStats() {
+            try {
+                const res = await fetch('/api/system');
+                const data = await res.json();
+                document.getElementById('sys-temp').innerText = `${data.temp}°C`;
+                document.getElementById('sys-mem').innerText = `${data.memory}%`;
+                document.getElementById('sys-mem-bar').style.width = `${data.memory}%`;
+                document.getElementById('sys-disk').innerText = `${data.disk}%`;
+                document.getElementById('sys-disk-bar').style.width = `${data.disk}%`;
+                document.getElementById('sys-uptime').innerText = `System Uptime: ${data.uptime}`;
+            } catch(e) {}
+        }
+
+        function populateConfigForm() {
+            const container = document.getElementById('config-form-container');
+            if (!configData || Object.keys(configData).length === 0) {
+                container.innerHTML = '<p class="text-red-400">Failed to load birdnet.conf</p>';
+                return;
+            }
+            
+            let html = '';
+            const keyFields = ['LATITUDE', 'LONGITUDE', 'CONFIDENCE', 'OVERLAP', 'AUDIO_FORMAT'];
+            
+            keyFields.forEach(k => {
+                const val = configData[k] || '';
+                html += `
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">${k}</label>
+                    <input type="text" id="conf-${k}" value="${val}" class="w-full bg-[var(--bn-bg)] text-white border border-[var(--bn-border)] rounded px-3 py-2 font-mono text-sm focus:outline-none focus:border-[var(--bn-highlight)]">
+                </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        document.getElementById('btn-save-config').addEventListener('click', async () => {
+            const btn = document.getElementById('btn-save-config');
+            const status = document.getElementById('config-save-status');
+            btn.disabled = true;
+            btn.innerText = 'Saving...';
+            
+            const updates = {};
+            ['LATITUDE', 'LONGITUDE', 'CONFIDENCE', 'OVERLAP', 'AUDIO_FORMAT'].forEach(k => {
+                const el = document.getElementById(`conf-${k}`);
+                if(el) updates[k] = el.value;
+            });
+
+            try {
+                const res = await fetch('/api/config/update', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(updates)
+                });
+                
+                if (res.ok) {
+                    status.innerText = "Configuration saved successfully. Restart service to apply.";
+                    status.className = "mt-2 text-sm text-green-400 font-bold";
+                    configData = { ...configData, ...updates }; 
+                } else {
+                    throw new Error('Save failed');
+                }
+            } catch (e) {
+                status.innerText = "Error saving configuration.";
+                status.className = "mt-2 text-sm text-red-400 font-bold";
+            } finally {
+                status.classList.remove('hidden');
+                btn.disabled = false;
+                btn.innerText = 'Save Configuration';
+                setTimeout(() => status.classList.add('hidden'), 5000);
+            }
+        });
+
+        async function updateServiceStatus() {
+            try {
+                const res = await fetch('/api/services');
+                const data = await res.json();
+                
+                const aBadge = document.getElementById('status-analysis');
+                if (data['birdnet_analysis.service']) {
+                    aBadge.innerText = 'RUNNING';
+                    aBadge.className = 'px-2 py-1 text-xs font-bold rounded bg-green-900 text-green-400';
+                } else {
+                    aBadge.innerText = 'STOPPED';
+                    aBadge.className = 'px-2 py-1 text-xs font-bold rounded bg-red-900 text-red-400';
+                }
+
+                const iBadge = document.getElementById('status-icecast');
+                if (data['icecast2.service']) {
+                    iBadge.innerText = 'RUNNING';
+                    iBadge.className = 'px-2 py-1 text-xs font-bold rounded bg-green-900 text-green-400';
+                } else {
+                    iBadge.innerText = 'STOPPED';
+                    iBadge.className = 'px-2 py-1 text-xs font-bold rounded bg-red-900 text-red-400';
+                }
+            } catch(e) {}
+        }
+
+        async function restartService(serviceName) {
+            try {
+                const res = await fetch('/api/services/restart', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({service: serviceName})
+                });
+                if(res.ok) {
+                    alert(`${serviceName} restart initiated.`);
+                    setTimeout(updateServiceStatus, 2000);
+                } else {
+                    alert(`Failed to restart ${serviceName}.`);
+                }
+            } catch(e) {
+                alert("Error connecting to backend.");
+            }
+        }
+
+        async function pollLog() {
+            if(!document.getElementById('tab-log').classList.contains('active')) return;
+            try {
+                const res = await fetch('/api/log');
+                const text = await res.text();
+                const out = document.getElementById('log-output');
+                if(out.innerText !== text) { out.innerText = text; out.scrollTop = out.scrollHeight; }
+            } catch(e) {}
+        }
+
+        init();
+    </script>
+</body>
+</html>
