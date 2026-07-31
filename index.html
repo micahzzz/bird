@@ -44,6 +44,10 @@
         .live-log-font { font-family: monospace; font-size: 0.8rem; line-height: 1.4; color: #cbd5e1; }
         .text-link { color: var(--bn-link); cursor: pointer; text-decoration: none; font-weight: 600; }
         .text-link:hover { text-decoration: underline; }
+
+        .insight-badge { font-size: 0.6rem; font-weight: 700; padding: 0.1rem 0.4rem; border-radius: 0.25rem; margin-left: 0.5rem; vertical-align: middle; text-transform: uppercase; }
+        .insight-new { background-color: #3b82f6; color: white; }
+        .insight-rare { background-color: #f59e0b; color: white; }
     </style>
 </head>
 <body class="flex h-screen">
@@ -642,25 +646,62 @@
             const loader = document.getElementById('loading-indicator');
             loader.classList.remove('hidden');
             try {
+                // Initial data fetch for detections feed and other components
                 const res = await fetch('/api/detections');
-                dbData = await res.json();
+                const payload = await res.json();
+                dbData = payload.detections || [];
                 window.currentDbExport = dbData;
                 
                 const confRes = await fetch('/api/config');
                 configData = await confRes.json();
                 
+                // Perform initial updates
+                applyGlobalFilter(); // This now handles the initial stat and dashboard render
                 updateSystemStats();
-                setInterval(updateSystemStats, 10000);
-                setInterval(pollLog, 3000);
-
-                applyGlobalFilter(); 
                 updateCompilerSuggestions();
                 populateDatabaseFilter();
                 filterDatabase();
+
+                // Set up polling
+                setInterval(() => {
+                    const currentFilter = document.getElementById('global-date-filter').value;
+                    updateLiveStats(currentFilter);
+                }, 30000); // Refresh stats every 30s
+                setInterval(updateSystemStats, 10000);
+                setInterval(pollLog, 3000);
+
             } catch (e) { 
                 document.getElementById('dash-feed').innerHTML = `<p class="text-red-400 font-bold p-4">Failed to load data. Is backend running?</p>`;
+                console.error(e);
             } finally {
                 loader.classList.add('hidden');
+            }
+        }
+
+        async function updateLiveStats(days = 'all') {
+            try {
+                const res = await fetch(`/api/stats?days=${days}`);
+                const stats = await res.json();
+
+                // Update dashboard cards - these ARE reactive to the filter
+                document.getElementById('dash-total').innerText = (stats.total_detections || 0).toLocaleString();
+                document.getElementById('dash-species-total').innerText = (stats.total_species || 0).toLocaleString();
+                
+                // These cards are NOT reactive and always show today/hour
+                document.getElementById('dash-today').innerText = (stats.today_detections || 0).toLocaleString();
+                document.getElementById('dash-hour').innerText = (stats.hour_detections || 0).toLocaleString();
+
+                // Update sidebar stats - these ARE also reactive to the filter
+                document.getElementById('sb-total').innerText = (stats.total_detections || 0).toLocaleString();
+                document.getElementById('sb-species-total').innerText = (stats.total_species || 0).toLocaleString();
+
+                // These sidebar stats are NOT reactive
+                document.getElementById('sb-today').innerText = (stats.today_detections || 0).toLocaleString();
+                document.getElementById('sb-hour').innerText = (stats.hour_detections || 0).toLocaleString();
+                document.getElementById('sb-species-today').innerText = (stats.today_species || 0).toLocaleString();
+                
+            } catch(e) {
+                console.error("Failed to update live stats", e);
             }
         }
 
@@ -686,33 +727,18 @@
         function applyGlobalFilter() {
             if (dbData.length === 0) return;
             const days = document.getElementById('global-date-filter').value;
+            
+            // Update stats and dashboard to reflect the new filter
+            updateLiveStats(days);
             const filtered = filterDataByDays(dbData, days);
-
             renderDashboard(filtered);
+
             if(document.getElementById('tab-analytics').classList.contains('active')) switchAnalytics(currentAnalyticsMode);
         }
 
         let dashChart = null;
         function renderDashboard(data) {
-            const todayStr = getTodayStr();
-            const currHour = new Date().getHours();
-            
-            const todayData = dbData.filter(d => d.Date === todayStr);
-            const hourData = todayData.filter(d => d.Time && parseInt(d.Time.split(':')[0], 10) === currHour);
-            const totalSpecies = new Set(dbData.map(d => d.Com_Name)).size;
-            
-            const spToday = new Set(todayData.map(d => d.Com_Name)).size;
-
-            document.getElementById('dash-total').innerText = dbData.length.toLocaleString();
-            document.getElementById('dash-today').innerText = todayData.length.toLocaleString();
-            document.getElementById('dash-hour').innerText = hourData.length.toLocaleString();
-            document.getElementById('dash-species-total').innerText = totalSpecies.toLocaleString();
-
-            document.getElementById('sb-total').innerText = dbData.length.toLocaleString();
-            document.getElementById('sb-today').innerText = todayData.length.toLocaleString();
-            document.getElementById('sb-hour').innerText = hourData.length.toLocaleString();
-            document.getElementById('sb-species-today').innerText = spToday.toLocaleString();
-            document.getElementById('sb-species-total').innerText = totalSpecies.toLocaleString();
+            // Stats are now handled by updateLiveStats()
 
             const hourCounts = Array(24).fill(0);
             data.forEach(d => {
@@ -736,18 +762,25 @@
                 }
             });
 
+            // The feed should always show the most recent detections from the initial load, not the filtered data
             const feed = document.getElementById('dash-feed');
             feed.innerHTML = '';
-            data.slice(0, 30).forEach(d => {
+            dbData.slice(0, 30).forEach(d => {
                 const pct = (parseFloat(d.Confidence)*100).toFixed(0);
+                let insightBadge = '';
+                if (d.insight && d.insight.status !== 'Normal') {
+                    const badgeClass = d.insight.status === 'New' ? 'insight-new' : 'insight-rare';
+                    insightBadge = `<span class="insight-badge ${badgeClass}" title="${d.insight.detail}">${d.insight.status}</span>`;
+                }
+
                 feed.innerHTML += `
                     <div onclick="searchAndPlay('${d.Com_Name}', '${d.Sci_Name}', '${d.Date}', '${d.Time}', '${pct}')" class="flex justify-between items-center bg-[var(--bn-panel)] p-3 rounded-lg border border-[var(--bn-border)] cursor-pointer hover:bg-[var(--bn-bg)] transition-colors group">
-                        <div class="flex items-center gap-3">
-                            <div class="w-8 h-8 rounded-full bg-[var(--bn-card)] text-[var(--bn-highlight)] flex items-center justify-center border border-[var(--bn-border)] group-hover:bg-[var(--bn-highlight)] group-hover:text-[#122617] transition-colors">
+                        <div class="flex items-center gap-3 overflow-hidden">
+                            <div class="w-8 h-8 rounded-full bg-[var(--bn-card)] text-[var(--bn-highlight)] flex items-center justify-center border border-[var(--bn-border)] group-hover:bg-[var(--bn-highlight)] group-hover:text-[#122617] transition-colors shrink-0">
                                 <svg class="w-4 h-4 ml-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path></svg>
                             </div>
-                            <div>
-                                <h4 class="text-white text-sm font-bold">${d.Com_Name}</h4>
+                            <div class="truncate">
+                                <h4 class="text-white text-sm font-bold truncate">${d.Com_Name}${insightBadge}</h4>
                                 <span class="text-xs text-slate-300">${d.Date} ${d.Time}</span>
                             </div>
                         </div>
@@ -757,52 +790,103 @@
             });
         }
 
-        // DATABASE EXPLORER FUNCTIONS
-        function populateDatabaseFilter() {
-            const speciesSet = new Set(dbData.map(d => d.Com_Name));
-            const select = document.getElementById('db-filter-species');
-            select.innerHTML = '<option value="all">All Species</option>' + 
-                Array.from(speciesSet).sort().map(s => `<option value="${s}">${s}</option>`).join('');
+        // --- DATABASE EXPLORER V2 (PAGINATED) ---
+        let dbCurrentPage = 0;
+        const dbPageSize = 50;
+        let dbIsLoading = false;
+        let dbHasMore = true;
+        let currentDbQuery = {};
+
+        document.getElementById('tab-database').addEventListener('scroll', (e) => {
+            const el = e.target;
+            if (!dbIsLoading && dbHasMore && el.scrollTop + el.clientHeight >= el.scrollHeight - 300) {
+                fetchPaginatedDetections(false);
+            }
+        });
+        
+        // The onclick handler for the main search button is now `searchDatabase()`
+        function searchDatabase() {
+            currentDbQuery = {
+                sp: document.getElementById('db-filter-species').value,
+                dStart: document.getElementById('db-filter-date-start').value,
+                dEnd: document.getElementById('db-filter-date-end').value,
+                tStart: document.getElementById('db-filter-time-start').value,
+                tEnd: document.getElementById('db-filter-time-end').value,
+                minConf: parseFloat(document.getElementById('db-filter-conf').value)
+            };
+            fetchPaginatedDetections(true); // true for new search
+        }
+        
+        async function fetchPaginatedDetections(isNewSearch = false) {
+            if (dbIsLoading) return;
+            if (isNewSearch) {
+                dbCurrentPage = 0;
+                dbHasMore = true;
+                document.getElementById('db-table-body').innerHTML = '';
+            }
+            if (!dbHasMore) return;
+
+            dbIsLoading = true;
+            document.getElementById('db-results-count').innerText = 'Loading...';
+
+            const offset = dbCurrentPage * dbPageSize;
+            const { sp, dStart, dEnd, tStart, tEnd, minConf } = currentDbQuery;
+
+            const params = new URLSearchParams({
+                limit: dbPageSize,
+                offset: offset
+            });
+
+            if (sp && sp !== 'all') params.append('sp', sp);
+            if (dStart) params.append('dStart', dStart);
+            if (dEnd) params.append('dEnd', dEnd);
+            if (tStart) params.append('tStart', tStart);
+            if (tEnd) params.append('tEnd', tEnd);
+            if (minConf) params.append('minConf', minConf);
+            
+            try {
+                const res = await fetch(`/api/detections?${params.toString()}`);
+                const payload = await res.json();
+                const data = payload.detections;
+                const totalCount = payload.total_count;
+
+                if (data.length < dbPageSize) {
+                    dbHasMore = false;
+                }
+
+                appendDbRows(data);
+                dbCurrentPage++;
+                
+                const totalShowing = document.getElementById('db-table-body').rows.length;
+                document.getElementById('db-results-count').innerText = `Showing ${totalShowing} of ${totalCount.toLocaleString()} results ${!dbHasMore ? '(End of List)' : ''}`;
+
+            } catch (e) {
+                console.error("Failed to load paginated detections", e);
+                document.getElementById('db-results-count').innerText = 'Error loading data.';
+            } finally {
+                dbIsLoading = false;
+            }
         }
 
-        function filterDatabase() {
-            const sp = document.getElementById('db-filter-species').value;
-            const dStart = document.getElementById('db-filter-date-start').value;
-            const dEnd = document.getElementById('db-filter-date-end').value;
-            const tStart = document.getElementById('db-filter-time-start').value;
-            const tEnd = document.getElementById('db-filter-time-end').value;
-            const minConf = parseFloat(document.getElementById('db-filter-conf').value);
-
-            let res = dbData;
-            if(sp !== 'all') res = res.filter(d => d.Com_Name === sp);
-            if(dStart) res = res.filter(d => d.Date >= dStart);
-            if(dEnd) res = res.filter(d => d.Date <= dEnd);
-            if(tStart) res = res.filter(d => d.Time >= tStart);
-            if(tEnd) res = res.filter(d => d.Time <= tEnd);
-            if(minConf > 0) res = res.filter(d => d.Confidence >= minConf);
-
-            renderDatabaseTable(res);
-            window.currentDbExport = res; 
-        }
-
-        function renderDatabaseTable(data) {
+        function appendDbRows(data) {
             const tbody = document.getElementById('db-table-body');
-            const limit = 500;
-            const displayData = data.slice(0, limit);
-            
-            document.getElementById('db-results-count').innerText = `${data.length.toLocaleString()} Results ${data.length > limit ? '(Showing top 500)' : ''}`;
-            
-            if(displayData.length === 0) {
+            if(data.length === 0 && dbCurrentPage === 0) {
                 tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400">No detections found matching these filters.</td></tr>`;
                 return;
             }
 
-            tbody.innerHTML = displayData.map(d => {
+            const rowsHtml = data.map(d => {
                 const pct = (d.Confidence * 100).toFixed(0);
+                let insightBadge = '';
+                if (d.insight && d.insight.status !== 'Normal') {
+                    const badgeClass = d.insight.status === 'New' ? 'insight-new' : 'insight-rare';
+                    insightBadge = `<span class="insight-badge ${badgeClass}" title="${d.insight.detail}">${d.insight.status}</span>`;
+                }
+
                 return `<tr class="hover:bg-[var(--bn-bg)] transition-colors border-b border-[var(--bn-border)]">
                     <td class="p-3 text-slate-300">${d.Date}</td>
                     <td class="p-3 text-slate-300">${d.Time}</td>
-                    <td class="p-3 font-bold text-white">${d.Com_Name}</td>
+                    <td class="p-3 font-bold text-white">${d.Com_Name}${insightBadge}</td>
                     <td class="p-3 text-slate-400 italic">${d.Sci_Name}</td>
                     <td class="p-3 text-[var(--bn-highlight)] font-mono">${pct}%</td>
                     <td class="p-3 text-right">
@@ -812,7 +896,30 @@
                     </td>
                 </tr>`;
             }).join('');
+
+            tbody.innerHTML += rowsHtml;
         }
+
+        function populateDatabaseFilter() {
+            const speciesSet = new Set(dbData.map(d => d.Com_Name));
+            const select = document.getElementById('db-filter-species');
+            select.innerHTML = '<option value="all">All Species</option>' + 
+                Array.from(speciesSet).sort().map(s => `<option value="${s}">${s}</option>`).join('');
+        }
+
+        // Old function now just calls the new search function.
+        function filterDatabase() {
+            searchDatabase();
+        }
+
+        // This function is now effectively obsolete for the database tab, but might be used elsewhere.
+        // For the database tab, appendDbRows is used.
+        function renderDatabaseTable(data) {
+            console.warn("renderDatabaseTable is deprecated for paginated view.");
+        }
+        
+        // Update the search button's onclick handler
+        document.querySelector('#tab-database button[onclick="filterDatabase()"]').setAttribute('onclick', 'searchDatabase()');
 
         function exportDatabaseCSV() {
             const data = window.currentDbExport || dbData;

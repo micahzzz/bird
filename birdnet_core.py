@@ -9,6 +9,7 @@ import sqlite3
 import csv
 import io
 import urllib.request
+from urllib.parse import urlparse, parse_qs
 import re
 import tempfile
 import time
@@ -106,6 +107,26 @@ def get_insight(species_name, detection_date):
         pass # Ignore malformed dates
 
     return insight
+
+def setup_database(db_path):
+    if not db_path:
+        print("Database not found, skipping setup.")
+        return
+    print("Setting up database and ensuring indexes...")
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        
+        # Create indexes for faster queries
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_detections_date ON detections(Date);")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_detections_com_name ON detections(Com_Name);")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_detections_date_com_name ON detections(Date, Com_Name);")
+        
+        conn.commit()
+        conn.close()
+        print("Database indexes are in place.")
+    except Exception as e:
+        print(f"Error setting up database indexes: {e}")
 
 
 class SidecarHandler(http.server.SimpleHTTPRequestHandler):
@@ -283,16 +304,60 @@ class SidecarHandler(http.server.SimpleHTTPRequestHandler):
             self.send_error(500, str(e))
 
     def do_GET(self):
-        if self.path == '/api/detections':
+        if self.path.startswith('/api/detections'):
             db_path = self.get_db_path()
             if not db_path:
                 self.send_error(404, "Database not found")
                 return
             try:
+                query_components = parse_qs(urlparse(self.path).query)
+                limit = int(query_components.get('limit', [50])[0])
+                offset = int(query_components.get('offset', [0])[0])
+                sp = query_components.get('sp', [None])[0]
+                d_start = query_components.get('dStart', [None])[0]
+                d_end = query_components.get('dEnd', [None])[0]
+                t_start = query_components.get('tStart', [None])[0]
+                t_end = query_components.get('tEnd', [None])[0]
+                min_conf = float(query_components.get('minConf', [0])[0])
+
                 conn = sqlite3.connect(db_path)
                 conn.row_factory = sqlite3.Row
                 cursor = conn.cursor()
-                cursor.execute("SELECT Date, Time, Sci_Name, Com_Name, Confidence FROM detections ORDER BY Date DESC, Time DESC LIMIT 500")
+
+                where_clauses = []
+                params = []
+
+                if sp and sp != 'all':
+                    where_clauses.append("Com_Name = ?")
+                    params.append(sp)
+                if d_start:
+                    where_clauses.append("Date >= ?")
+                    params.append(d_start)
+                if d_end:
+                    where_clauses.append("Date <= ?")
+                    params.append(d_end)
+                if t_start:
+                    where_clauses.append("Time >= ?")
+                    params.append(t_start)
+                if t_end:
+                    where_clauses.append("Time <= ?")
+                    params.append(t_end)
+                if min_conf > 0:
+                    where_clauses.append("Confidence >= ?")
+                    params.append(min_conf)
+
+                where_sql = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
+
+                # Get total count for filters
+                count_query = f"SELECT COUNT(*) FROM detections {where_sql}"
+                cursor.execute(count_query, params)
+                total_count = cursor.fetchone()[0]
+                
+                # Get paginated data
+                query_params = params + [limit, offset]
+                query = f"SELECT Date, Time, Sci_Name, Com_Name, Confidence FROM detections {where_sql} ORDER BY Date DESC, Time DESC LIMIT ? OFFSET ?"
+                
+                cursor.execute(query, query_params)
                 rows = cursor.fetchall()
                 
                 detections_with_insights = []
@@ -303,11 +368,77 @@ class SidecarHandler(http.server.SimpleHTTPRequestHandler):
                     detections_with_insights.append(detection_dict)
                 
                 conn.close()
+
+                response_payload = {
+                    "detections": detections_with_insights,
+                    "total_count": total_count
+                }
                 
                 self.send_response(200)
                 self.send_header('Content-type', 'application/json')
                 self.end_headers()
-                self.wfile.write(json.dumps(detections_with_insights).encode('utf-8'))
+                self.wfile.write(json.dumps(response_payload).encode('utf-8'))
+            except Exception as e:
+                self.send_error(500, str(e))
+        
+        elif self.path.startswith('/api/stats'):
+            db_path = self.get_db_path()
+            if not db_path:
+                self.send_error(404, "Database not found")
+                return
+            try:
+                from datetime import datetime, timedelta
+                query_components = parse_qs(urlparse(self.path).query)
+                days_str = query_components.get('days', [None])[0]
+
+                today_str = datetime.now().strftime('%Y-%m-%d')
+                
+                conn = sqlite3.connect(db_path)
+                cursor = conn.cursor()
+
+                # Time-filtered stats
+                where_clause = ""
+                params = []
+                if days_str and days_str != 'all':
+                    if days_str == 'today':
+                        where_clause = "WHERE Date = ?"
+                        params.append(today_str)
+                    elif days_str.isdigit():
+                        start_date = datetime.now() - timedelta(days=int(days_str))
+                        where_clause = "WHERE Date >= ?"
+                        params.append(start_date.strftime('%Y-%m-%d'))
+
+                cursor.execute(f"SELECT COUNT(*) FROM detections {where_clause}", params)
+                total_detections = cursor.fetchone()[0]
+                
+                cursor.execute(f"SELECT COUNT(DISTINCT Com_Name) FROM detections {where_clause}", params)
+                total_species = cursor.fetchone()[0]
+
+                # Unfiltered stats for sidebar/today view
+                cursor.execute("SELECT COUNT(*) FROM detections WHERE Date = ?", (today_str,))
+                today_detections = cursor.fetchone()[0]
+                
+                cursor.execute("SELECT COUNT(DISTINCT Com_Name) FROM detections WHERE Date = ?", (today_str,))
+                today_species = cursor.fetchone()[0]
+
+                last_hour_str = datetime.now().strftime('%H')
+                cursor.execute("SELECT COUNT(*) FROM detections WHERE Date = ? AND SUBSTR(Time, 1, 2) = ?", (today_str, last_hour_str))
+                hour_detections = cursor.fetchone()[0]
+
+                conn.close()
+
+                stats = {
+                    "total_detections": total_detections,
+                    "total_species": total_species,
+                    "today_detections": today_detections,
+                    "today_species": today_species,
+                    "hour_detections": hour_detections
+                }
+                
+                self.send_response(200)
+                self.send_header('Content-type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps(stats).encode('utf-8'))
             except Exception as e:
                 self.send_error(500, str(e))
                 
@@ -525,9 +656,13 @@ class ThreadingServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
     allow_reuse_address = True
 
 if __name__ == '__main__':
+    db_path_main = SidecarHandler.get_db_path(None)
+    
+    # Set up database with indexes
+    setup_database(db_path_main)
+
     # Build the history cache on startup
-    db_path_for_cache = SidecarHandler.get_db_path(None)
-    build_species_history_cache(db_path_for_cache)
+    build_species_history_cache(db_path_main)
 
     with ThreadingServer(("", PORT), SidecarHandler) as httpd:
         print(f"BirdNET Core Server active at http://localhost:{PORT}")
