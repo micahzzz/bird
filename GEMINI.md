@@ -121,3 +121,62 @@ The CDN Injection Bug: Never use Markdown hyperlink syntax [https://...](https:/
 SocketServer NameError: Ensure import socketserver is explicitly present at the top of birdnet_core.py.
 
 Context Truncation: The HTML file is large. The AI must ensure it paces the generation and completes the file entirely, ending properly with </html> and followed by the mandatory
+
+
+UPDATE:
+
+BirdNET-Pi UI Upgrade: Project Handover & Architecture Brief
+
+Project Overview & Architecture Strategy
+
+Context & Long-Term Goal: The default BirdNET-Pi web interface is built entirely on legacy PHP. Our ultimate, long-term vision is a 100% replacement of the legacy PHP system with a modern, lightning-fast Single Page Application (SPA). This includes full feature parity: configuration, administration, data management, and service control.
+
+Current Strategy (The Stepping Stone): We are employing a "Headless Hybrid" approach. We are leaving the PHP layer intact for deep system-level bash commands while our modern Python "Sidecar Server" (birdnet_core.py) rapidly expands to swallow all UI-driven configuration, database management, and service control responsibilities.
+
+Tech Stack Deep Dive:
+
+Backend: Python 3 (birdnet_core.py) running on localhost:9999.
+
+Frontend: A single index.html monolith.
+
+Styling & Data: Tailwind CSS and Chart.js (via CDN).
+
+Engineering Philosophy: The file should, for now, remain a standalone monolith to support simple drag-and-drop updates. As the project scope grows, maintain clear, logical sectioning within index.html for markup, CSS, and specific functional handler blocks (e.g., config-forms, service-controls, species-management).
+
+UI/UX Design Guidelines
+
+Aesthetic: Dark, earthy, forest-green theme. Modern, clean, and readable.
+
+Hyperlinks/Numeric Highlights: Bright blue.
+
+Logo: Official BirdNET SVG vector. Strict Rule: Red and Black/Dark-Gray only (Zero purple).
+
+Units: Default to Imperial (°F, mph, inches). Analytics UI must include a Metric toggle.
+
+Engineering & Protocol Guidelines
+
+Backend Expansion: All new settings must be handled via secure endpoints. Configuration updates (e.g., birdnet.conf) must be implemented with robust parsing that preserves existing file comments and formatting.
+
+Error Handling: Use aggressive, fault-tolerant logic. Filesystem operations (os.walk) and subprocess calls must be wrapped in try/except blocks to ensure the backend remains stable if a corrupted file or unexpected service state is encountered.
+
+Feature Parity: Implement missing features based on the Feature Gap Analysis, prioritizing System/Service controls, Advanced Settings, and Species List management.
+
+Formatting Rules:
+
+NEVER use the term "diff" in any context.
+
+NEVER conclude a response with a "next step" prompt or suggestion.
+
+Always use absolute URLs for CDNs.
+
+Every file generation request must use the mandatory file block format with valid file paths.
+
+Known Traps to Avoid
+
+The Canvas Formatting Bug: Always use the mandatory file block format (```html:index.html). Failure to do so breaks the collaborative UI.
+
+CDN Injection: Never use Markdown hyperlink syntax inside HTML script tags.
+
+SocketServer: Always verify import socketserver is present.
+
+Context Truncation: For large files, pace the generation to ensure the document is complete and ends with </html>.

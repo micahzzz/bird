@@ -44,6 +44,70 @@ def update_config(updates):
                 f.write(line)
     return True
 
+species_history_cache = {}
+
+def build_species_history_cache(db_path):
+    print("Building species history cache...")
+    if not db_path:
+        print("Database not found, cannot build cache.")
+        return
+    
+    global species_history_cache
+    new_cache = {}
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT
+                Com_Name,
+                MIN(Date) as first_seen,
+                MAX(Date) as last_seen,
+                COUNT(*) as total_count
+            FROM
+                detections
+            GROUP BY
+                Com_Name;
+        """)
+        for row in cursor.fetchall():
+            new_cache[row[0]] = {"first_seen": row[1], "last_seen": row[2], "count": row[3]}
+        conn.close()
+        species_history_cache = new_cache
+        print(f"Successfully built cache for {len(species_history_cache)} species.")
+    except Exception as e:
+        print(f"Error building species history cache: {e}")
+
+def get_insight(species_name, detection_date):
+    from datetime import datetime, timedelta
+
+    insight = {"status": "Normal", "detail": ""}
+    
+    # Check for New Species
+    if species_name not in species_history_cache:
+        insight["status"] = "New"
+        insight["detail"] = "This is the first time this species has been detected!"
+        # Add to cache immediately to avoid duplicate 'New' flags for recent detections
+        species_history_cache[species_name] = {"first_seen": detection_date, "last_seen": detection_date, "count": 1}
+        return insight
+
+    history = species_history_cache[species_name]
+    
+    # Check for Rare Species
+    try:
+        last_seen_date = datetime.strptime(history['last_seen'], '%Y-%m-%d')
+        current_date = datetime.strptime(detection_date, '%Y-%m-%d')
+        
+        # Check if the last sighting was from *before* today
+        if current_date > last_seen_date:
+            days_since_seen = (current_date - last_seen_date).days
+            if days_since_seen >= 30:
+                insight["status"] = "Rare"
+                insight["detail"] = f"Not seen for {days_since_seen} days."
+    except (ValueError, TypeError):
+        pass # Ignore malformed dates
+
+    return insight
+
+
 class SidecarHandler(http.server.SimpleHTTPRequestHandler):
     
     def get_db_path(self):
@@ -143,6 +207,55 @@ class SidecarHandler(http.server.SimpleHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(json.dumps({"success": success}).encode())
 
+            elif self.path == '/api/species_list/update':
+                list_name = payload.get('list_name')
+                content = payload.get('content', '')
+                
+                allowed_lists = {'confirmed': 'confirmed_species_list.txt', 'excluded': 'exclude_species_list.txt', 'whitelisted': 'whitelist_species_list.txt'}
+                if list_name not in allowed_lists:
+                    self.send_error(400, "Invalid species list name")
+                    return
+
+                list_path = os.path.join(os.path.expanduser('~/BirdNET-Pi'), allowed_lists[list_name])
+
+                with open(list_path, 'w', encoding='utf-8') as f:
+                    f.write(content)
+                
+                self.send_response(200)
+                self.send_header('Content-type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": True}).encode())
+
+            elif self.path == '/api/service_control':
+                action = payload.get('action')
+                service = payload.get('service')
+                script_path = '/home/birder/BirdNET-Pi/scripts/'
+                
+                allowed_actions = ['stop', 'restart', 'enable', 'disable']
+                allowed_services = [
+                    'livestream.service', 'icecast2.service', 'web_terminal.service', 
+                    'birdnet_log.service', 'birdnet_analysis.service', 'birdnet_stats.service', 
+                    'birdnet_recording.service', 'chart_viewer.service', 'spectrogram_viewer.service'
+                ]
+
+                if action in ['restart_all', 'stop_all']:
+                    script = 'restart_services.sh' if action == 'restart_all' else 'stop_core_services.sh'
+                    subprocess.run(['sudo', os.path.join(script_path, script)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    self.send_response(200)
+                    self.send_header('Content-type', 'application/json')
+                    self.end_headers()
+                    self.wfile.write(json.dumps({"success": True, "message": f"Global {action} initiated."}).encode())
+                
+                elif action in allowed_actions and service in allowed_services:
+                    subprocess.run(['sudo', 'systemctl', action, service], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    self.send_response(200)
+                    self.send_header('Content-type', 'application/json')
+                    self.end_headers()
+                    self.wfile.write(json.dumps({"success": True, "message": f"Service {service} action {action} initiated."}).encode())
+                
+                else:
+                    self.send_error(400, "Invalid service control action or service name")
+            
             elif self.path == '/api/services/restart':
                 service = payload.get('service')
                 if service in ['birdnet_analysis.service', 'icecast2.service']:
@@ -153,7 +266,19 @@ class SidecarHandler(http.server.SimpleHTTPRequestHandler):
                     self.wfile.write(json.dumps({"success": True}).encode())
                 else:
                     self.send_error(400, "Invalid service")
-
+            elif self.path == '/api/system_control':
+                            action = payload.get('action')
+                            # Whitelist of allowed system commands
+                            actions = {
+                                'reboot': ['sudo', '/sbin/reboot'],
+                                'shutdown': ['sudo', '/sbin/shutdown', 'now']
+                            }
+                            if action in actions:
+                                subprocess.Popen(actions[action]) # Popen because reboot/shutdown kills the process
+                                self.send_response(200)
+                                self.end_headers()
+                            else:
+                                self.send_error(400, "Invalid system action")
         except Exception as e:
             self.send_error(500, str(e))
 
@@ -165,22 +290,24 @@ class SidecarHandler(http.server.SimpleHTTPRequestHandler):
                 return
             try:
                 conn = sqlite3.connect(db_path)
+                conn.row_factory = sqlite3.Row
                 cursor = conn.cursor()
-                cursor.execute("SELECT Date, Time, Sci_Name, Com_Name, Confidence FROM detections ORDER BY Date DESC, Time DESC")
+                cursor.execute("SELECT Date, Time, Sci_Name, Com_Name, Confidence FROM detections ORDER BY Date DESC, Time DESC LIMIT 500")
                 rows = cursor.fetchall()
-                col_names = [d[0] for d in cursor.description]
                 
-                output = io.StringIO()
-                writer = csv.writer(output)
-                writer.writerow(col_names)
-                writer.writerows(rows)
-                csv_data = output.getvalue()
+                detections_with_insights = []
+                for row in rows:
+                    detection_dict = dict(row)
+                    insight = get_insight(detection_dict['Com_Name'], detection_dict['Date'])
+                    detection_dict['insight'] = insight
+                    detections_with_insights.append(detection_dict)
+                
                 conn.close()
                 
                 self.send_response(200)
-                self.send_header('Content-type', 'text/csv')
+                self.send_header('Content-type', 'application/json')
                 self.end_headers()
-                self.wfile.write(csv_data.encode('utf-8'))
+                self.wfile.write(json.dumps(detections_with_insights).encode('utf-8'))
             except Exception as e:
                 self.send_error(500, str(e))
                 
@@ -199,13 +326,21 @@ class SidecarHandler(http.server.SimpleHTTPRequestHandler):
             except Exception as e:
                 self.send_error(500, str(e))
 
-        elif self.path == '/api/services':
+        elif self.path == '/api/services/status':
             try:
-                services = ['birdnet_analysis.service', 'icecast2.service']
+                services = [
+                    'livestream.service', 'icecast2.service', 'web_terminal.service', 
+                    'birdnet_log.service', 'birdnet_analysis.service', 'birdnet_stats.service', 
+                    'birdnet_recording.service', 'chart_viewer.service', 'spectrogram_viewer.service'
+                ]
                 status_data = {}
                 for s in services:
-                    res = subprocess.run(['systemctl', 'is-active', s], stdout=subprocess.PIPE, text=True)
-                    status_data[s] = res.stdout.strip() == 'active'
+                    active_res = subprocess.run(['systemctl', 'is-active', s], capture_output=True, text=True)
+                    enabled_res = subprocess.run(['systemctl', 'is-enabled', s], capture_output=True, text=True)
+                    status_data[s] = {
+                        "active": active_res.stdout.strip(),
+                        "enabled": enabled_res.stdout.strip()
+                    }
                 self.send_response(200)
                 self.send_header('Content-type', 'application/json')
                 self.end_headers()
@@ -275,6 +410,9 @@ class SidecarHandler(http.server.SimpleHTTPRequestHandler):
                 self.wfile.write(json.dumps(payload).encode())
             except Exception as e:
                 self.send_error(500, str(e))
+
+        elif self.path.startswith('/api/species_list'):
+            self.get_species_list()
 
         elif self.path == '/api/stream':
             config = get_config()
@@ -357,11 +495,40 @@ class SidecarHandler(http.server.SimpleHTTPRequestHandler):
             except ConnectionError: 
                 pass
 
+    def get_species_list(self):
+        try:
+            list_name = self.path.split('?list=')[-1]
+            allowed_lists = {'confirmed': 'confirmed_species_list.txt', 'excluded': 'exclude_species_list.txt', 'whitelisted': 'whitelist_species_list.txt'}
+            
+            if list_name not in allowed_lists:
+                self.send_error(400, "Invalid species list name")
+                return
+
+            list_path = os.path.join(os.path.expanduser('~/BirdNET-Pi'), allowed_lists[list_name])
+            
+            content = ""
+            if os.path.exists(list_path):
+                with open(list_path, 'r', encoding='utf-8') as f:
+                    content = f.read()
+            
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps({"list_name": list_name, "content": content}).encode())
+
+        except Exception as e:
+            self.send_error(500, f"Error getting species list: {e}")
+
+
 class ThreadingServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
     daemon_threads = True
     allow_reuse_address = True
 
 if __name__ == '__main__':
+    # Build the history cache on startup
+    db_path_for_cache = SidecarHandler.get_db_path(None)
+    build_species_history_cache(db_path_for_cache)
+
     with ThreadingServer(("", PORT), SidecarHandler) as httpd:
         print(f"BirdNET Core Server active at http://localhost:{PORT}")
         try: httpd.serve_forever()
