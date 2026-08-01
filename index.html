@@ -1740,14 +1740,12 @@
                 const res = await fetch('/api/system');
                 const data = await res.json();
                 
-                const isImperial = !isMetric;
-                const tempVal = isImperial ? (data.temp * 1.8 + 32) : data.temp;
-                const tempUnit = isImperial ? '°F' : '°C';
-                
-                document.getElementById('sys-temp').innerText = `${tempVal.toFixed(1)}${tempUnit}`;
+                // Per user request, CPU temperature is now always displayed in Celsius.
+                document.getElementById('sys-temp').innerText = `${data.temp.toFixed(1)}°C`;
                 
                 const tempBar = document.getElementById('sys-temp-bar');
                 if (tempBar) {
+                    // The bar's percentage is based on Celsius, so it remains correct.
                     const tempPct = Math.max(0, Math.min(100, ((data.temp - 0) / 85) * 100));
                     tempBar.style.width = `${tempPct}%`;
                 }
