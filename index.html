@@ -585,6 +585,7 @@
     </div>
 
     <script>
+        const API_BASE = 'http://' + (window.location.hostname || 'localhost') + ':9998';
         let dbData = [];
         let configData = {};
         let activeChart = null;
@@ -647,12 +648,12 @@
             loader.classList.remove('hidden');
             try {
                 // Initial data fetch for detections feed and other components
-                const res = await fetch('/api/detections');
+                const res = await fetch(API_BASE + '/api/detections');
                 const payload = await res.json();
                 dbData = payload.detections || [];
                 window.currentDbExport = dbData;
                 
-                const confRes = await fetch('/api/config');
+                const confRes = await fetch(API_BASE + '/api/config');
                 configData = await confRes.json();
                 
                 // Perform initial updates
@@ -680,7 +681,7 @@
 
         async function updateLiveStats(days = 'all') {
             try {
-                const res = await fetch(`/api/stats?days=${days}`);
+                const res = await fetch(API_BASE + `/api/stats?days=${days}`);
                 const stats = await res.json();
 
                 // Update dashboard cards - these ARE reactive to the filter
@@ -845,7 +846,7 @@
             if (minConf) params.append('minConf', minConf);
             
             try {
-                const res = await fetch(`/api/detections?${params.toString()}`);
+                const res = await fetch(API_BASE + `/api/detections?${params.toString()}`);
                 const payload = await res.json();
                 const data = payload.detections;
                 const totalCount = payload.total_count;
@@ -1132,7 +1133,7 @@
 
         async function fetchGallery() {
             try {
-                const res = await fetch('/api/gallery');
+                const res = await fetch(API_BASE + '/api/gallery');
                 const data = await res.json();
                 galleryCacheRecent = data.recent || [];
                 galleryCacheBest = data.best || [];
@@ -1302,7 +1303,7 @@
             }
 
             try {
-                const res = await fetch('/api/compile', {
+                const res = await fetch(API_BASE + '/api/compile', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
@@ -1712,7 +1713,7 @@
             const dot = document.getElementById('stream-status-dot');
             
             if (audio.paused || !audio.src) {
-                audio.src = '/api/stream';
+                audio.src = API_BASE + '/api/stream';
                 audio.play().then(() => {
                     btn.innerHTML = 'Disconnect';
                     btn.classList.add('bg-red-600', 'text-white');
@@ -1737,7 +1738,7 @@
 
         async function updateSystemStats() {
             try {
-                const res = await fetch('/api/system');
+                const res = await fetch(API_BASE + '/api/system');
                 const data = await res.json();
                 
                 // Per user request, CPU temperature is now always displayed in Celsius.
@@ -1798,7 +1799,7 @@
             });
 
             try {
-                const res = await fetch('/api/config/update', {
+                const res = await fetch(API_BASE + '/api/config/update', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify(updates)
@@ -1837,7 +1838,7 @@
             currentSpeciesList = listName;
             
             try {
-                const res = await fetch(`/api/species_list?list=${listName}`);
+                const res = await fetch(API_BASE + `/api/species_list?list=${listName}`);
                 const data = await res.json();
                 textarea.value = data.content;
             } catch (e) {
@@ -1859,7 +1860,7 @@
             btn.innerText = 'Saving...';
             
             try {
-                const res = await fetch('/api/species_list/update', {
+                const res = await fetch(API_BASE + '/api/species_list/update', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ list_name: currentSpeciesList, content: textarea.value })
@@ -1887,7 +1888,7 @@
             if (!confirm(`Are you sure you want to ${friendlyAction} ${service}?`)) return;
 
             try {
-                const res = await fetch('/api/service_control', {
+                const res = await fetch(API_BASE + '/api/service_control', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ action: action, service: service })
@@ -1906,7 +1907,7 @@
         async function loadServiceStatus() {
             const tbody = document.getElementById('services-table-body');
             try {
-                const res = await fetch('/api/services/status');
+                const res = await fetch(API_BASE + '/api/services/status');
                 const data = await res.json();
                 
                 tbody.innerHTML = '';
@@ -1945,7 +1946,7 @@
         async function pollLog() {
             if(!document.getElementById('tab-log').classList.contains('active')) return;
             try {
-                const res = await fetch('/api/log');
+                const res = await fetch(API_BASE + '/api/log');
                 const text = await res.text();
                 const out = document.getElementById('log-output');
                 if(out.innerText !== text) { out.innerText = text; out.scrollTop = out.scrollHeight; }
