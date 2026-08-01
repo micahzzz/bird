@@ -255,7 +255,7 @@
                 </div>
             </div>
             
-            <div id="analytics-chart-container" class="bird-card bg-white p-6 h-[500px] relative rounded-lg">
+            <div id="analytics-chart-container" class="bird-card p-6 h-[500px] relative rounded-lg">
                 <canvas id="analytics-chart"></canvas>
             </div>
             
@@ -271,9 +271,9 @@
         <!-- MEDIA GALLERY TAB -->
         <div id="tab-gallery" class="tab-content custom-scrollbar">
             <div class="flex gap-2 mb-6 border-b border-[var(--bn-border)] pb-4">
-                <button class="toggle-btn active" onclick="switchGallery('recent')">Recent Captures</button>
-                <button class="toggle-btn" onclick="switchGallery('today')">Today's List</button>
-                <button class="toggle-btn" onclick="switchGallery('best')">Best Recordings</button>
+                <button class="toggle-btn" onclick="switchGallery('recent', this)">Recent Captures</button>
+                <button class="toggle-btn" onclick="switchGallery('today', this)">Today's List</button>
+                <button class="toggle-btn" onclick="switchGallery('best', this)">Best Recordings</button>
             </div>
 
             <div id="gallery-recent" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"></div>
@@ -369,6 +369,7 @@
                 <button class="toggle-btn active" onclick="switchTools('config')">Configuration</button>
                 <button class="toggle-btn" onclick="switchTools('services')">Service Control</button>
                 <button class="toggle-btn" onclick="switchTools('species')">Species Lists</button>
+                <button class="toggle-btn" onclick="switchTools('files')">File Manager</button>
             </div>
 
             <!-- Configuration Form -->
@@ -447,6 +448,26 @@
                 <textarea id="species-list-textarea" class="w-full h-64 bg-[var(--bn-bg)] text-white border border-[var(--bn-border)] rounded-lg p-3 font-mono text-sm focus:outline-none focus:border-[var(--bn-highlight)]" placeholder="Select a list to view/edit..."></textarea>
                 <button id="btn-save-species-list" class="mt-4 bg-[var(--bn-highlight)] hover:bg-[#3d7a4b] text-[#111a14] font-bold py-2 px-6 rounded-lg transition-colors">Save Current List</button>
                 <p id="species-list-status" class="mt-2 text-sm hidden"></p>
+            </div>
+
+            <!-- File Manager -->
+            <div id="tools-files" class="hidden bird-card p-6">
+                <h3 class="text-lg font-bold text-white mb-2">File Manager</h3>
+                <div id="file-manager-breadcrumbs" class="text-sm text-slate-400 mb-4"></div>
+                <div class="overflow-auto border border-[var(--bn-border)] rounded-lg">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-[var(--bn-panel)] text-white">
+                            <tr>
+                                <th class="p-3 font-semibold">Name</th>
+                                <th class="p-3 font-semibold">Size</th>
+                                <th class="p-3 font-semibold">Modified</th>
+                                <th class="p-3 font-semibold text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="file-manager-body" class="divide-y divide-[var(--bn-border)]">
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </main>
@@ -606,9 +627,12 @@
         let animationFrameId;
 
         Chart.defaults.font.family = "'Inter', sans-serif";
+        Chart.defaults.color = '#cbd5e1';
+        Chart.defaults.scale.grid.color = 'rgba(255, 255, 255, 0.1)';
+        Chart.defaults.scale.ticks.color = '#cbd5e1';
 
         document.querySelectorAll('.nav-item').forEach(el => {
-            el.addEventListener('click', (e) => {
+            el.addEventListener('click', async (e) => {
                 document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
                 document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
                 
@@ -622,8 +646,15 @@
                 if (['dashboard', 'analytics'].includes(tabId)) filter.classList.remove('hidden');
                 else filter.classList.add('hidden');
 
-                if (tabId === 'analytics') switchAnalytics('acc');
-                if (tabId === 'gallery' && galleryCacheRecent.length === 0) fetchGallery();
+                if (tabId === 'analytics') switchAnalytics('acc', document.querySelector('#tab-analytics .toggle-btn'));
+                
+                if (tabId === 'gallery' && galleryCacheRecent.length === 0) {
+                    await fetchGallery();
+                } else if (tabId === 'gallery') {
+                    if (!document.querySelector('#tab-gallery .toggle-btn.active')) {
+                        switchGallery('recent', document.querySelector('#tab-gallery .toggle-btn[onclick*="\'recent\'"]'));
+                    }
+                }
                 if (tabId === 'tools') populateConfigForm();
             });
         });
@@ -632,10 +663,11 @@
             document.querySelectorAll('#tab-tools > div > .toggle-btn').forEach(b => b.classList.remove('active'));
             event.target.classList.add('active');
             
-            ['config', 'services', 'species'].forEach(v => document.getElementById(`tools-${v}`).classList.add('hidden'));
+            ['config', 'services', 'species', 'files'].forEach(v => document.getElementById(`tools-${v}`).classList.add('hidden'));
             document.getElementById(`tools-${view}`).classList.remove('hidden');
             
             if(view === 'services') loadServiceStatus();
+            if(view === 'files') loadFileManager();
         }
 
         function getTodayStr() { 
@@ -719,10 +751,10 @@
                 return sourceData.filter(d => d.Date >= start && d.Date <= end);
             }
 
-            const latestDate = new Date(sourceData[0].Date);
+            const latestDate = new Date(sourceData[0].Date + 'T00:00:00');
             const cutoff = new Date(latestDate);
             cutoff.setDate(cutoff.getDate() - parseInt(daysStr));
-            return sourceData.filter(d => new Date(d.Date) >= cutoff);
+            return sourceData.filter(d => new Date(d.Date + 'T00:00:00') >= cutoff);
         }
 
         function applyGlobalFilter() {
@@ -734,7 +766,11 @@
             const filtered = filterDataByDays(dbData, days);
             renderDashboard(filtered);
 
-            if(document.getElementById('tab-analytics').classList.contains('active')) switchAnalytics(currentAnalyticsMode);
+            if(document.getElementById('tab-analytics').classList.contains('active')) {
+                // Find the active button to pass to switchAnalytics if needed, then call it
+                const activeBtn = document.querySelector(`#tab-analytics .toggle-btn.active`);
+                switchAnalytics(currentAnalyticsMode, activeBtn);
+            }
         }
 
         let dashChart = null;
@@ -755,11 +791,23 @@
                 type: 'bar',
                 data: {
                     labels: Array.from({length: 24}, (_, i) => i),
-                    datasets: [{ label: 'Detections', data: hourCounts, backgroundColor: '#4ade80', borderRadius: 2 }]
+                    datasets: [{ 
+                        label: 'Detections', 
+                        data: hourCounts, 
+                        backgroundColor: '#4ade80', 
+                        borderRadius: 2,
+                        maxBarThickness: 36,
+                        categoryPercentage: 0.6,
+                        barPercentage: 0.8
+                    }]
                 },
                 options: {
-                    responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
-                    scales: { y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#cbd5e1' } }, x: { grid: { display: false }, ticks: { callback: v => `${v}:00`, color: '#cbd5e1' } } }
+                    responsive: true, maintainAspectRatio: false, 
+                    plugins: { legend: { display: false } },
+                    scales: { 
+                        y: { ticks: { color: '#cbd5e1' } }, 
+                        x: { grid: { display: false }, ticks: { callback: v => `${v}:00`, color: '#cbd5e1' } } 
+                    }
                 }
             });
 
@@ -942,10 +990,10 @@
         }
 
         let currentAnalyticsMode = 'acc';
-        function switchAnalytics(mode) {
+        function switchAnalytics(mode, buttonEl) {
             currentAnalyticsMode = mode;
             document.querySelectorAll('#tab-analytics .toggle-btn').forEach(b => b.classList.remove('active'));
-            event.target.classList.add('active');
+            if (buttonEl) buttonEl.classList.add('active');
             
             const uToggle = document.getElementById('weather-unit-toggle');
             const hContainer = document.getElementById('analytics-health-container');
@@ -954,17 +1002,16 @@
             if (mode === 'weather') uToggle.classList.remove('hidden');
             else uToggle.classList.add('hidden');
             
-            const days = document.getElementById('global-date-filter').value;
-            const filtered = filterDataByDays(dbData, days);
-
             if (mode === 'health') {
                 cContainer.classList.add('hidden');
                 hContainer.classList.remove('hidden');
+                const days = document.getElementById('global-date-filter').value;
+                const filtered = filterDataByDays(dbData, days);
                 renderDiagnostics(filtered);
             } else {
                 hContainer.classList.add('hidden');
                 cContainer.classList.remove('hidden');
-                renderAnalytics(filtered);
+                renderAnalytics();
             }
         }
 
@@ -972,124 +1019,173 @@
             isMetric = true; 
             e.target.className="px-2 py-1 rounded text-xs font-bold bg-[var(--bn-highlight)] text-[#122617] transition-colors"; 
             document.getElementById('unit-imperial').className="px-2 py-1 rounded text-xs font-bold text-slate-300 hover:text-white transition-colors"; 
-            switchAnalytics('weather'); 
+            switchAnalytics('weather', e.target.closest('.toggle-btn')); 
             updateSystemStats();
         });
         document.getElementById('unit-imperial').addEventListener('click', (e) => { 
             isMetric = false; 
             e.target.className="px-2 py-1 rounded text-xs font-bold bg-[var(--bn-highlight)] text-[#122617] transition-colors"; 
             document.getElementById('unit-metric').className="px-2 py-1 rounded text-xs font-bold text-slate-300 hover:text-white transition-colors"; 
-            switchAnalytics('weather'); 
+            switchAnalytics('weather', e.target.closest('.toggle-btn')); 
             updateSystemStats();
         });
 
-        async function renderAnalytics(data) {
-            if(!data || data.length === 0) return;
-            const ctx = document.getElementById('analytics-chart').getContext('2d');
-            if(activeChart) activeChart.destroy();
-            
-            const commonScales = {
-                y: { grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { color: '#475569' } },
-                x: { grid: { display: false }, ticks: { color: '#475569' } }
-            };
+        async function renderAnalytics() {
+            try {
+                const days = document.getElementById('global-date-filter').value;
+                if (activeChart) { activeChart.destroy(); activeChart = null; }
+                const ctx = document.getElementById('analytics-chart').getContext('2d');
+                
+                const darkThemeScales = {
+                    x: { ticks: { color: '#cbd5e1' }, grid: { color: 'rgba(255, 255, 255, 0.1)' } },
+                    y: { ticks: { color: '#cbd5e1' }, grid: { color: 'rgba(255, 255, 255, 0.1)' } }
+                };
 
-            if (currentAnalyticsMode === 'matrix') {
-                const spCounts = {};
-                data.forEach(d => spCounts[d.Com_Name] = (spCounts[d.Com_Name] || 0) + 1);
-                const topSp = Object.entries(spCounts).sort((a,b)=>b[1]-a[1]).slice(0,25).map(x=>x[0]);
-                
-                const bData = []; let gMax = 0; const wMap = {};
-                data.forEach(d => {
-                    if(topSp.includes(d.Com_Name) && d.Time) {
-                        const h = parseInt(d.Time.split(':')[0],10);
-                        const k = `${d.Com_Name}-${h}`;
-                        wMap[k] = (wMap[k] || 0) + 1;
-                        if(wMap[k] > gMax) gMax = wMap[k];
-                    }
-                });
-                
-                topSp.forEach((sp, yIdx) => {
-                    for(let h=0; h<24; h++){
-                        const v = wMap[`${sp}-${h}`];
-                        if(v) bData.push({x:h, y:yIdx, r: Math.max(3, (v/gMax)*15), _v: v});
-                    }
-                });
+                if (currentAnalyticsMode === 'matrix') {
+                    const filtered = filterDataByDays(dbData, days);
+                    const spCounts = {};
+                    filtered.forEach(d => spCounts[d.Com_Name] = (spCounts[d.Com_Name] || 0) + 1);
+                    const topSp = Object.entries(spCounts).sort((a, b) => b[1] - a[1]).slice(0, 25).map(x => x[0]);
 
-                activeChart = new Chart(ctx, {
-                    type: 'bubble', data: { datasets: [{ data: bData, backgroundColor: 'rgba(74, 222, 128, 0.7)', borderColor: '#4ade80', borderWidth: 1 }] },
-                    options: { 
-                        responsive: true, maintainAspectRatio: false, 
-                        plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => `${topSp[c.raw.y]} at ${c.raw.x}:00 = ${c.raw._v} hits` } } }, 
-                        scales: { 
-                            y: { ticks: { callback: v => topSp[v], color: '#475569' }, grid: { color: 'rgba(0,0,0,0.05)' }, reverse: true, min:-0.5, max: topSp.length-0.5 }, 
-                            x: { grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { color: '#475569' }, min: -1, max: 24 } 
-                        } 
-                    }
-                });
-            }
-            else if (currentAnalyticsMode === 'acc') {
-                const daily = {};
-                [...data].reverse().forEach(d => { if(!daily[d.Date]) daily[d.Date] = new Set(); daily[d.Date].add(d.Com_Name); });
-                const sortedDates = Object.keys(daily).sort();
-                const labels = []; const counts = []; const seen = new Set();
-                sortedDates.forEach(dt => { labels.push(dt); daily[dt].forEach(sp => seen.add(sp)); counts.push(seen.size); });
-                
-                const niceLabels = labels.map(l => { const d=new Date(l); return `${d.toLocaleString('default',{month:'short'})} ${d.getDate()}`;});
+                    const bData = []; let gMax = 0; const wMap = {};
+                    filtered.forEach(d => {
+                        if (topSp.includes(d.Com_Name) && d.Time) {
+                            const h = parseInt(d.Time.split(':')[0], 10);
+                            const k = `${d.Com_Name}-${h}`;
+                            wMap[k] = (wMap[k] || 0) + 1;
+                            if (wMap[k] > gMax) gMax = wMap[k];
+                        }
+                    });
 
-                activeChart = new Chart(ctx, {
-                    type: 'line', data: { labels: niceLabels, datasets: [{ label: 'Total Unique Species', data: counts, borderColor: '#4ade80', backgroundColor: 'rgba(74, 222, 128, 0.15)', fill: true, tension: 0.4, pointRadius: 2 }] },
-                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: commonScales }
-                });
-            } 
-            else if (currentAnalyticsMode === 'weather') {
-                const daily = {}; data.forEach(d => { daily[d.Date] = (daily[d.Date] || 0) + 1; });
-                const sortedDates = Object.keys(daily).sort();
-                const niceLabels = sortedDates.map(l => { const d=new Date(l); return `${d.toLocaleString('default',{month:'short'})} ${d.getDate()}`;});
-                
-                const lat = configData.LATITUDE || '41.9'; const lon = configData.LONGITUDE || '-73.1';
-                const s = sortedDates[0]; const e = sortedDates[sortedDates.length-1];
-                const unitT = isMetric ? 'celsius' : 'fahrenheit';
-                const unitR = isMetric ? 'mm' : 'inch';
-                const unitW = isMetric ? 'kmh' : 'mph';
-                
-                try {
-                    const res = await fetch(`https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=${s}&end_date=${e}&daily=temperature_2m_max,precipitation_sum,windspeed_10m_max&timezone=auto&temperature_unit=${unitT}&windspeed_unit=${unitW}&precipitation_unit=${unitR}`);
-                    const wData = await res.json();
-                    
-                    const labels = []; const dets = []; const temps = []; const rains = []; const winds = [];
-                    sortedDates.forEach(dt => {
-                        labels.push(dt); dets.push(daily[dt]);
-                        const idx = wData.daily.time.indexOf(dt);
-                        temps.push(idx > -1 ? wData.daily.temperature_2m_max[idx] : null);
-                        rains.push(idx > -1 ? wData.daily.precipitation_sum[idx] : null);
-                        winds.push(idx > -1 ? wData.daily.windspeed_10m_max[idx] : null);
+                    topSp.forEach((sp, yIdx) => {
+                        for (let h = 0; h < 24; h++) {
+                            const v = wMap[`${sp}-${h}`];
+                            if (v) bData.push({ x: h, y: yIdx, r: Math.max(3, (v / gMax) * 15), _v: v });
+                        }
                     });
 
                     activeChart = new Chart(ctx, {
-                        type: 'bar',
-                        data: {
-                            labels: niceLabels,
-                            datasets: [
-                                { type: 'bar', label: 'Detections', data: dets, backgroundColor: '#4ade80', yAxisID: 'y' },
-                                { type: 'line', label: `Max Temp (${isMetric?'°C':'°F'})`, data: temps, borderColor: '#ef4444', tension: 0.4, pointRadius: 2, yAxisID: 'yT' },
-                                { type: 'line', label: `Max Wind (${isMetric?'km/h':'mph'})`, data: winds, borderColor: '#9ca3af', borderDash: [4,4], tension: 0.3, pointRadius: 0, yAxisID: 'yT' },
-                                { type: 'bar', label: `Rain (${isMetric?'mm':'in'})`, data: rains, backgroundColor: 'rgba(59, 130, 246, 0.5)', yAxisID: 'yR' }
-                            ]
-                        },
-                        options: { 
-                            responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, 
-                            plugins: {
-                                legend: { labels: { color: '#475569' } }
-                            },
-                            scales: { 
-                                x: { grid: { display: false }, ticks: { color: '#475569' } }, 
-                                y: { position: 'left', grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { color: '#475569' } }, 
-                                yT: { position: 'right', grid: { display: false }, ticks: { color: '#475569' } }, 
-                                yR: { display: false, min: 0 } 
-                            } 
+                        type: 'bubble',
+                        data: { datasets: [{ data: bData, backgroundColor: 'rgba(74, 222, 128, 0.7)', borderColor: '#4ade80', borderWidth: 1 }] },
+                        options: {
+                            responsive: true, maintainAspectRatio: false,
+                            plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => `${topSp[c.raw.y]} at ${c.raw.x}:00 = ${c.raw._v} hits` } } },
+                            scales: {
+                                y: { ...darkThemeScales.y, ticks: { callback: v => topSp[v], color: '#cbd5e1' }, reverse: true, min: -0.5, max: topSp.length - 0.5 },
+                                x: { ...darkThemeScales.x, min: -1, max: 24 }
+                            }
                         }
                     });
-                } catch(e) {}
+                    return;
+                }
+
+                const statsRes = await fetch(API_BASE + `/api/stats?days=${days}`);
+                const statsData = await statsRes.json();
+                if (!statsData || typeof statsData !== 'object') { throw new Error("Invalid stats payload"); }
+                
+                const dailyData = statsData.detections_by_date || {};
+
+                if (currentAnalyticsMode === 'acc') {
+                    const uniqueSpeciesByDate = statsData.species_by_date || {};
+                    let sortedDates = Object.keys(uniqueSpeciesByDate).sort();
+                    
+                    const labels = [];
+                    const counts = [];
+                    const seen = new Set();
+                    
+                    if (sortedDates.length === 1) {
+                        const singleDate = new Date(sortedDates[0]);
+                        const prevDate = new Date(singleDate);
+                        prevDate.setDate(singleDate.getDate() - 1);
+                        labels.push(`${prevDate.toLocaleString('default', { month: 'short' })} ${prevDate.getDate()}`);
+                        counts.push(0);
+                    }
+
+                    sortedDates.forEach(date => {
+                        const d = new Date(date + 'T00:00:00');
+                        labels.push(`${d.toLocaleString('default',{month:'short'})} ${d.getDate()}`);
+                        (uniqueSpeciesByDate[date] || []).forEach(species => seen.add(species));
+                        counts.push(seen.size);
+                    });
+
+                    activeChart = new Chart(ctx, {
+                        type: 'line',
+                        data: { labels: labels, datasets: [{ label: 'Total Unique Species', data: counts, borderColor: '#4ade80', backgroundColor: 'rgba(74, 222, 128, 0.15)', fill: true, tension: 0.4, pointRadius: 2 }] },
+                        options: { 
+                            responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, 
+                            scales: {
+                                x: darkThemeScales.x,
+                                y: { ...darkThemeScales.y, beginAtZero: true, suggestedMax: Math.max(...counts) + 2 }
+                            }
+                        }
+                    });
+                }
+                else if (currentAnalyticsMode === 'weather') {
+                    const sortedDates = Object.keys(dailyData).sort();
+                    const dets = sortedDates.map(dt => dailyData[dt] || 0);
+                    const niceLabels = sortedDates.map(l => { const d = new Date(l + 'T00:00:00'); return `${d.toLocaleString('default', { month: 'short' })} ${d.getDate()}`; });
+
+                    try {
+                        if (sortedDates.length === 0) throw new Error("No dates for weather fetch");
+
+                        const lat = configData.LATITUDE || '41.9'; const lon = configData.LONGITUDE || '-73.1';
+                        const s = sortedDates[0]; const e = sortedDates[sortedDates.length - 1];
+                        const unitT = isMetric ? 'celsius' : 'fahrenheit';
+                        const unitR = isMetric ? 'mm' : 'inch';
+                        const unitW = isMetric ? 'kmh' : 'mph';
+
+                        const weatherRes = await fetch(`https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=${s}&end_date=${e}&daily=temperature_2m_max,precipitation_sum,windspeed_10m_max&timezone=auto&temperature_unit=${unitT}&windspeed_unit=${unitW}&precipitation_unit=${unitR}`);
+                        const wData = await weatherRes.json();
+
+                        const rains = [];
+                        const temps = sortedDates.map(dt => {
+                            const idx = wData.daily.time.indexOf(dt);
+                            rains.push(idx > -1 ? wData.daily.precipitation_sum[idx] : null);
+                            return idx > -1 ? wData.daily.temperature_2m_max[idx] : null;
+                        });
+                        const winds = sortedDates.map(dt => {
+                            const idx = wData.daily.time.indexOf(dt);
+                            return idx > -1 ? wData.daily.windspeed_10m_max[idx] : null;
+                        });
+                        const maxRain = Math.max(...rains.filter(r => r !== null));
+                        
+                        activeChart = new Chart(ctx, {
+                            type: 'bar',
+                            data: {
+                                labels: niceLabels,
+                                datasets: [
+                                    { type: 'bar', label: 'Detections', data: dets, backgroundColor: 'rgba(74, 222, 128, 0.8)', yAxisID: 'y', maxBarThickness: 24, categoryPercentage: 0.7, barPercentage: 0.8 },
+                                    { type: 'line', label: `Max Temp (${isMetric ? '°C' : '°F'})`, data: temps, borderColor: '#f87171', tension: 0.4, pointRadius: 2, yAxisID: 'yT' },
+                                    { type: 'line', label: `Max Wind (${isMetric ? 'km/h' : 'mph'})`, data: winds, borderColor: '#9ca3af', borderDash: [4, 4], tension: 0.3, pointRadius: 0, yAxisID: 'yT' },
+                                    { type: 'bar', label: `Rain (${isMetric ? 'mm' : 'in'})`, data: rains, backgroundColor: 'rgba(96, 165, 250, 0.6)', yAxisID: 'yR', maxBarThickness: 24, categoryPercentage: 0.7, barPercentage: 0.8 }
+                                ]
+                            },
+                            options: {
+                                responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
+                                plugins: { legend: { labels: { color: '#cbd5e1' } } },
+                                scales: {
+                                    x: { ...darkThemeScales.x, stacked: true },
+                                    y: { ...darkThemeScales.y, stacked: true, position: 'left', beginAtZero: true },
+                                    yT: { position: 'right', grid: { display: false }, ticks: { color: '#cbd5e1' } },
+                                    yR: { display: false, beginAtZero: true, max: Math.max(1, maxRain * 1.5) }
+                                }
+                            }
+                        });
+
+                    } catch (e) {
+                        console.error("Weather API failed, rendering fallback chart:", e);
+                        activeChart = new Chart(ctx, {
+                            type: 'bar',
+                            data: {
+                                labels: niceLabels,
+                                datasets: [{ label: 'Detections', data: dets, backgroundColor: 'rgba(74, 222, 128, 0.8)', maxBarThickness: 36 }]
+                            },
+                            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: darkThemeScales }
+                        });
+                    }
+                }
+            } catch (e) {
+                console.error('Analytics render error:', e);
             }
         }
 
@@ -1137,13 +1233,13 @@
                 const data = await res.json();
                 galleryCacheRecent = data.recent || [];
                 galleryCacheBest = data.best || [];
-                switchGallery('recent');
+                switchGallery('recent', document.querySelector('#tab-gallery .toggle-btn'));
             } catch(e) {}
         }
 
-        function switchGallery(mode) {
+        function switchGallery(mode, buttonEl) {
             document.querySelectorAll('#tab-gallery > div > .toggle-btn:not(.sort-btn)').forEach(b => b.classList.remove('active'));
-            event.target.classList.add('active');
+            if(buttonEl) buttonEl.classList.add('active');
             
             ['recent', 'today', 'best'].forEach(t => document.getElementById(`gallery-${t}`).classList.add('hidden'));
             document.getElementById(`gallery-${mode}`).classList.remove('hidden');
@@ -1156,6 +1252,10 @@
         function renderGalleryGrid(files, containerId) {
             const container = document.getElementById(containerId);
             container.innerHTML = '';
+            if (!files || files.length === 0) {
+                container.innerHTML = '<p class="text-slate-400 text-sm p-4">No recordings found for this view.</p>';
+                return;
+            }
             files.slice(0, 100).forEach(f => {
                 const pct = (f.confidence * 100).toFixed(0);
                 const dbMatch = dbData.find(d => d.Com_Name === f.species);
@@ -1516,61 +1616,55 @@
             cancelAnimationFrame(animationFrameId);
         }
 
-        function drawModalHistoryChart(species, days = '30') {
+        async function drawModalHistoryChart(species, days = '30') {
             const ctx = document.getElementById('modal-history-chart').getContext('2d');
             if (modalChart) modalChart.destroy();
             
-            let spData = dbData.filter(d => d.Com_Name === species);
-            
-            if (days !== 'all') {
-                const cutoff = new Date(); 
-                cutoff.setDate(cutoff.getDate() - parseInt(days));
-                spData = spData.filter(d => new Date(d.Date) >= cutoff);
-            }
-            
-            const daily = {};
-            spData.forEach(d => daily[d.Date] = (daily[d.Date] || 0) + 1);
-            
-            const labels = []; const data = [];
-            
-            if (days === 'all' && spData.length > 0) {
-                 const allDates = [...new Set(spData.map(d => d.Date))].sort();
-                 if(allDates.length > 0) {
-                     let curr = new Date(allDates[0]);
-                     const end = new Date();
-                     while (curr <= end) {
-                         const dStr = curr.toISOString().split('T')[0];
-                         labels.push(dStr.substring(5)); 
-                         data.push(daily[dStr] || 0);
-                         curr.setDate(curr.getDate() + 1);
-                     }
-                 }
-            } else {
-                let curr = new Date(); 
-                curr.setDate(curr.getDate() - parseInt(days === 'all' ? 30 : days));
-                while (curr <= new Date()) {
-                    const dStr = curr.toISOString().split('T')[0];
-                    labels.push(dStr.substring(5));
-                    data.push(daily[dStr] || 0);
-                    curr.setDate(curr.getDate() + 1);
-                }
+            const statsRes = await fetch(API_BASE + `/api/stats?days=${days}&species_of_interest=${encodeURIComponent(species)}`);
+            const statsData = await statsRes.json();
+            const daily = statsData.species_by_date ? (statsData.species_by_date[species] || {}) : {};
+
+            const labels = []; 
+            const data = [];
+            const daysToParse = (days === 'all') ? 365 : parseInt(days); // Limit 'all' to a year for performance
+
+            let curr = new Date();
+            curr.setDate(curr.getDate() - daysToParse);
+
+            while (curr <= new Date()) {
+                const dStr = curr.toISOString().split('T')[0];
+                labels.push(`${curr.toLocaleString('default',{month:'short'})} ${curr.getDate()}`);
+                data.push(daily[dStr] || 0);
+                curr.setDate(curr.getDate() + 1);
             }
             
             modalChart = new Chart(ctx, {
-                type: 'line', 
+                type: 'bar', 
                 data: { 
                     labels: labels, 
                     datasets: [{ 
                         data: data, 
-                        borderColor: '#ef4444', 
-                        backgroundColor: 'rgba(239, 68, 68, 0.15)', 
-                        fill: true, 
-                        tension: 0.4, 
-                        pointRadius: 0, 
-                        borderWidth: 2 
+                        backgroundColor: 'rgba(239, 68, 68, 0.8)',
+                        maxBarThickness: 16,
+                        categoryPercentage: 0.8,
+                        barPercentage: 0.9
                     }] 
                 },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { enabled: true } }, scales: { x: { display: false }, y: { display: false, min: 0 } } }
+                options: { 
+                    responsive: true, maintainAspectRatio: false, 
+                    plugins: { legend: { display: false }, tooltip: { enabled: true } }, 
+                    scales: { 
+                        x: { 
+                            ticks: { 
+                                color: '#cbd5e1',
+                                // Auto-skip ticks to prevent overlap on small charts
+                                autoSkip: true,
+                                maxTicksLimit: 6
+                            } 
+                        }, 
+                        y: { display: false, min: 0 } 
+                    } 
+                }
             });
         }
 
@@ -1909,16 +2003,22 @@
             try {
                 const res = await fetch(API_BASE + '/api/services/status');
                 const data = await res.json();
+
+                if (data.detail) {
+                    throw new Error(data.detail);
+                }
                 
                 tbody.innerHTML = '';
                 for (const service in data) {
                     const status = data[service];
+
+                    if (typeof status !== 'object' || status === null) continue;
                     
-                    const activeBadge = status.active === 'active' 
+                    const activeBadge = ('active' in status && status.active === 'active')
                         ? `<span class="px-2 py-1 text-xs font-bold rounded bg-green-900 text-green-400">ACTIVE</span>`
                         : `<span class="px-2 py-1 text-xs font-bold rounded bg-slate-700 text-slate-300">INACTIVE</span>`;
                     
-                    const enabledBadge = status.enabled === 'enabled'
+                    const enabledBadge = ('enabled' in status && status.enabled === 'enabled')
                         ? `<span class="px-2 py-1 text-xs font-bold rounded bg-blue-900 text-blue-300">ENABLED</span>`
                         : `<span class="px-2 py-1 text-xs font-bold rounded bg-red-900 text-red-400">DISABLED</span>`;
 
@@ -1939,7 +2039,7 @@
                     tbody.innerHTML += row;
                 }
             } catch(e) {
-                tbody.innerHTML = '<tr><td colspan="3" class="p-4 text-center text-red-400">Failed to load service statuses.</td></tr>';
+                tbody.innerHTML = `<tr><td colspan="3" class="p-4 text-center text-red-400">Failed to load service statuses. ${e.message || ''}</td></tr>`;
             }
         }
 
@@ -1951,6 +2051,98 @@
                 const out = document.getElementById('log-output');
                 if(out.innerText !== text) { out.innerText = text; out.scrollTop = out.scrollHeight; }
             } catch(e) {}
+        }
+
+        // --- FILE MANAGER ---
+        async function loadFileManager(path = '') {
+            const tbody = document.getElementById('file-manager-body');
+            tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-slate-400">Loading files...</td></tr>`;
+
+            try {
+                const res = await fetch(API_BASE + `/api/files/list?path=${encodeURIComponent(path)}`);
+                const data = await res.json();
+                
+                // Breadcrumbs
+                const breadcrumbs = document.getElementById('file-manager-breadcrumbs');
+                let bcHtml = `<a href="#" onclick="loadFileManager('')" class="hover:underline">root</a> / `;
+                let currentPath = '';
+                if (data.current_path) {
+                    const parts = data.current_path.split('/');
+                    parts.forEach((part, i) => {
+                        if(!part) return;
+                        currentPath += (currentPath ? '/' : '') + part;
+                        if (i < parts.length - 1) {
+                            bcHtml += `<a href="#" onclick="loadFileManager('${currentPath}')" class="hover:underline">${part}</a> / `;
+                        } else {
+                            bcHtml += `${part}`;
+                        }
+                    });
+                }
+                breadcrumbs.innerHTML = bcHtml;
+
+                // File table
+                tbody.innerHTML = '';
+                if (data.items.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-slate-400">Directory is empty.</td></tr>`;
+                    return;
+                }
+
+                data.items.forEach(item => {
+                    const icon = item.is_dir 
+                        ? `<svg class="w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20"><path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"></path></svg>`
+                        : `<svg class="w-5 h-5 text-slate-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9 2a2 2 0 00-2 2v8a2 2 0 002 2h2a2 2 0 002-2V4a2 2 0 00-2-2H9z"></path></svg>`;
+                    
+                    const nameCell = item.is_dir
+                        ? `<a href="#" onclick="loadFileManager('${item.rel_path}')" class="font-bold text-white hover:underline">${item.name}</a>`
+                        : `<span class="text-slate-200">${item.name}</span>`;
+
+                    const row = `
+                        <tr class="hover:bg-[var(--bn-bg)] transition-colors">
+                            <td class="p-3 flex items-center gap-2">${icon}${nameCell}</td>
+                            <td class="p-3 text-slate-400 font-mono">${item.is_dir ? '--' : formatFileSize(item.size)}</td>
+                            <td class="p-3 text-slate-400 font-mono text-xs">${new Date(item.mtime * 1000).toLocaleString()}</td>
+                            <td class="p-3 text-right">
+                                <div class="flex gap-2 justify-end">
+                                    <a href="${API_BASE}/api/files/download?path=${encodeURIComponent(item.rel_path)}" download class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-1 px-3 rounded-md text-xs transition-colors">Download</a>
+                                    <button onclick="deleteFile('${item.rel_path}', '${item.name}')" class="bg-red-800 hover:bg-red-700 text-white font-bold py-1 px-3 rounded-md text-xs transition-colors">Delete</button>
+                                </div>
+                            </td>
+                        </tr>`;
+                    tbody.innerHTML += row;
+                });
+
+            } catch (e) {
+                tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-red-400">Error loading files.</td></tr>`;
+            }
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        async function deleteFile(path, name) {
+            if (!confirm(`Are you sure you want to delete "${name}"? This cannot be undone.`)) return;
+
+            try {
+                const res = await fetch(`${API_BASE}/api/files/delete?path=${encodeURIComponent(path)}`, {
+                    method: 'DELETE'
+                });
+                if (res.ok) {
+                    // Refresh the current directory view
+                    const currentPath = document.getElementById('file-manager-breadcrumbs').innerText.replace(/root \/ /g, '').replace(/ \/ /g, '/');
+                    const parentPath = path.substring(0, path.lastIndexOf('/'));
+                    loadFileManager(parentPath);
+                } else {
+                    const error = await res.json();
+                    alert(`Failed to delete file: ${error.detail}`);
+                }
+            } catch (e) {
+                alert('An error occurred while trying to delete the file.');
+            }
         }
 
         init();

@@ -1,31 +1,17 @@
-# routers/system.py
-from fastapi import APIRouter, HTTPException
-from fastapi.responses import PlainTextResponse
-import subprocess
 import os
-from typing import Dict
+import shutil
+import subprocess
+from fastapi import APIRouter, HTTPException, Body, Query
+from fastapi.responses import FileResponse
 
-router = APIRouter()
+router = APIRouter(tags=["System & Config"])
 
-# --- Path Handling ---
-# Using os.path.expanduser to correctly resolve '~' to the home directory
-# of the user running the script.
-CONFIG_PATH = os.path.expanduser('~/BirdNET-Pi/birdnet.conf')
+CONF_FILE = os.path.expanduser("~/BirdNET-Pi/birdnet.conf")
+CONFIG_PATH = CONF_FILE  # Restored for compatibility with streaming.py
+SPECIES_DIR = os.path.expanduser("~/BirdNET-Pi/")
+STORAGE_DIR = os.path.expanduser("~/BirdSongs/")
 
-
-def run_command(command: str) -> str:
-    """A helper function to run shell commands and return the output."""
-    try:
-        # Using subprocess.check_output is slightly more modern and raises an error on non-zero exit codes.
-        return subprocess.check_output(command, shell=True, text=True, stderr=subprocess.PIPE).strip()
-    except subprocess.CalledProcessError as e:
-        print(f"Command '{command}' failed with error: {e.stderr}")
-        return ""
-    except Exception as e:
-        print(f"An unexpected error occurred while running command '{command}': {e}")
-        return ""
-
-def parse_config(path: str) -> Dict[str, str]:
+def parse_config(path: str) -> dict:
     """Parses a simple key-value .conf file."""
     config = {}
     if not os.path.exists(path):
@@ -37,51 +23,212 @@ def parse_config(path: str) -> Dict[str, str]:
                 config[key.strip()] = val.strip(' "\'')
     return config
 
-
-@router.get("/system", summary="Get Live System Statistics")
-async def get_system_stats():
-    """
-    Returns live system statistics like CPU temperature, memory/disk usage, and uptime.
-    This logic has been migrated from the original birdnet_core.py.
-    """
+def get_cpu_temp():
     try:
-        temp_raw = run_command("cat /sys/class/thermal/thermal_zone0/temp")
-        temp_c = round(int(temp_raw) / 1000.0, 1) if temp_raw.isdigit() else 0.0
+        with open("/sys/class/thermal/thermal_zone0/temp", "r") as f:
+            return round(float(f.read().strip()) / 1000.0, 1)
+    except Exception:
+        return 0.0
 
-        mem_raw = run_command("free -m | awk 'NR==2 {printf \"%.1f\", $3*100/$2}'")
-        memory = float(mem_raw) if mem_raw and mem_raw.replace('.', '', 1).isdigit() else 0.0
+def get_memory_usage():
+    try:
+        mem = {}
+        with open("/proc/meminfo", "r") as f:
+            for line in f:
+                parts = line.split(":")
+                if len(parts) == 2:
+                    mem[parts[0].strip()] = int(parts[1].split()[0])
+        total = mem.get("MemTotal", 1)
+        available = mem.get("MemAvailable", total)
+        used_pct = ((total - available) / total) * 100.0
+        return round(used_pct, 1)
+    except Exception:
+        return 0.0
 
-        disk_raw = run_command("df -h / | awk 'NR==2 {print $5}'").replace('%', '')
-        disk = int(disk_raw) if disk_raw.isdigit() else 0
+def get_disk_usage():
+    try:
+        usage = shutil.disk_usage("/")
+        return round((usage.used / usage.total) * 100.0, 1)
+    except Exception:
+        return 0.0
 
-        uptime = run_command("uptime -p").replace('up ', '')
+def get_uptime_str():
+    try:
+        with open("/proc/uptime", "r") as f:
+            uptime_seconds = float(f.readline().split()[0])
+        days = int(uptime_seconds // 86400)
+        hours = int((uptime_seconds % 86400) // 3600)
+        minutes = int((uptime_seconds % 3600) // 60)
+        parts = []
+        if days > 0: parts.append(f"{days} day{'s' if days != 1 else ''}")
+        if hours > 0: parts.append(f"{hours} hour{'s' if hours != 1 else ''}")
+        parts.append(f"{minutes} minute{'s' if minutes != 1 else ''}")
+        return ", ".join(parts)
+    except Exception:
+        return "Unknown"
 
-        return {
-            "temp": temp_c,
-            "memory": memory,
-            "disk": disk,
-            "uptime": uptime
-        }
-    except Exception as e:
-        # If anything unexpected goes wrong, return a 500 error.
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve system stats: {str(e)}")
+@router.get("/system")
+async def get_system_telemetry():
+    return {
+        "temp": get_cpu_temp(),
+        "memory": get_memory_usage(),
+        "disk": get_disk_usage(),
+        "uptime": get_uptime_str()
+    }
 
-
-@router.get("/config", summary="Get birdnet.conf Settings")
+@router.get("/config")
 async def get_config():
-    """
-    Reads and returns the key-value pairs from the birdnet.conf file.
-    """
-    config = parse_config(CONFIG_PATH)
-    if not config:
-        raise HTTPException(status_code=404, detail=f"Config file not found or is empty at {CONFIG_PATH}")
+    config = {}
+    if os.path.exists(CONF_FILE):
+        with open(CONF_FILE, "r") as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    key, val = line.split("=", 1)
+                    config[key.strip()] = val.strip(' "')
     return config
 
+@router.post("/config/update")
+async def update_config(payload: dict = Body(...)):
+    if not os.path.exists(CONF_FILE):
+        raise HTTPException(status_code=404, detail="birdnet.conf not found")
+    lines = []
+    with open(CONF_FILE, "r") as f:
+        lines = f.readlines()
+    updated_keys = set()
+    new_lines = []
+    for line in lines:
+        stripped = line.strip()
+        if stripped and not stripped.startswith("#") and "=" in line:
+            key, _ = line.split("=", 1)
+            key = key.strip()
+            if key in payload:
+                new_lines.append(f'{key}="{payload[key]}"\n')
+                updated_keys.add(key)
+                continue
+        new_lines.append(line)
+    for k, v in payload.items():
+        if k not in updated_keys:
+            new_lines.append(f'{k}="{v}"\n')
+    with open(CONF_FILE, "w") as f:
+        f.writelines(new_lines)
+    return {"status": "success", "message": "Configuration updated successfully"}
 
-@router.get("/log", response_class=PlainTextResponse, summary="Get System Service Log")
+@router.get("/log")
 async def get_system_log():
-    """
-    Fetches the last 100 lines of the `birdnet_analysis.service` log.
-    """
-    log_output = run_command("journalctl -u birdnet_analysis.service -n 100 --no-pager")
-    return log_output
+    try:
+        output = subprocess.check_output(
+            ["journalctl", "-u", "birdnet_analysis.service", "-n", "100", "--no-pager"],
+            text=True
+        )
+        return output
+    except Exception as e:
+        return f"Error retrieving logs: {str(e)}"
+
+@router.get("/services/status")
+async def get_services_status():
+    services = ["birdnet_analysis.service", "birdnet_recording.service", "caddy.service"]
+    status_dict = {}
+    for s in services:
+        try:
+            active = subprocess.check_output(["systemctl", "is-active", s], text=True).strip()
+            enabled = subprocess.check_output(["systemctl", "is-enabled", s], text=True).strip()
+            status_dict[s] = {"active": active, "enabled": enabled}
+        except subprocess.CalledProcessError as e:
+            active = e.output.strip() if e.output else "inactive"
+            status_dict[s] = {"active": active, "enabled": "disabled"}
+        except Exception:
+            status_dict[s] = {"active": "inactive", "enabled": "disabled"}
+    return status_dict
+
+@router.post("/service_control")
+async def control_service(payload: dict = Body(...)):
+    action = payload.get("action")
+    service = payload.get("service")
+    allowed_actions = ["start", "stop", "restart", "enable", "disable"]
+    allowed_services = ["birdnet_analysis.service", "birdnet_recording.service", "caddy.service"]
+    if action in allowed_actions and service in allowed_services:
+        try:
+            subprocess.run(["sudo", "systemctl", action, service], check=True)
+            return {"status": "success", "message": f"{action} executed on {service}"}
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+    raise HTTPException(status_code=400, detail="Invalid action or service")
+
+@router.get("/species_list")
+async def get_species_list(list: str = "confirmed"):
+    filename_map = {
+        "confirmed": "confirmed_species.txt",
+        "whitelisted": "whitelisted_species.txt",
+        "excluded": "excluded_species.txt"
+    }
+    target = filename_map.get(list.lower())
+    if not target:
+        raise HTTPException(status_code=400, detail="Invalid species list type")
+    filepath = os.path.join(SPECIES_DIR, target)
+    if os.path.exists(filepath):
+        with open(filepath, "r") as f:
+            return {"list": list, "content": f.read()}
+    return {"list": list, "content": ""}
+
+@router.post("/species_list/update")
+async def update_species_list(payload: dict = Body(...)):
+    list_name = payload.get("list_name", "").lower()
+    content = payload.get("content", "")
+    filename_map = {
+        "confirmed": "confirmed_species.txt",
+        "whitelisted": "whitelisted_species.txt",
+        "excluded": "excluded_species.txt"
+    }
+    target = filename_map.get(list_name)
+    if not target:
+        raise HTTPException(status_code=400, detail="Invalid species list type")
+    filepath = os.path.join(SPECIES_DIR, target)
+    with open(filepath, "w") as f:
+        f.write(content)
+    return {"status": "success", "message": f"{list_name} species list saved successfully"}
+
+# --- NATIVE FILE MANAGER ENDPOINTS ---
+@router.get("/files/list")
+async def list_files(path: str = ""):
+    target_path = os.path.abspath(os.path.join(STORAGE_DIR, path))
+    if not target_path.startswith(os.path.abspath(STORAGE_DIR)):
+        raise HTTPException(status_code=403, detail="Access denied")
+    if not os.path.exists(target_path):
+        raise HTTPException(status_code=404, detail="Directory not found")
+
+    items = []
+    for item in sorted(os.listdir(target_path)):
+        full_p = os.path.join(target_path, item)
+        rel_p = os.path.relpath(full_p, STORAGE_DIR)
+        is_dir = os.path.isdir(full_p)
+        size = os.path.getsize(full_p) if not is_dir else 0
+        mtime = os.path.getmtime(full_p)
+        items.append({
+            "name": item,
+            "rel_path": rel_p,
+            "is_dir": is_dir,
+            "size": size,
+            "mtime": mtime
+        })
+    return {"current_path": path, "items": items}
+
+@router.get("/files/download")
+async def download_file(path: str = Query(...)):
+    target_path = os.path.abspath(os.path.join(STORAGE_DIR, path))
+    if not target_path.startswith(os.path.abspath(STORAGE_DIR)) or not os.path.isfile(target_path):
+        raise HTTPException(status_code=404, detail="File not found")
+    return FileResponse(target_path, filename=os.path.basename(target_path))
+
+@router.delete("/files/delete")
+async def delete_file(path: str = Query(...)):
+    target_path = os.path.abspath(os.path.join(STORAGE_DIR, path))
+    if not target_path.startswith(os.path.abspath(STORAGE_DIR)):
+        raise HTTPException(status_code=403, detail="Access denied")
+    if os.path.isdir(target_path):
+        shutil.rmtree(target_path)
+    elif os.path.isfile(target_path):
+        os.remove(target_path)
+    else:
+        raise HTTPException(status_code=404, detail="Item not found")
+    return {"status": "success"}
