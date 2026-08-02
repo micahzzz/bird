@@ -28,22 +28,48 @@ def get_config():
     return config
 
 def update_config(updates):
-    if not os.path.exists(CONFIG_PATH): return False
-    
-    with open(CONFIG_PATH, 'r') as f:
-        lines = f.readlines()
+    if not os.path.exists(CONFIG_PATH):
+        return False, "Config file not found"
+
+    # Define which keys should not have their values quoted
+    unquoted_keys = {
+        'LATITUDE', 'LONGITUDE', 'BIRDWEATHER_ID', 'APPRISE_NOTIFY_EACH_DETECTION',
+        'APPRISE_NOTIFY_NEW_SPECIES', 'APPRISE_NOTIFY_NEW_SPECIES_EACH_DAY', 'APPRISE_WEEKLY_REPORT',
+        'APPRISE_MINIMUM_SECONDS_BETWEEN_NOTIFICATIONS_PER_SPECIES', 'SF_THRESH', 'DATA_MODEL_VERSION',
+        'PRIVACY_THRESHOLD', 'PURGE_THRESHOLD', 'MAX_FILES_SPECIES', 'CHANNELS', 'RECORDING_LENGTH',
+        'EXTRACTION_LENGTH', 'HIGHPASS_FREQ', 'SILENCE_UPDATE_INDICATOR', 'AUTOMATIC_UPDATE',
+        'RAW_SPECTROGRAM', 'RARE_SPECIES_THRESHOLD', 'OVERLAP', 'CONFIDENCE', 'SENSITIVITY',
+        'FREQSHIFT_HI', 'FREQSHIFT_LO', 'FREQSHIFT_PITCH', 'FREQSHIFT_RECONNECT_DELAY'
+    }
+
+    try:
+        with open(CONFIG_PATH, 'r') as f:
+            content = f.read()
+
+        for key, value in updates.items():
+            # Sanitize value to prevent injection issues, although we control the keys
+            value_str = str(value)
+            
+            # Decide on quoting
+            formatted_value = value_str if key in unquoted_keys else f'"{value_str}"'
+            
+            # Pattern to find the key, optionally commented out
+            pattern = re.compile(f"^(#\\s*)?{key}=.*", re.MULTILINE)
+            
+            if pattern.search(content):
+                # Key exists, so we replace it, making sure to uncomment it
+                content = pattern.sub(f"{key}={formatted_value}", content)
+            else:
+                # Key doesn't exist, append it to the end
+                content += f"\n{key}={formatted_value}"
         
-    with open(CONFIG_PATH, 'w') as f:
-        for line in lines:
-            updated = False
-            if '=' in line and not line.startswith('#'):
-                key = line.split('=', 1)[0].strip()
-                if key in updates:
-                    f.write(f'{key}="{updates[key]}"\n')
-                    updated = True
-            if not updated:
-                f.write(line)
-    return True
+        with open(CONFIG_PATH, 'w') as f:
+            f.write(content)
+            
+        return True, "Configuration updated successfully."
+        
+    except Exception as e:
+        return False, str(e)
 
 species_history_cache = {}
 
@@ -230,11 +256,33 @@ class SidecarHandler(http.server.SimpleHTTPRequestHandler):
                 self.wfile.write(json.dumps({"success": True, "file": web_path, "count": len(valid_files)}).encode())
                 
             elif self.path == '/api/config/update':
-                success = update_config(payload)
+                editable_keys = [
+                    'LATITUDE', 'LONGITUDE', 'CONFIDENCE', 'SENSITIVITY', 'OVERLAP', 
+                    'PRIVACY_THRESHOLD', 'FULL_DISK', 'PURGE_THRESHOLD', 'MAX_FILES_SPECIES',
+                    'REC_CARD', 'CHANNELS', 'RECORDING_LENGTH', 'EXTRACTION_LENGTH', 'HIGHPASS_FREQ', 'AUDIOFMT',
+                    'MODEL', 'DATA_MODEL_VERSION', 'SF_THRESH', 'RARE_SPECIES_THRESHOLD', 
+                    'SILENCE_UPDATE_INDICATOR', 'AUTOMATIC_UPDATE', 'RAW_SPECTROGRAM',
+                    'APPRISE_SERVICES', 'APPRISE_NOTIFICATION_TITLE', 'APPRISE_NOTIFY_EACH_DETECTION',
+                    'APPRISE_NOTIFY_NEW_SPECIES', 'APPRISE_NOTIFY_NEW_SPECIES_EACH_DAY', 'APPRISE_WEEKLY_REPORT',
+                    'APPRISE_MINIMUM_SECONDS_BETWEEN_NOTIFICATIONS_PER_SPECIES', 'APPRISE_ONLY_NOTIFY_SPECIES_NAMES',
+                    'APPRISE_ONLY_NOTIFY_SPECIES_NAMES_2', 'SITE_NAME', 'BIRDWEATHER_ID', 'DATABASE_LANG', 
+                    'TIMEZONE', 'CADDY_PWD', 'BIRDNETPI_URL'
+                ]
+                
+                filtered_payload = {k: v for k, v in payload.items() if k in editable_keys}
+
+                if not filtered_payload:
+                    self.send_response(400)
+                    self.send_header('Content-type', 'application/json')
+                    self.end_headers()
+                    self.wfile.write(json.dumps({"success": False, "message": "No valid settings provided."}).encode())
+                    return
+
+                success, message = update_config(filtered_payload)
                 self.send_response(200 if success else 500)
                 self.send_header('Content-type', 'application/json')
                 self.end_headers()
-                self.wfile.write(json.dumps({"success": success}).encode())
+                self.wfile.write(json.dumps({"success": success, "message": message}).encode())
 
             elif self.path == '/api/species_list/update':
                 list_name = payload.get('list_name')

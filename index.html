@@ -381,21 +381,183 @@
 
             <!-- Configuration Form -->
             <div id="tools-config" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- General Site Settings Card -->
                 <div class="bird-card p-6">
-                    <h3 class="text-lg font-bold text-white mb-4">Core Settings</h3>
+                    <h3 class="text-lg font-bold text-white mb-4">General Site Settings</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label for="config-SITE_NAME" class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Site Name</label>
+                            <input type="text" id="config-SITE_NAME" class="w-full bg-[var(--bn-bg)] text-white border border-[var(--bn-border)] rounded px-3 py-2 font-mono text-sm">
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label for="config-LATITUDE" class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Latitude</label>
+                                <input type="number" step="0.0001" id="config-LATITUDE" class="w-full bg-[var(--bn-bg)] text-white border border-[var(--bn-border)] rounded px-3 py-2 font-mono text-sm">
+                            </div>
+                            <div>
+                                <label for="config-LONGITUDE" class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Longitude</label>
+                                <input type="number" step="0.0001" id="config-LONGITUDE" class="w-full bg-[var(--bn-bg)] text-white border border-[var(--bn-border)] rounded px-3 py-2 font-mono text-sm">
+                            </div>
+                        </div>
+                        <div>
+                            <label for="config-TIMEZONE" class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Timezone</label>
+                            <input type="text" id="config-TIMEZONE" class="w-full bg-[var(--bn-bg)] text-white border border-[var(--bn-border)] rounded px-3 py-2 font-mono text-sm" placeholder="e.g., America/New_York">
+                        </div>
+                        <div>
+                            <label for="config-BIRDWEATHER_ID" class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">BirdWeather ID</label>
+                            <input type="text" id="config-BIRDWEATHER_ID" class="w-full bg-[var(--bn-bg)] text-white border border-[var(--bn-border)] rounded px-3 py-2 font-mono text-sm">
+                        </div>
+                         <div>
+                            <label for="config-DATABASE_LANG" class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Database Language</label>
+                            <input type="text" id="config-DATABASE_LANG" class="w-full bg-[var(--bn-bg)] text-white border border-[var(--bn-border)] rounded px-3 py-2 font-mono text-sm">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bird-card p-6">
+                    <h3 class="text-lg font-bold text-white mb-4">BirdNET-Lite Settings</h3>
                     <div class="space-y-4" id="config-form-container">
                         <p class="text-slate-400 text-sm">Loading configuration...</p>
                     </div>
                     <button id="btn-save-config" class="mt-6 w-full bg-[var(--bn-highlight)] hover:bg-[#3d7a4b] text-[#111a14] font-bold py-2 px-4 rounded-lg transition-colors">Save Configuration</button>
                     <p id="config-save-status" class="mt-2 text-sm hidden"></p>
                 </div>
+
+                <!-- Disk Management Card -->
+                <div class="bird-card p-6">
+                    <h3 class="text-lg font-bold text-white mb-4">Disk Management</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Full Disk Behavior</label>
+                            <div class="flex items-center space-x-4">
+                                <label class="flex items-center text-white"><input type="radio" id="config-FULL_DISK-purge" name="FULL_DISK" value="purge" class="mr-2 h-4 w-4 text-blue-600 bg-gray-700 border-gray-600 focus:ring-blue-500">Purge</label>
+                                <label class="flex items-center text-white"><input type="radio" id="config-FULL_DISK-keep" name="FULL_DISK" value="keep" class="mr-2 h-4 w-4 text-blue-600 bg-gray-700 border-gray-600 focus:ring-blue-500">Keep</label>
+                            </div>
+                            <p class="text-xs text-gray-400 mt-1">Choose 'purge' to delete old files or 'keep' to stop services when disk is full.</p>
+                        </div>
+                        <div>
+                            <label for="config-PURGE_THRESHOLD" class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Purge Threshold (%)</label>
+                            <input type="number" id="config-PURGE_THRESHOLD" name="PURGE_THRESHOLD" min="20" max="99" step="1" class="w-full bg-[var(--bn-bg)] text-white border border-[var(--bn-border)] rounded px-3 py-2 font-mono text-sm focus:outline-none focus:border-[var(--bn-highlight)]">
+                            <p class="text-xs text-gray-400 mt-1">Disk usage % to trigger purge or service stop.</p>
+                        </div>
+                        <div>
+                            <label for="config-MAX_FILES_SPECIES" class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Max Recordings per Species</label>
+                            <input type="number" id="config-MAX_FILES_SPECIES" name="MAX_FILES_SPECIES" min="0" step="1" class="w-full bg-[var(--bn-bg)] text-white border border-[var(--bn-border)] rounded px-3 py-2 font-mono text-sm focus:outline-none focus:border-[var(--bn-highlight)]">
+                            <p class="text-xs text-gray-400 mt-1">0 for unlimited. Oldest recordings are deleted first.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Audio Settings Card -->
+                <div class="bird-card p-6">
+                    <h3 class="text-lg font-bold text-white mb-4">Audio Settings</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label for="config-REC_CARD" class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Recording Device</label>
+                            <input type="text" id="config-REC_CARD" class="w-full bg-[var(--bn-bg)] text-white border border-[var(--bn-border)] rounded px-3 py-2 font-mono text-sm" placeholder="Default">
+                        </div>
+                        <div>
+                            <label for="config-CHANNELS" class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Channels</label>
+                            <input type="number" id="config-CHANNELS" min="1" max="2" step="1" class="w-full bg-[var(--bn-bg)] text-white border border-[var(--bn-border)] rounded px-3 py-2 font-mono text-sm">
+                        </div>
+                        <div>
+                            <label for="config-RECORDING_LENGTH" class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Recording Length (s)</label>
+                            <input type="number" id="config-RECORDING_LENGTH" min="1" class="w-full bg-[var(--bn-bg)] text-white border border-[var(--bn-border)] rounded px-3 py-2 font-mono text-sm">
+                        </div>
+                        <div>
+                            <label for="config-EXTRACTION_LENGTH" class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Extraction Length (s)</label>
+                            <input type="number" id="config-EXTRACTION_LENGTH" min="1" class="w-full bg-[var(--bn-bg)] text-white border border-[var(--bn-border)] rounded px-3 py-2 font-mono text-sm">
+                        </div>
+                         <div>
+                            <label for="config-HIGHPASS_FREQ" class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">High-Pass Filter (Hz)</label>
+                            <input type="number" id="config-HIGHPASS_FREQ" min="0" step="50" class="w-full bg-[var(--bn-bg)] text-white border border-[var(--bn-border)] rounded px-3 py-2 font-mono text-sm">
+                        </div>
+                        <div>
+                            <label for="config-AUDIOFMT" class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Audio Format</label>
+                            <input type="text" id="config-AUDIOFMT" class="w-full bg-[var(--bn-bg)] text-white border border-[var(--bn-border)] rounded px-3 py-2 font-mono text-sm">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Analysis & Model Settings Card -->
+                <div class="bird-card p-6">
+                    <h3 class="text-lg font-bold text-white mb-4">Analysis & Model Settings</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label for="config-MODEL" class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Analysis Model</label>
+                            <input type="text" id="config-MODEL" class="w-full bg-[var(--bn-bg)] text-white border border-[var(--bn-border)] rounded px-3 py-2 font-mono text-sm">
+                        </div>
+                        <div>
+                            <label for="config-SF_THRESH" class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Species Validation Threshold</label>
+                            <input type="number" id="config-SF_THRESH" step="0.01" class="w-full bg-[var(--bn-bg)] text-white border border-[var(--bn-border)] rounded px-3 py-2 font-mono text-sm">
+                        </div>
+                        <div>
+                            <label for="config-RARE_SPECIES_THRESHOLD" class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Rare Species Threshold (Days)</label>
+                            <input type="number" id="config-RARE_SPECIES_THRESHOLD" min="1" class="w-full bg-[var(--bn-bg)] text-white border border-[var(--bn-border)] rounded px-3 py-2 font-mono text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Raw Spectrogram</label>
+                            <input type="text" id="config-RAW_SPECTROGRAM" class="w-full bg-[var(--bn-bg)] text-white border border-[var(--bn-border)] rounded px-3 py-2 font-mono text-sm">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Notification Settings Card -->
+                <div class="bird-card p-6 lg:col-span-2">
+                    <h3 class="text-lg font-bold text-white mb-4">Notification Settings</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="space-y-4">
+                            <div>
+                                <label for="config-APPRISE_SERVICES" class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Apprise Service URLs</label>
+                                <textarea id="config-APPRISE_SERVICES" rows="4" class="w-full bg-[var(--bn-bg)] text-white border border-[var(--bn-border)] rounded px-3 py-2 font-mono text-sm" placeholder="One service URL per line..."></textarea>
+                            </div>
+                            <div>
+                                <label for="config-APPRISE_NOTIFICATION_TITLE" class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Notification Title</label>
+                                <input type="text" id="config-APPRISE_NOTIFICATION_TITLE" class="w-full bg-[var(--bn-bg)] text-white border border-[var(--bn-border)] rounded px-3 py-2 font-mono text-sm">
+                            </div>
+                             <div>
+                                <label for="config-APPRISE_MINIMUM_SECONDS_BETWEEN_NOTIFICATIONS_PER_SPECIES" class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Notification Cooldown (s)</label>
+                                <input type="number" id="config-APPRISE_MINIMUM_SECONDS_BETWEEN_NOTIFICATIONS_PER_SPECIES" min="0" class="w-full bg-[var(--bn-bg)] text-white border border-[var(--bn-border)] rounded px-3 py-2 font-mono text-sm">
+                            </div>
+                            <div class="flex items-center">
+                                <input id="config-APPRISE_NOTIFY_EACH_DETECTION" type="checkbox" class="h-4 w-4 rounded bg-[var(--bn-bg)] border-[var(--bn-border)] text-[var(--bn-highlight)] focus:ring-[var(--bn-highlight)]">
+                                <label for="config-APPRISE_NOTIFY_EACH_DETECTION" class="ml-2 block text-sm text-slate-200">Notify For Each Detection</label>
+                            </div>
+                            <div class="flex items-center">
+                                <input id="config-APPRISE_NOTIFY_NEW_SPECIES" type="checkbox" class="h-4 w-4 rounded bg-[var(--bn-bg)] border-[var(--bn-border)] text-[var(--bn-highlight)] focus:ring-[var(--bn-highlight)]">
+                                <label for="config-APPRISE_NOTIFY_NEW_SPECIES" class="ml-2 block text-sm text-slate-200">Notify For New Species (All Time)</label>
+                            </div>
+                            <div class="flex items-center">
+                                <input id="config-APPRISE_NOTIFY_NEW_SPECIES_EACH_DAY" type="checkbox" class="h-4 w-4 rounded bg-[var(--bn-bg)] border-[var(--bn-border)] text-[var(--bn-highlight)] focus:ring-[var(--bn-highlight)]">
+                                <label for="config-APPRISE_NOTIFY_NEW_SPECIES_EACH_DAY" class="ml-2 block text-sm text-slate-200">Notify For New Species (Daily)</label>
+                            </div>
+                            <div class="flex items-center">
+                                <input id="config-APPRISE_WEEKLY_REPORT" type="checkbox" class="h-4 w-4 rounded bg-[var(--bn-bg)] border-[var(--bn-border)] text-[var(--bn-highlight)] focus:ring-[var(--bn-highlight)]">
+                                <label for="config-APPRISE_WEEKLY_REPORT" class="ml-2 block text-sm text-slate-200">Send Weekly Report</label>
+                            </div>
+                        </div>
+                        <div class="space-y-4">
+                            <div>
+                                <label for="config-APPRISE_ONLY_NOTIFY_SPECIES_NAMES_2" class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Include Species List</label>
+                                <textarea id="config-APPRISE_ONLY_NOTIFY_SPECIES_NAMES_2" rows="5" class="w-full bg-[var(--bn-bg)] text-white border border-[var(--bn-border)] rounded px-3 py-2 font-mono text-sm" placeholder="One species name per line..."></textarea>
+                                <p class="text-xs text-gray-400 mt-1">Only send notifications for these species.</p>
+                            </div>
+                             <div>
+                                <label for="config-APPRISE_ONLY_NOTIFY_SPECIES_NAMES" class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Exclude Species List</label>
+                                <textarea id="config-APPRISE_ONLY_NOTIFY_SPECIES_NAMES" rows="5" class="w-full bg-[var(--bn-bg)] text-white border border-[var(--bn-border)] rounded px-3 py-2 font-mono text-sm" placeholder="One species name per line..."></textarea>
+                                <p class="text-xs text-gray-400 mt-1">Never send notifications for these species.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
                 <div class="bird-card p-6 flex flex-col justify-start">
                     <h3 class="text-lg font-bold text-white mb-4">System Telemetry</h3>
                     <div class="grid grid-cols-2 gap-4">
                         <div class="bg-[var(--bn-bg)] p-4 rounded-lg border border-[var(--bn-border)]">
                             <div class="flex justify-between items-center mb-1">
                                 <span class="block text-xs font-bold text-slate-400 uppercase">Temperature</span>
-                                <span id="sys-temp" class="text-lg font-bold text-white">--.-°F</span>
+                                <span id="sys-temp" class="text-lg font-bold text-white">--.-°C</span>
                             </div>
                             <div class="w-full bg-[#111a14] h-2 rounded-full overflow-hidden border border-[var(--bn-border)]">
                                 <div id="sys-temp-bar" class="bg-red-500 h-full w-0 transition-all duration-500"></div>
@@ -1850,13 +2012,13 @@
                 const res = await fetch(API_BASE + '/api/system');
                 const data = await res.json();
                 
-                // Per user request, CPU temperature is now always displayed in Celsius.
-                document.getElementById('sys-temp').innerText = `${data.temp.toFixed(1)}°C`;
+                const tempC = data.temp;
+                document.getElementById('sys-temp').innerText = `${tempC.toFixed(1)}°C`;
                 
                 const tempBar = document.getElementById('sys-temp-bar');
                 if (tempBar) {
-                    // The bar's percentage is based on Celsius, so it remains correct.
-                    const tempPct = Math.max(0, Math.min(100, ((data.temp - 0) / 85) * 100));
+                    // The bar's percentage is based on a 0-85°C range, which is a sensible default for system heat.
+                    const tempPct = Math.max(0, Math.min(100, ((tempC - 0) / 85) * 100));
                     tempBar.style.width = `${tempPct}%`;
                 }
                 
@@ -1880,7 +2042,7 @@
             }
             
             let html = '';
-            const keyFields = ['LATITUDE', 'LONGITUDE', 'CONFIDENCE', 'SENSITIVITY', 'OVERLAP', 'PRIVACY_THRESHOLD'];
+            const keyFields = ['CONFIDENCE', 'SENSITIVITY', 'OVERLAP', 'PRIVACY_THRESHOLD'];
             
             keyFields.forEach(k => {
                 const val = configData[k] || '';
@@ -1892,6 +2054,62 @@
                 `;
             });
             container.innerHTML = html;
+
+            // Populate General Site Settings
+            const generalFields = ['SITE_NAME', 'LATITUDE', 'LONGITUDE', 'TIMEZONE', 'BIRDWEATHER_ID', 'DATABASE_LANG', 'CADDY_PWD', 'BIRDNETPI_URL'];
+            generalFields.forEach(key => {
+                const el = document.getElementById(`config-${key}`);
+                if (el && configData[key]) {
+                    el.value = configData[key];
+                }
+            });
+
+            // Populate Disk Management settings
+            if (configData.FULL_DISK) {
+                const radio = document.getElementById(`config-FULL_DISK-${configData.FULL_DISK}`);
+                if (radio) radio.checked = true;
+            }
+            const purgeThreshold = document.getElementById('config-PURGE_THRESHOLD');
+            if (purgeThreshold && configData.PURGE_THRESHOLD) purgeThreshold.value = configData.PURGE_THRESHOLD;
+            
+            const maxFiles = document.getElementById('config-MAX_FILES_SPECIES');
+            if (maxFiles && configData.MAX_FILES_SPECIES) maxFiles.value = configData.MAX_FILES_SPECIES;
+
+            // Populate Audio Settings
+            const audioFields = ['REC_CARD', 'CHANNELS', 'RECORDING_LENGTH', 'EXTRACTION_LENGTH', 'HIGHPASS_FREQ', 'AUDIOFMT'];
+            audioFields.forEach(key => {
+                const el = document.getElementById(`config-${key}`);
+                if (el && configData[key]) {
+                    el.value = configData[key];
+                }
+            });
+
+            // Populate Analysis & Model Settings
+            const analysisFields = ['MODEL', 'SF_THRESH', 'RARE_SPECIES_THRESHOLD', 'RAW_SPECTROGRAM'];
+            analysisFields.forEach(key => {
+                const el = document.getElementById(`config-${key}`);
+                if (el && configData[key]) {
+                    el.value = configData[key];
+                }
+            });
+
+            // Populate Notification Settings
+            const notificationFields = [
+                'APPRISE_SERVICES', 'APPRISE_NOTIFICATION_TITLE', 'APPRISE_MINIMUM_SECONDS_BETWEEN_NOTIFICATIONS_PER_SPECIES',
+                'APPRISE_ONLY_NOTIFY_SPECIES_NAMES', 'APPRISE_ONLY_NOTIFY_SPECIES_NAMES_2'
+            ];
+            notificationFields.forEach(key => {
+                const el = document.getElementById(`config-${key}`);
+                if (el && configData[key]) el.value = configData[key];
+            });
+            const notificationCheckboxes = [
+                'APPRISE_NOTIFY_EACH_DETECTION', 'APPRISE_NOTIFY_NEW_SPECIES', 
+                'APPRISE_NOTIFY_NEW_SPECIES_EACH_DAY', 'APPRISE_WEEKLY_REPORT'
+            ];
+            notificationCheckboxes.forEach(key => {
+                const el = document.getElementById(`config-${key}`);
+                if (el && configData[key] === 'true') el.checked = true;
+            });
         }
 
         document.getElementById('btn-save-config').addEventListener('click', async () => {
@@ -1901,11 +2119,32 @@
             btn.innerText = 'Saving...';
             
             const updates = {};
-            const keyFields = ['LATITUDE', 'LONGITUDE', 'CONFIDENCE', 'SENSITIVITY', 'OVERLAP', 'PRIVACY_THRESHOLD'];
+            const keyFields = [
+                'CONFIDENCE', 'SENSITIVITY', 'OVERLAP', 'PRIVACY_THRESHOLD',
+                'PURGE_THRESHOLD', 'MAX_FILES_SPECIES',
+                'REC_CARD', 'CHANNELS', 'RECORDING_LENGTH', 'EXTRACTION_LENGTH', 'HIGHPASS_FREQ', 'AUDIOFMT',
+                'MODEL', 'SF_THRESH', 'RARE_SPECIES_THRESHOLD', 'RAW_SPECTROGRAM',
+                'APPRISE_SERVICES', 'APPRISE_NOTIFICATION_TITLE', 'APPRISE_MINIMUM_SECONDS_BETWEEN_NOTIFICATIONS_PER_SPECIES',
+                'APPRISE_ONLY_NOTIFY_SPECIES_NAMES', 'APPRISE_ONLY_NOTIFY_SPECIES_NAMES_2',
+                'SITE_NAME', 'LATITUDE', 'LONGITUDE', 'TIMEZONE', 'BIRDWEATHER_ID', 'DATABASE_LANG', 'CADDY_PWD', 'BIRDNETPI_URL'
+            ];
             keyFields.forEach(k => {
-                const el = document.getElementById(`conf-${k}`);
+                const inputId = k.startsWith('config-') ? k : `conf-${k}`;
+                const el = document.getElementById(inputId) || document.getElementById(`config-${k}`);
                 if(el) updates[k] = el.value;
             });
+
+            const checkboxes = [
+                'APPRISE_NOTIFY_EACH_DETECTION', 'APPRISE_NOTIFY_NEW_SPECIES', 
+                'APPRISE_NOTIFY_NEW_SPECIES_EACH_DAY', 'APPRISE_WEEKLY_REPORT'
+            ];
+            checkboxes.forEach(key => {
+                const el = document.getElementById(`config-${key}`);
+                if(el) updates[key] = el.checked ? 'true' : 'false';
+            });
+
+            const fullDiskRadio = document.querySelector('input[name="FULL_DISK"]:checked');
+            if (fullDiskRadio) updates['FULL_DISK'] = fullDiskRadio.value;
 
             try {
                 const res = await fetch(API_BASE + '/api/config/update', {
@@ -1914,15 +2153,16 @@
                     body: JSON.stringify(updates)
                 });
                 
-                if (res.ok) {
-                    status.innerText = "Configuration saved successfully. Restart service to apply.";
+                const result = await res.json();
+                if (res.ok && result.success) {
+                    status.innerText = "Configuration saved successfully. Some changes may require a service restart to apply.";
                     status.className = "mt-2 text-sm text-green-400 font-bold";
                     configData = { ...configData, ...updates }; 
                 } else {
-                    throw new Error('Save failed');
+                    throw new Error(result.message || 'Save failed');
                 }
             } catch (e) {
-                status.innerText = "Error saving configuration.";
+                status.innerText = "Error saving configuration: " + e.message;
                 status.className = "mt-2 text-sm text-red-400 font-bold";
             } finally {
                 status.classList.remove('hidden');

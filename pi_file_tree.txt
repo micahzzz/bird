@@ -1,0 +1,2917 @@
+.
+├── BirdNET-Pi
+│   ├── apprise.txt
+│   ├── BirdDB.txt
+│   ├── birdnet
+│   │   ├── bin
+│   │   │   ├── activate
+│   │   │   ├── activate.csh
+│   │   │   ├── activate.fish
+│   │   │   ├── Activate.ps1
+│   │   │   ├── apprise
+│   │   │   ├── f2py
+│   │   │   ├── fonttools
+│   │   │   ├── idna
+│   │   │   ├── jsonschema
+│   │   │   ├── markdown_py
+│   │   │   ├── normalizer
+│   │   │   ├── numba
+│   │   │   ├── numpy-config
+│   │   │   ├── pip
+│   │   │   ├── pip3
+│   │   │   ├── pip3.13
+│   │   │   ├── plotly_get_chrome
+│   │   │   ├── pyftmerge
+│   │   │   ├── pyftsubset
+│   │   │   ├── pyproject-build
+│   │   │   ├── py.test
+│   │   │   ├── pytest
+│   │   │   ├── python -> python3
+│   │   │   ├── python3 -> /usr/bin/python3
+│   │   │   ├── python3.13 -> python3
+│   │   │   ├── streamlit
+│   │   │   ├── streamlit.cmd
+│   │   │   ├── ttx
+│   │   │   ├── watchmedo
+│   │   │   └── wheel
+│   │   ├── etc
+│   │   │   └── jupyter
+│   │   │       └── nbconfig
+│   │   ├── include
+│   │   │   └── python3.13
+│   │   ├── lib
+│   │   │   └── python3.13
+│   │   │       └── site-packages
+│   │   ├── lib64 -> lib
+│   │   ├── pyvenv.cfg
+│   │   └── share
+│   │       ├── jupyter
+│   │       │   ├── labextensions
+│   │       │   └── nbextensions
+│   │       └── man
+│   │           └── man1
+│   ├── birdnet.conf
+│   ├── birdnet.db
+│   ├── body.txt
+│   ├── diagnostic.py.save
+│   ├── docs
+│   │   ├── overview.png
+│   │   ├── spectrogram.png
+│   │   └── translations.md
+│   ├── firstrun.ini
+│   ├── homepage
+│   │   ├── images
+│   │   │   ├── BirdNET-Pi_nm_flowchart.alpha.png
+│   │   │   ├── bird.png
+│   │   │   ├── bird.svg
+│   │   │   ├── bnp.png
+│   │   │   ├── chart.svg
+│   │   │   ├── check.svg
+│   │   │   ├── copy.png
+│   │   │   ├── delete.svg
+│   │   │   ├── favicon.ico
+│   │   │   ├── info.png
+│   │   │   ├── lock.svg
+│   │   │   ├── menu.png
+│   │   │   ├── shift.svg
+│   │   │   ├── sort_abc.svg
+│   │   │   ├── sort_conf.svg
+│   │   │   ├── sort_date.svg
+│   │   │   ├── sort_occ.svg
+│   │   │   ├── spinner.gif
+│   │   │   ├── unlock.svg
+│   │   │   ├── unshift.svg
+│   │   │   └── wiki.png
+│   │   ├── index.php
+│   │   ├── static
+│   │   │   ├── Chart.bundle.js
+│   │   │   ├── chartjs-plugin-trendline.min.js
+│   │   │   ├── custom-audio-player.js
+│   │   │   ├── dark-style.css
+│   │   │   ├── dialog-polyfill.css
+│   │   │   ├── dialog-polyfill.js
+│   │   │   ├── generateMiniGraph.js
+│   │   │   ├── NotoSansArabic-Regular.ttf
+│   │   │   ├── NotoSansJP-Regular.ttf
+│   │   │   ├── NotoSansKR-Regular.ttf
+│   │   │   ├── NotoSansThai-Regular.ttf
+│   │   │   ├── plupload.full.min.js
+│   │   │   └── RobotoFlex-Regular.ttf
+│   │   ├── style.css
+│   │   └── views.php
+│   ├── LICENSE
+│   ├── model
+│   │   ├── BirdNET_6K_GLOBAL_MODEL_Labels.txt
+│   │   ├── BirdNET_6K_GLOBAL_MODEL.tflite
+│   │   ├── BirdNET_GLOBAL_6K_V2.4_MData_Model_FP16.tflite
+│   │   ├── BirdNET_GLOBAL_6K_V2.4_MData_Model_V2_FP16.tflite
+│   │   ├── BirdNET_GLOBAL_6K_V2.4_Model_FP16_Labels.txt
+│   │   ├── BirdNET_GLOBAL_6K_V2.4_Model_FP16.tflite
+│   │   ├── l18n
+│   │   │   ├── labels_af.json
+│   │   │   ├── labels_ar.json
+│   │   │   ├── labels_ca.json
+│   │   │   ├── labels_cs.json
+│   │   │   ├── labels_da.json
+│   │   │   ├── labels_de.json
+│   │   │   ├── labels_en.json
+│   │   │   ├── labels_es.json
+│   │   │   ├── labels_et.json
+│   │   │   ├── labels_fi.json
+│   │   │   ├── labels_fr.json
+│   │   │   ├── labels_hr.json
+│   │   │   ├── labels_hu.json
+│   │   │   ├── labels_id.json
+│   │   │   ├── labels_is.json
+│   │   │   ├── labels_it.json
+│   │   │   ├── labels_ja.json
+│   │   │   ├── labels_ko.json
+│   │   │   ├── labels_lt.json
+│   │   │   ├── labels_lv.json
+│   │   │   ├── labels_nl.json
+│   │   │   ├── labels_no.json
+│   │   │   ├── labels_pl.json
+│   │   │   ├── labels_pt.json
+│   │   │   ├── labels_ro.json
+│   │   │   ├── labels_ru.json
+│   │   │   ├── labels_sk.json
+│   │   │   ├── labels_sl.json
+│   │   │   ├── labels_sr.json
+│   │   │   ├── labels_sv.json
+│   │   │   ├── labels_th.json
+│   │   │   ├── labels_tr.json
+│   │   │   ├── labels_uk.json
+│   │   │   ├── labels_vi.json
+│   │   │   ├── labels_zh_CN.json
+│   │   │   └── labels_zh_TW.json
+│   │   ├── labels_flickr.txt -> /home/birder/BirdNET-Pi/model/labels_nm/labels_en.txt
+│   │   └── labels.txt
+│   ├── newinstaller.sh
+│   ├── pi_file_tree.txt
+│   ├── README.md
+│   ├── requirements_custom.txt
+│   ├── requirements.txt
+│   ├── scripts
+│   │   ├── adminer-de.php
+│   │   ├── adminer-fr.php
+│   │   ├── adminer.php
+│   │   ├── advanced.php
+│   │   ├── api.php
+│   │   ├── backup_data.sh
+│   │   ├── backup.php
+│   │   ├── birdnet_analysis.py
+│   │   ├── birdnet_changeidentification.sh
+│   │   ├── birdnet_log.sh
+│   │   ├── birdnet_recording.sh
+│   │   ├── birds.db
+│   │   ├── cleanup.sh
+│   │   ├── clear_all_data.sh
+│   │   ├── common.php
+│   │   ├── config.php
+│   │   ├── confirmed_species_list.txt -> /home/birder/BirdNET-Pi/confirmed_species_list.txt
+│   │   ├── createdb.sh
+│   │   ├── custom_recording.sh
+│   │   ├── daily_plot.py
+│   │   ├── disk_check_exclude.txt
+│   │   ├── disk_check.sh
+│   │   ├── disk_species_clean.sh
+│   │   ├── disk_species_count.sh
+│   │   ├── disk_usage.sh
+│   │   ├── dump_logs.sh
+│   │   ├── ebird.php
+│   │   ├── exclude_species_list.txt -> /home/birder/BirdNET-Pi/exclude_species_list.txt
+│   │   ├── extra_info.sh
+│   │   ├── filemanager
+│   │   │   ├── filemanager.php
+│   │   │   ├── LICENSE
+│   │   │   ├── SECURITY.md
+│   │   │   └── translation.json
+│   │   ├── gotty
+│   │   ├── gotty-aarch64
+│   │   ├── gotty-x86_64
+│   │   ├── history.php
+│   │   ├── include_species_list.txt -> /home/birder/BirdNET-Pi/include_species_list.txt
+│   │   ├── __init__.py
+│   │   ├── install_birdnet.sh
+│   │   ├── install_config.sh
+│   │   ├── install_helpers.sh
+│   │   ├── install_language_label.sh
+│   │   ├── install_noip2.sh
+│   │   ├── install_services.sh
+│   │   ├── install_zram_service.sh
+│   │   ├── labels.txt -> /home/birder/BirdNET-Pi/model/labels.txt
+│   │   ├── livestream.sh
+│   │   ├── most_recent.sh
+│   │   ├── overview.php
+│   │   ├── play.php
+│   │   ├── plotly_streamlit.py
+│   │   ├── pre_update.sh
+│   │   ├── print_diagnostic_info.sh
+│   │   ├── read_chunks.sh
+│   │   ├── restart_services.sh
+│   │   ├── restore.php
+│   │   ├── send_test_notification.py
+│   │   ├── service_controls.php
+│   │   ├── species_list.php
+│   │   ├── species_notifier.sh
+│   │   ├── species.py
+│   │   ├── species_tools.php
+│   │   ├── spectrogram.php
+│   │   ├── spectrogram.sh
+│   │   ├── stats.php
+│   │   ├── stop_core_services.sh
+│   │   ├── system_controls.php
+│   │   ├── todays_detections.php
+│   │   ├── uninstall.sh
+│   │   ├── update_birdnet.sh
+│   │   ├── update_birdnet_snippets.sh
+│   │   ├── update_caddyfile.sh
+│   │   ├── update_species.sh
+│   │   ├── utils
+│   │   │   ├── analysis.py
+│   │   │   ├── classes.py
+│   │   │   ├── db.py
+│   │   │   ├── helpers.py
+│   │   │   ├── __init__.py
+│   │   │   ├── maintainer.py
+│   │   │   ├── models.py
+│   │   │   ├── notifications.py
+│   │   │   └── reporting.py
+│   │   ├── weekly_report.php
+│   │   ├── weekly_report.sh
+│   │   ├── whitelist_species_list.txt -> /home/birder/BirdNET-Pi/whitelist_species_list.txt
+│   │   └── wikipedia.db
+│   ├── templates
+│   │   ├── automatic_update.cron
+│   │   ├── avahi-alias@.service
+│   │   ├── bashrc
+│   │   ├── birdnet_analysis.service
+│   │   ├── birdnet_log.service
+│   │   ├── birdnet_recording.service
+│   │   ├── birdnet_stats.service
+│   │   ├── chart_viewer.service
+│   │   ├── cleanup.cron
+│   │   ├── custom_recording.service
+│   │   ├── gotty
+│   │   ├── green_bootstrap.css
+│   │   ├── home-birder-BirdSongs-StreamData.mount
+│   │   ├── http.service
+│   │   ├── index_bootstrap.html
+│   │   ├── livestream.service
+│   │   ├── phpsysinfo.ini
+│   │   ├── spectrogram_viewer.service
+│   │   ├── tmux.conf
+│   │   ├── web_terminal.service
+│   │   └── weekly_report.cron
+│   ├── tests
+│   │   ├── helpers.py
+│   │   ├── __init__.py
+│   │   ├── test_analysis.py
+│   │   ├── test_apprise_notifications.py
+│   │   └── testdata
+│   ├── tflite_runtime-2.17.1-cp313-cp313-linux_aarch64.whl
+│   └── version.md
+├── birdnet-ui
+│   ├── birdnet_core.py
+│   ├── fastapi_app
+│   │   ├── database.py
+│   │   ├── main.py
+│   │   ├── routers
+│   │   │   ├── compiler.py
+│   │   │   ├── detections.py
+│   │   │   ├── gallery.py
+│   │   │   ├── __init__.py
+│   │   │   ├── streaming.py
+│   │   │   └── system.py
+│   │   └── static
+│   │       ├── bird_art
+│   │       │   ├── acanthis-flammea-2.png
+│   │       │   ├── acanthis-flammea.png
+│   │       │   ├── accipiter-cooperii-2.png
+│   │       │   ├── accipiter-cooperii.png
+│   │       │   ├── accipiter-gentilis-2.png
+│   │       │   ├── accipiter-gentilis.png
+│   │       │   ├── accipiter-striatus-2.png
+│   │       │   ├── accipiter-striatus.png
+│   │       │   ├── actitis-macularius-2.png
+│   │       │   ├── actitis-macularius.png
+│   │       │   ├── aechmophorus-occidentalis-2.png
+│   │       │   ├── aechmophorus-occidentalis.png
+│   │       │   ├── aegolius-acadicus-2.png
+│   │       │   ├── aegolius-acadicus.png
+│   │       │   ├── aeronautes-saxatalis-2.png
+│   │       │   ├── aeronautes-saxatalis.png
+│   │       │   ├── agelaius-phoeniceus-2.png
+│   │       │   ├── agelaius-phoeniceus.png
+│   │       │   ├── aix-sponsa-2.png
+│   │       │   ├── aix-sponsa.png
+│   │       │   ├── ammodramus-savannarum-2.png
+│   │       │   ├── ammodramus-savannarum.png
+│   │       │   ├── amphispiza-bilineata-2.png
+│   │       │   ├── amphispiza-bilineata.png
+│   │       │   ├── anas-acuta-2.png
+│   │       │   ├── anas-acuta.png
+│   │       │   ├── anas-crecca-2.png
+│   │       │   ├── anas-crecca.png
+│   │       │   ├── anas-platyrhynchos-2.png
+│   │       │   ├── anas-platyrhynchos.png
+│   │       │   ├── anas-rubripes-2.png
+│   │       │   ├── anas-rubripes.png
+│   │       │   ├── anser-albifrons-2.png
+│   │       │   ├── anser-albifrons.png
+│   │       │   ├── anthus-rubescens-2.png
+│   │       │   ├── anthus-rubescens.png
+│   │       │   ├── antigone-canadensis-2.png
+│   │       │   ├── antigone-canadensis.png
+│   │       │   ├── antrostomus-vociferus-2.png
+│   │       │   ├── antrostomus-vociferus.png
+│   │       │   ├── aphelocoma-californica-2.png
+│   │       │   ├── aphelocoma-californica.png
+│   │       │   ├── aphelocoma-woodhouseii-2.png
+│   │       │   ├── aphelocoma-woodhouseii.png
+│   │       │   ├── aquila-chrysaetos-2.png
+│   │       │   ├── aquila-chrysaetos.png
+│   │       │   ├── archilochus-alexandri-2.png
+│   │       │   ├── archilochus-alexandri.png
+│   │       │   ├── archilochus-colubris-2.png
+│   │       │   ├── archilochus-colubris.png
+│   │       │   ├── ardea-alba-2.png
+│   │       │   ├── ardea-alba.png
+│   │       │   ├── ardea-herodias-2.png
+│   │       │   ├── ardea-herodias.png
+│   │       │   ├── artemisiospiza-belli-2.png
+│   │       │   ├── artemisiospiza-belli.png
+│   │       │   ├── asio-flammeus-2.png
+│   │       │   ├── asio-flammeus.png
+│   │       │   ├── asio-otus-2.png
+│   │       │   ├── asio-otus.png
+│   │       │   ├── athene-cunicularia-2.png
+│   │       │   ├── athene-cunicularia.png
+│   │       │   ├── aythya-affinis-2.png
+│   │       │   ├── aythya-affinis.png
+│   │       │   ├── aythya-americana-2.png
+│   │       │   ├── aythya-americana.png
+│   │       │   ├── aythya-collaris-2.png
+│   │       │   ├── aythya-collaris.png
+│   │       │   ├── aythya-valisineria-2.png
+│   │       │   ├── aythya-valisineria.png
+│   │       │   ├── baeolophus-bicolor-2.png
+│   │       │   ├── baeolophus-bicolor.png
+│   │       │   ├── baeolophus-inornatus-2.png
+│   │       │   ├── baeolophus-inornatus.png
+│   │       │   ├── bombycilla-cedrorum-2.png
+│   │       │   ├── bombycilla-cedrorum.png
+│   │       │   ├── bombycilla-garrulus-2.png
+│   │       │   ├── bombycilla-garrulus.png
+│   │       │   ├── bonasa-umbellus-2.png
+│   │       │   ├── bonasa-umbellus.png
+│   │       │   ├── botaurus-lentiginosus-2.png
+│   │       │   ├── botaurus-lentiginosus.png
+│   │       │   ├── branta-canadensis-2.png
+│   │       │   ├── branta-canadensis.png
+│   │       │   ├── bubo-virginianus-2.png
+│   │       │   ├── bubo-virginianus.png
+│   │       │   ├── bubulcus-ibis-2.png
+│   │       │   ├── bubulcus-ibis.png
+│   │       │   ├── bucephala-albeola-2.png
+│   │       │   ├── bucephala-albeola.png
+│   │       │   ├── bucephala-clangula-2.png
+│   │       │   ├── bucephala-clangula.png
+│   │       │   ├── buteo-jamaicensis-2.png
+│   │       │   ├── buteo-jamaicensis.png
+│   │       │   ├── buteo-lagopus-2.png
+│   │       │   ├── buteo-lagopus.png
+│   │       │   ├── buteo-lineatus-2.png
+│   │       │   ├── buteo-lineatus.png
+│   │       │   ├── buteo-platypterus-2.png
+│   │       │   ├── buteo-platypterus.png
+│   │       │   ├── buteo-regalis-2.png
+│   │       │   ├── buteo-regalis.png
+│   │       │   ├── buteo-swainsoni-2.png
+│   │       │   ├── buteo-swainsoni.png
+│   │       │   ├── butorides-virescens-2.png
+│   │       │   ├── butorides-virescens.png
+│   │       │   ├── calamospiza-melanocorys-2.png
+│   │       │   ├── calamospiza-melanocorys.png
+│   │       │   ├── calidris-alba-2.png
+│   │       │   ├── calidris-alba.png
+│   │       │   ├── calidris-alpina-2.png
+│   │       │   ├── calidris-alpina.png
+│   │       │   ├── calidris-minutilla-2.png
+│   │       │   ├── calidris-minutilla.png
+│   │       │   ├── calidris-pusilla-2.png
+│   │       │   ├── calidris-pusilla.png
+│   │       │   ├── callipepla-californica-2.png
+│   │       │   ├── callipepla-californica.png
+│   │       │   ├── calothorax-lucifer-2.png
+│   │       │   ├── calothorax-lucifer.png
+│   │       │   ├── calypte-anna-2.png
+│   │       │   ├── calypte-anna.png
+│   │       │   ├── calypte-costae-2.png
+│   │       │   ├── calypte-costae.png
+│   │       │   ├── cardellina-canadensis-2.png
+│   │       │   ├── cardellina-canadensis.png
+│   │       │   ├── cardellina-pusilla-2.png
+│   │       │   ├── cardellina-pusilla.png
+│   │       │   ├── cardellina-rubrifrons-2.png
+│   │       │   ├── cardellina-rubrifrons.png
+│   │       │   ├── cardinalis-cardinalis-2.png
+│   │       │   ├── cardinalis-cardinalis.png
+│   │       │   ├── cathartes-aura-2.png
+│   │       │   ├── cathartes-aura.png
+│   │       │   ├── catharus-fuscescens-2.png
+│   │       │   ├── catharus-fuscescens.png
+│   │       │   ├── catharus-guttatus-2.png
+│   │       │   ├── catharus-guttatus.png
+│   │       │   ├── catharus-ustulatus-2.png
+│   │       │   ├── catharus-ustulatus.png
+│   │       │   ├── catherpes-mexicanus-2.png
+│   │       │   ├── catherpes-mexicanus.png
+│   │       │   ├── certhia-americana-2.png
+│   │       │   ├── certhia-americana.png
+│   │       │   ├── chaetura-pelagica-2.png
+│   │       │   ├── chaetura-pelagica.png
+│   │       │   ├── chaetura-vauxi-2.png
+│   │       │   ├── chaetura-vauxi.png
+│   │       │   ├── charadrius-melodus-2.png
+│   │       │   ├── charadrius-melodus.png
+│   │       │   ├── charadrius-semipalmatus-2.png
+│   │       │   ├── charadrius-semipalmatus.png
+│   │       │   ├── charadrius-vociferus-2.png
+│   │       │   ├── charadrius-vociferus.png
+│   │       │   ├── chlidonias-niger-2.png
+│   │       │   ├── chlidonias-niger.png
+│   │       │   ├── chondestes-grammacus-2.png
+│   │       │   ├── chondestes-grammacus.png
+│   │       │   ├── chordeiles-minor-2.png
+│   │       │   ├── chordeiles-minor.png
+│   │       │   ├── chroicocephalus-philadelphia-2.png
+│   │       │   ├── chroicocephalus-philadelphia.png
+│   │       │   ├── cinclus-mexicanus-2.png
+│   │       │   ├── cinclus-mexicanus.png
+│   │       │   ├── circus-hudsonius-2.png
+│   │       │   ├── circus-hudsonius.png
+│   │       │   ├── cistothorus-palustris-2.png
+│   │       │   ├── cistothorus-palustris.png
+│   │       │   ├── coccothraustes-vespertinus-2.png
+│   │       │   ├── coccothraustes-vespertinus.png
+│   │       │   ├── coccyzus-americanus-2.png
+│   │       │   ├── coccyzus-americanus.png
+│   │       │   ├── coccyzus-erythropthalmus-2.png
+│   │       │   ├── coccyzus-erythropthalmus.png
+│   │       │   ├── colaptes-auratus-2.png
+│   │       │   ├── colaptes-auratus.png
+│   │       │   ├── columba-livia-2.png
+│   │       │   ├── columba-livia.png
+│   │       │   ├── columbina-passerina-2.png
+│   │       │   ├── columbina-passerina.png
+│   │       │   ├── contopus-cooperi-2.png
+│   │       │   ├── contopus-cooperi.png
+│   │       │   ├── contopus-sordidulus-2.png
+│   │       │   ├── contopus-sordidulus.png
+│   │       │   ├── contopus-virens-2.png
+│   │       │   ├── contopus-virens.png
+│   │       │   ├── coragyps-atratus-2.png
+│   │       │   ├── coragyps-atratus.png
+│   │       │   ├── corthylio-calendula-2.png
+│   │       │   ├── corthylio-calendula.png
+│   │       │   ├── corvus-brachyrhynchos-2.png
+│   │       │   ├── corvus-brachyrhynchos.png
+│   │       │   ├── corvus-corax-2.png
+│   │       │   ├── corvus-corax.png
+│   │       │   ├── cyanocitta-cristata-2.png
+│   │       │   ├── cyanocitta-cristata.png
+│   │       │   ├── cyanocitta-stelleri-2.png
+│   │       │   ├── cyanocitta-stelleri.png
+│   │       │   ├── cygnus-buccinator-2.png
+│   │       │   ├── cygnus-buccinator.png
+│   │       │   ├── cygnus-olor-2.png
+│   │       │   ├── cygnus-olor.png
+│   │       │   ├── cypseloides-niger-2.png
+│   │       │   ├── cypseloides-niger.png
+│   │       │   ├── dolichonyx-oryzivorus-2.png
+│   │       │   ├── dolichonyx-oryzivorus.png
+│   │       │   ├── dryobates-nuttallii-2.png
+│   │       │   ├── dryobates-nuttallii.png
+│   │       │   ├── dryobates-pubescens-2.png
+│   │       │   ├── dryobates-pubescens.png
+│   │       │   ├── dryobates-villosus-2.png
+│   │       │   ├── dryobates-villosus.png
+│   │       │   ├── dryocopus-pileatus-2.png
+│   │       │   ├── dryocopus-pileatus.png
+│   │       │   ├── dumetella-carolinensis-2.png
+│   │       │   ├── dumetella-carolinensis.png
+│   │       │   ├── egretta-caerulea-2.png
+│   │       │   ├── egretta-caerulea.png
+│   │       │   ├── egretta-thula-2.png
+│   │       │   ├── egretta-thula.png
+│   │       │   ├── elanus-leucurus-2.png
+│   │       │   ├── elanus-leucurus.png
+│   │       │   ├── empidonax-alnorum-2.png
+│   │       │   ├── empidonax-alnorum.png
+│   │       │   ├── empidonax-difficilis-2.png
+│   │       │   ├── empidonax-difficilis.png
+│   │       │   ├── empidonax-flaviventris-2.png
+│   │       │   ├── empidonax-flaviventris.png
+│   │       │   ├── empidonax-hammondii-2.png
+│   │       │   ├── empidonax-hammondii.png
+│   │       │   ├── empidonax-minimus-2.png
+│   │       │   ├── empidonax-minimus.png
+│   │       │   ├── empidonax-oberholseri-2.png
+│   │       │   ├── empidonax-oberholseri.png
+│   │       │   ├── empidonax-traillii-2.png
+│   │       │   ├── empidonax-traillii.png
+│   │       │   ├── empidonax-wrightii-2.png
+│   │       │   ├── empidonax-wrightii.png
+│   │       │   ├── eremophila-alpestris-2.png
+│   │       │   ├── eremophila-alpestris.png
+│   │       │   ├── euphagus-cyanocephalus-2.png
+│   │       │   ├── euphagus-cyanocephalus.png
+│   │       │   ├── falco-columbarius-2.png
+│   │       │   ├── falco-columbarius.png
+│   │       │   ├── falco-mexicanus-2.png
+│   │       │   ├── falco-mexicanus.png
+│   │       │   ├── falco-peregrinus-2.png
+│   │       │   ├── falco-peregrinus.png
+│   │       │   ├── falco-sparverius-2.png
+│   │       │   ├── falco-sparverius.png
+│   │       │   ├── fulica-americana-2.png
+│   │       │   ├── fulica-americana.png
+│   │       │   ├── gavia-immer-2.png
+│   │       │   ├── gavia-immer.png
+│   │       │   ├── geothlypis-philadelphia-2.png
+│   │       │   ├── geothlypis-philadelphia.png
+│   │       │   ├── geothlypis-tolmiei-2.png
+│   │       │   ├── geothlypis-tolmiei.png
+│   │       │   ├── geothlypis-trichas-2.png
+│   │       │   ├── geothlypis-trichas.png
+│   │       │   ├── glaucidium-gnoma-2.png
+│   │       │   ├── glaucidium-gnoma.png
+│   │       │   ├── gymnogyps-californianus-2.png
+│   │       │   ├── gymnogyps-californianus.png
+│   │       │   ├── haemorhous-mexicanus-2.png
+│   │       │   ├── haemorhous-mexicanus.png
+│   │       │   ├── haemorhous-purpureus-2.png
+│   │       │   ├── haemorhous-purpureus.png
+│   │       │   ├── haliaeetus-leucocephalus-2.png
+│   │       │   ├── haliaeetus-leucocephalus.png
+│   │       │   ├── himantopus-mexicanus-2.png
+│   │       │   ├── himantopus-mexicanus.png
+│   │       │   ├── hirundo-rustica-2.png
+│   │       │   ├── hirundo-rustica.png
+│   │       │   ├── hydroprogne-caspia-2.png
+│   │       │   ├── hydroprogne-caspia.png
+│   │       │   ├── hylocichla-mustelina-2.png
+│   │       │   ├── hylocichla-mustelina.png
+│   │       │   ├── icteria-virens-2.png
+│   │       │   ├── icteria-virens.png
+│   │       │   ├── icterus-bullockii-2.png
+│   │       │   ├── icterus-bullockii.png
+│   │       │   ├── icterus-cucullatus-2.png
+│   │       │   ├── icterus-cucullatus.png
+│   │       │   ├── icterus-galbula-2.png
+│   │       │   ├── icterus-galbula.png
+│   │       │   ├── icterus-parisorum-2.png
+│   │       │   ├── icterus-parisorum.png
+│   │       │   ├── icterus-spurius-2.png
+│   │       │   ├── icterus-spurius.png
+│   │       │   ├── ixobrychus-exilis-2.png
+│   │       │   ├── ixobrychus-exilis.png
+│   │       │   ├── ixoreus-naevius-2.png
+│   │       │   ├── ixoreus-naevius.png
+│   │       │   ├── junco-hyemalis-2.png
+│   │       │   ├── junco-hyemalis.png
+│   │       │   ├── lanius-ludovicianus-2.png
+│   │       │   ├── lanius-ludovicianus.png
+│   │       │   ├── larus-argentatus-2.png
+│   │       │   ├── larus-argentatus.png
+│   │       │   ├── larus-californicus-2.png
+│   │       │   ├── larus-californicus.png
+│   │       │   ├── larus-delawarensis-2.png
+│   │       │   ├── larus-delawarensis.png
+│   │       │   ├── larus-glaucescens-2.png
+│   │       │   ├── larus-glaucescens.png
+│   │       │   ├── larus-heermanni-2.png
+│   │       │   ├── larus-heermanni.png
+│   │       │   ├── larus-marinus-2.png
+│   │       │   ├── larus-marinus.png
+│   │       │   ├── larus-occidentalis-2.png
+│   │       │   ├── larus-occidentalis.png
+│   │       │   ├── leiothlypis-celata-2.png
+│   │       │   ├── leiothlypis-celata.png
+│   │       │   ├── leiothlypis-lucidae-2.png
+│   │       │   ├── leiothlypis-lucidae.png
+│   │       │   ├── leiothlypis-peregrina-2.png
+│   │       │   ├── leiothlypis-peregrina.png
+│   │       │   ├── leiothlypis-ruficapilla-2.png
+│   │       │   ├── leiothlypis-ruficapilla.png
+│   │       │   ├── leucophaeus-atricilla-2.png
+│   │       │   ├── leucophaeus-atricilla.png
+│   │       │   ├── leucophaeus-pipixcan-2.png
+│   │       │   ├── leucophaeus-pipixcan.png
+│   │       │   ├── leucosticte-tephrocotis-2.png
+│   │       │   ├── leucosticte-tephrocotis.png
+│   │       │   ├── limosa-fedoa-2.png
+│   │       │   ├── limosa-fedoa.png
+│   │       │   ├── lophodytes-cucullatus-2.png
+│   │       │   ├── lophodytes-cucullatus.png
+│   │       │   ├── loxia-curvirostra-2.png
+│   │       │   ├── loxia-curvirostra.png
+│   │       │   ├── mareca-americana-2.png
+│   │       │   ├── mareca-americana.png
+│   │       │   ├── mareca-strepera-2.png
+│   │       │   ├── mareca-strepera.png
+│   │       │   ├── megaceryle-alcyon-2.png
+│   │       │   ├── megaceryle-alcyon.png
+│   │       │   ├── megascops-asio-2.png
+│   │       │   ├── megascops-asio.png
+│   │       │   ├── megascops-kennicottii-2.png
+│   │       │   ├── megascops-kennicottii.png
+│   │       │   ├── melanerpes-carolinus-2.png
+│   │       │   ├── melanerpes-carolinus.png
+│   │       │   ├── melanerpes-erythrocephalus-2.png
+│   │       │   ├── melanerpes-erythrocephalus.png
+│   │       │   ├── melanerpes-formicivorus-2.png
+│   │       │   ├── melanerpes-formicivorus.png
+│   │       │   ├── melanerpes-lewis-2.png
+│   │       │   ├── melanerpes-lewis.png
+│   │       │   ├── meleagris-gallopavo-2.png
+│   │       │   ├── meleagris-gallopavo.png
+│   │       │   ├── melospiza-georgiana-2.png
+│   │       │   ├── melospiza-georgiana.png
+│   │       │   ├── melospiza-lincolnii-2.png
+│   │       │   ├── melospiza-lincolnii.png
+│   │       │   ├── melospiza-melodia-2.png
+│   │       │   ├── melospiza-melodia.png
+│   │       │   ├── melozone-aberti-2.png
+│   │       │   ├── melozone-aberti.png
+│   │       │   ├── melozone-crissalis-2.png
+│   │       │   ├── melozone-crissalis.png
+│   │       │   ├── melozone-fusca-2.png
+│   │       │   ├── melozone-fusca.png
+│   │       │   ├── mergus-merganser-2.png
+│   │       │   ├── mergus-merganser.png
+│   │       │   ├── mimus-polyglottos-2.png
+│   │       │   ├── mimus-polyglottos.png
+│   │       │   ├── mniotilta-varia-2.png
+│   │       │   ├── mniotilta-varia.png
+│   │       │   ├── molothrus-ater-2.png
+│   │       │   ├── molothrus-ater.png
+│   │       │   ├── myadestes-townsendi-2.png
+│   │       │   ├── myadestes-townsendi.png
+│   │       │   ├── myiarchus-cinerascens-2.png
+│   │       │   ├── myiarchus-cinerascens.png
+│   │       │   ├── myiarchus-crinitus-2.png
+│   │       │   ├── myiarchus-crinitus.png
+│   │       │   ├── nannopterum-auritum-2.png
+│   │       │   ├── nannopterum-auritum.png
+│   │       │   ├── nucifraga-columbiana-2.png
+│   │       │   ├── nucifraga-columbiana.png
+│   │       │   ├── numenius-americanus-2.png
+│   │       │   ├── numenius-americanus.png
+│   │       │   ├── nycticorax-nycticorax-2.png
+│   │       │   ├── nycticorax-nycticorax.png
+│   │       │   ├── oreothlypis-ruficapilla-2.png
+│   │       │   ├── oreothlypis-ruficapilla.png
+│   │       │   ├── pandion-haliaetus-2.png
+│   │       │   ├── pandion-haliaetus.png
+│   │       │   ├── parkesia-noveboracensis-2.png
+│   │       │   ├── parkesia-noveboracensis.png
+│   │       │   ├── passerculus-sandwichensis-2.png
+│   │       │   ├── passerculus-sandwichensis.png
+│   │       │   ├── passer-domesticus-2.png
+│   │       │   ├── passer-domesticus.png
+│   │       │   ├── passerella-iliaca-2.png
+│   │       │   ├── passerella-iliaca.png
+│   │       │   ├── passerina-amoena-2.png
+│   │       │   ├── passerina-amoena.png
+│   │       │   ├── passerina-cyanea-2.png
+│   │       │   ├── passerina-cyanea.png
+│   │       │   ├── patagioenas-fasciata-2.png
+│   │       │   ├── patagioenas-fasciata.png
+│   │       │   ├── pelecanus-erythrorhynchos-2.png
+│   │       │   ├── pelecanus-erythrorhynchos.png
+│   │       │   ├── pelecanus-occidentalis-2.png
+│   │       │   ├── pelecanus-occidentalis.png
+│   │       │   ├── perisoreus-canadensis-2.png
+│   │       │   ├── perisoreus-canadensis.png
+│   │       │   ├── petrochelidon-pyrrhonota-2.png
+│   │       │   ├── petrochelidon-pyrrhonota.png
+│   │       │   ├── phainopepla-nitens-2.png
+│   │       │   ├── phainopepla-nitens.png
+│   │       │   ├── phalacrocorax-auritus-2.png
+│   │       │   ├── phalacrocorax-auritus.png
+│   │       │   ├── phalaenoptilus-nuttallii-2.png
+│   │       │   ├── phalaenoptilus-nuttallii.png
+│   │       │   ├── phasianus-colchicus-2.png
+│   │       │   ├── phasianus-colchicus.png
+│   │       │   ├── pheucticus-ludovicianus-2.png
+│   │       │   ├── pheucticus-ludovicianus.png
+│   │       │   ├── pheucticus-melanocephalus-2.png
+│   │       │   ├── pheucticus-melanocephalus.png
+│   │       │   ├── pica-nuttalli-2.png
+│   │       │   ├── pica-nuttalli.png
+│   │       │   ├── picoides-arcticus-2.png
+│   │       │   ├── picoides-arcticus.png
+│   │       │   ├── pinicola-enucleator-2.png
+│   │       │   ├── pinicola-enucleator.png
+│   │       │   ├── pipilo-chlorurus-2.png
+│   │       │   ├── pipilo-chlorurus.png
+│   │       │   ├── pipilo-erythrophthalmus-2.png
+│   │       │   ├── pipilo-erythrophthalmus.png
+│   │       │   ├── pipilo-maculatus-2.png
+│   │       │   ├── pipilo-maculatus.png
+│   │       │   ├── piranga-ludoviciana-2.png
+│   │       │   ├── piranga-ludoviciana.png
+│   │       │   ├── piranga-olivacea-2.png
+│   │       │   ├── piranga-olivacea.png
+│   │       │   ├── piranga-rubra-2.png
+│   │       │   ├── piranga-rubra.png
+│   │       │   ├── plegadis-chihi-2.png
+│   │       │   ├── plegadis-chihi.png
+│   │       │   ├── pluvialis-squatarola-2.png
+│   │       │   ├── pluvialis-squatarola.png
+│   │       │   ├── podiceps-nigricollis-2.png
+│   │       │   ├── podiceps-nigricollis.png
+│   │       │   ├── podilymbus-podiceps-2.png
+│   │       │   ├── podilymbus-podiceps.png
+│   │       │   ├── poecile-atricapillus-2.png
+│   │       │   ├── poecile-atricapillus.png
+│   │       │   ├── poecile-gambeli-2.png
+│   │       │   ├── poecile-gambeli.png
+│   │       │   ├── poecile-rufescens-2.png
+│   │       │   ├── poecile-rufescens.png
+│   │       │   ├── polioptila-caerulea-2.png
+│   │       │   ├── polioptila-caerulea.png
+│   │       │   ├── pooecetes-gramineus-2.png
+│   │       │   ├── pooecetes-gramineus.png
+│   │       │   ├── porzana-carolina-2.png
+│   │       │   ├── porzana-carolina.png
+│   │       │   ├── progne-subis-2.png
+│   │       │   ├── progne-subis.png
+│   │       │   ├── psaltriparus-minimus-2.png
+│   │       │   ├── psaltriparus-minimus.png
+│   │       │   ├── quiscalus-mexicanus-2.png
+│   │       │   ├── quiscalus-mexicanus.png
+│   │       │   ├── quiscalus-quiscula-2.png
+│   │       │   ├── quiscalus-quiscula.png
+│   │       │   ├── rallus-limicola-2.png
+│   │       │   ├── rallus-limicola.png
+│   │       │   ├── recurvirostra-americana-2.png
+│   │       │   ├── recurvirostra-americana.png
+│   │       │   ├── regulus-calendula-2.png
+│   │       │   ├── regulus-calendula.png
+│   │       │   ├── regulus-satrapa-2.png
+│   │       │   ├── regulus-satrapa.png
+│   │       │   ├── riparia-riparia-2.png
+│   │       │   ├── riparia-riparia.png
+│   │       │   ├── rynchops-niger-2.png
+│   │       │   ├── rynchops-niger.png
+│   │       │   ├── salpinctes-obsoletus-2.png
+│   │       │   ├── salpinctes-obsoletus.png
+│   │       │   ├── sayornis-nigricans-2.png
+│   │       │   ├── sayornis-nigricans.png
+│   │       │   ├── sayornis-phoebe-2.png
+│   │       │   ├── sayornis-phoebe.png
+│   │       │   ├── sayornis-saya-2.png
+│   │       │   ├── sayornis-saya.png
+│   │       │   ├── seiurus-aurocapilla-2.png
+│   │       │   ├── seiurus-aurocapilla.png
+│   │       │   ├── selasphorus-platycercus-2.png
+│   │       │   ├── selasphorus-platycercus.png
+│   │       │   ├── selasphorus-rufus-2.png
+│   │       │   ├── selasphorus-rufus.png
+│   │       │   ├── selasphorus-sasin-2.png
+│   │       │   ├── selasphorus-sasin.png
+│   │       │   ├── setophaga-americana-2.png
+│   │       │   ├── setophaga-americana.png
+│   │       │   ├── setophaga-caerulescens-2.png
+│   │       │   ├── setophaga-caerulescens.png
+│   │       │   ├── setophaga-castanea-2.png
+│   │       │   ├── setophaga-castanea.png
+│   │       │   ├── setophaga-cerulea-2.png
+│   │       │   ├── setophaga-cerulea.png
+│   │       │   ├── setophaga-coronata-2.png
+│   │       │   ├── setophaga-coronata.png
+│   │       │   ├── setophaga-fusca-2.png
+│   │       │   ├── setophaga-fusca.png
+│   │       │   ├── setophaga-magnolia-2.png
+│   │       │   ├── setophaga-magnolia.png
+│   │       │   ├── setophaga-nigrescens-2.png
+│   │       │   ├── setophaga-nigrescens.png
+│   │       │   ├── setophaga-occidentalis-2.png
+│   │       │   ├── setophaga-occidentalis.png
+│   │       │   ├── setophaga-palmarum-2.png
+│   │       │   ├── setophaga-palmarum.png
+│   │       │   ├── setophaga-pensylvanica-2.png
+│   │       │   ├── setophaga-pensylvanica.png
+│   │       │   ├── setophaga-petechia-2.png
+│   │       │   ├── setophaga-petechia.png
+│   │       │   ├── setophaga-pinus-2.png
+│   │       │   ├── setophaga-pinus.png
+│   │       │   ├── setophaga-ruticilla-2.png
+│   │       │   ├── setophaga-ruticilla.png
+│   │       │   ├── setophaga-striata-2.png
+│   │       │   ├── setophaga-striata.png
+│   │       │   ├── setophaga-tigrina-2.png
+│   │       │   ├── setophaga-tigrina.png
+│   │       │   ├── setophaga-townsendi-2.png
+│   │       │   ├── setophaga-townsendi.png
+│   │       │   ├── setophaga-virens-2.png
+│   │       │   ├── setophaga-virens.png
+│   │       │   ├── sialia-currucoides-2.png
+│   │       │   ├── sialia-currucoides.png
+│   │       │   ├── sialia-mexicana-2.png
+│   │       │   ├── sialia-mexicana.png
+│   │       │   ├── sialia-sialis-2.png
+│   │       │   ├── sialia-sialis.png
+│   │       │   ├── sitta-canadensis-2.png
+│   │       │   ├── sitta-canadensis.png
+│   │       │   ├── sitta-carolinensis-2.png
+│   │       │   ├── sitta-carolinensis.png
+│   │       │   ├── sitta-pygmaea-2.png
+│   │       │   ├── sitta-pygmaea.png
+│   │       │   ├── spatula-clypeata-2.png
+│   │       │   ├── spatula-clypeata.png
+│   │       │   ├── spatula-discors-2.png
+│   │       │   ├── spatula-discors.png
+│   │       │   ├── sphyrapicus-ruber-2.png
+│   │       │   ├── sphyrapicus-ruber.png
+│   │       │   ├── sphyrapicus-thyroideus-2.png
+│   │       │   ├── sphyrapicus-thyroideus.png
+│   │       │   ├── sphyrapicus-varius-2.png
+│   │       │   ├── sphyrapicus-varius.png
+│   │       │   ├── spinus-lawrencei-2.png
+│   │       │   ├── spinus-lawrencei.png
+│   │       │   ├── spinus-pinus-2.png
+│   │       │   ├── spinus-pinus.png
+│   │       │   ├── spinus-psaltria-2.png
+│   │       │   ├── spinus-psaltria.png
+│   │       │   ├── spinus-tristis-2.png
+│   │       │   ├── spinus-tristis.png
+│   │       │   ├── spiza-americana-2.png
+│   │       │   ├── spiza-americana.png
+│   │       │   ├── spizella-atrogularis-2.png
+│   │       │   ├── spizella-atrogularis.png
+│   │       │   ├── spizella-breweri-2.png
+│   │       │   ├── spizella-breweri.png
+│   │       │   ├── spizella-pallida-2.png
+│   │       │   ├── spizella-pallida.png
+│   │       │   ├── spizella-passerina-2.png
+│   │       │   ├── spizella-passerina.png
+│   │       │   ├── spizella-pusilla-2.png
+│   │       │   ├── spizella-pusilla.png
+│   │       │   ├── spizelloides-arborea-2.png
+│   │       │   ├── spizelloides-arborea.png
+│   │       │   ├── stelgidopteryx-serripennis-2.png
+│   │       │   ├── stelgidopteryx-serripennis.png
+│   │       │   ├── sterna-forsteri-2.png
+│   │       │   ├── sterna-forsteri.png
+│   │       │   ├── sterna-hirundo-2.png
+│   │       │   ├── sterna-hirundo.png
+│   │       │   ├── streptopelia-decaocto-2.png
+│   │       │   ├── streptopelia-decaocto.png
+│   │       │   ├── strix-occidentalis-2.png
+│   │       │   ├── strix-occidentalis.png
+│   │       │   ├── strix-varia-2.png
+│   │       │   ├── strix-varia.png
+│   │       │   ├── sturnella-magna-2.png
+│   │       │   ├── sturnella-magna.png
+│   │       │   ├── sturnella-neglecta-2.png
+│   │       │   ├── sturnella-neglecta.png
+│   │       │   ├── sturnus-vulgaris-2.png
+│   │       │   ├── sturnus-vulgaris.png
+│   │       │   ├── tachycineta-bicolor-2.png
+│   │       │   ├── tachycineta-bicolor.png
+│   │       │   ├── tachycineta-thalassina-2.png
+│   │       │   ├── tachycineta-thalassina.png
+│   │       │   ├── thalasseus-elegans-2.png
+│   │       │   ├── thalasseus-elegans.png
+│   │       │   ├── thryomanes-bewickii-2.png
+│   │       │   ├── thryomanes-bewickii.png
+│   │       │   ├── thryothorus-ludovicianus-2.png
+│   │       │   ├── thryothorus-ludovicianus.png
+│   │       │   ├── toxostoma-redivivum-2.png
+│   │       │   ├── toxostoma-redivivum.png
+│   │       │   ├── toxostoma-rufum-2.png
+│   │       │   ├── toxostoma-rufum.png
+│   │       │   ├── tringa-flavipes-2.png
+│   │       │   ├── tringa-flavipes.png
+│   │       │   ├── tringa-melanoleuca-2.png
+│   │       │   ├── tringa-melanoleuca.png
+│   │       │   ├── tringa-semipalmata-2.png
+│   │       │   ├── tringa-semipalmata.png
+│   │       │   ├── tringa-solitaria-2.png
+│   │       │   ├── tringa-solitaria.png
+│   │       │   ├── troglodytes-aedon-2.png
+│   │       │   ├── troglodytes-aedon.png
+│   │       │   ├── troglodytes-hiemalis-2.png
+│   │       │   ├── troglodytes-hiemalis.png
+│   │       │   ├── troglodytes-pacificus-2.png
+│   │       │   ├── troglodytes-pacificus.png
+│   │       │   ├── turdus-migratorius-2.png
+│   │       │   ├── turdus-migratorius.png
+│   │       │   ├── tyrannus-tyrannus-2.png
+│   │       │   ├── tyrannus-tyrannus.png
+│   │       │   ├── tyrannus-verticalis-2.png
+│   │       │   ├── tyrannus-verticalis.png
+│   │       │   ├── tyrannus-vociferans-2.png
+│   │       │   ├── tyrannus-vociferans.png
+│   │       │   ├── tyto-alba-2.png
+│   │       │   ├── tyto-alba.png
+│   │       │   ├── urile-penicillatus-2.png
+│   │       │   ├── urile-penicillatus.png
+│   │       │   ├── vireo-bellii-2.png
+│   │       │   ├── vireo-bellii.png
+│   │       │   ├── vireo-cassinii-2.png
+│   │       │   ├── vireo-cassinii.png
+│   │       │   ├── vireo-flavifrons-2.png
+│   │       │   ├── vireo-flavifrons.png
+│   │       │   ├── vireo-gilvus-2.png
+│   │       │   ├── vireo-gilvus.png
+│   │       │   ├── vireo-huttoni-2.png
+│   │       │   ├── vireo-huttoni.png
+│   │       │   ├── vireo-olivaceus-2.png
+│   │       │   ├── vireo-olivaceus.png
+│   │       │   ├── vireo-philadelphicus-2.png
+│   │       │   ├── vireo-philadelphicus.png
+│   │       │   ├── vireo-solitarius-2.png
+│   │       │   ├── vireo-solitarius.png
+│   │       │   ├── xanthocephalus-xanthocephalus-2.png
+│   │       │   ├── xanthocephalus-xanthocephalus.png
+│   │       │   ├── zenaida-asiatica-2.png
+│   │       │   ├── zenaida-asiatica.png
+│   │       │   ├── zenaida-macroura-2.png
+│   │       │   ├── zenaida-macroura.png
+│   │       │   ├── zonotrichia-albicollis-2.png
+│   │       │   ├── zonotrichia-albicollis.png
+│   │       │   ├── zonotrichia-atricapilla-2.png
+│   │       │   ├── zonotrichia-atricapilla.png
+│   │       │   ├── zonotrichia-leucophrys-2.png
+│   │       │   ├── zonotrichia-leucophrys.png
+│   │       │   ├── zonotrichia-querula-2.png
+│   │       │   └── zonotrichia-querula.png
+│   │       ├── dims.json
+│   │       ├── masks.json
+│   │       └── nest.webp
+│   └── index.html
+├── BirdSongs
+│   ├── audio_health_report.csv
+│   ├── dawn_chorus4.py
+│   ├── diagnostic.py
+│   ├── Extracted
+│   │   ├── By_Date
+│   │   │   ├── 2026-06-23
+│   │   │   │   ├── American_Robin
+│   │   │   │   ├── Carolina_Wren
+│   │   │   │   ├── Chimney_Swift
+│   │   │   │   ├── Tufted_Titmouse
+│   │   │   │   └── White-breasted_Nuthatch
+│   │   │   ├── 2026-06-24
+│   │   │   │   ├── American_Goldfinch
+│   │   │   │   ├── American_Robin
+│   │   │   │   ├── Black-throated_Green_Warbler
+│   │   │   │   ├── Carolina_Wren
+│   │   │   │   ├── Cedar_Waxwing
+│   │   │   │   ├── Chimney_Swift
+│   │   │   │   ├── Eastern_Bluebird
+│   │   │   │   ├── Gray_Catbird
+│   │   │   │   ├── House_Finch
+│   │   │   │   ├── House_Sparrow
+│   │   │   │   ├── Northern_Cardinal
+│   │   │   │   ├── Red-eyed_Vireo
+│   │   │   │   ├── Song_Sparrow
+│   │   │   │   ├── Tufted_Titmouse
+│   │   │   │   └── Yellow-billed_Cuckoo
+│   │   │   ├── 2026-06-25
+│   │   │   │   ├── American_Crow
+│   │   │   │   ├── American_Goldfinch
+│   │   │   │   ├── American_Redstart
+│   │   │   │   ├── American_Robin
+│   │   │   │   ├── Black-throated_Green_Warbler
+│   │   │   │   ├── Brown-headed_Cowbird
+│   │   │   │   ├── Carolina_Wren
+│   │   │   │   ├── Cedar_Waxwing
+│   │   │   │   ├── Chimney_Swift
+│   │   │   │   ├── Downy_Woodpecker
+│   │   │   │   ├── Eastern_Bluebird
+│   │   │   │   ├── Gray_Catbird
+│   │   │   │   ├── Mourning_Dove
+│   │   │   │   ├── Northern_Cardinal
+│   │   │   │   ├── Red-bellied_Woodpecker
+│   │   │   │   ├── Red-breasted_Nuthatch
+│   │   │   │   ├── Red-eyed_Vireo
+│   │   │   │   ├── Tufted_Titmouse
+│   │   │   │   └── White-breasted_Nuthatch
+│   │   │   ├── 2026-06-26
+│   │   │   │   ├── American_Crow
+│   │   │   │   ├── American_Robin
+│   │   │   │   ├── Black-throated_Green_Warbler
+│   │   │   │   ├── Blue_Jay
+│   │   │   │   ├── Broad-winged_Hawk
+│   │   │   │   ├── Carolina_Wren
+│   │   │   │   ├── Chimney_Swift
+│   │   │   │   ├── Fish_Crow
+│   │   │   │   ├── Gray_Catbird
+│   │   │   │   ├── Northern_Cardinal
+│   │   │   │   └── Tufted_Titmouse
+│   │   │   ├── 2026-06-27
+│   │   │   │   ├── American_Crow
+│   │   │   │   ├── American_Goldfinch
+│   │   │   │   ├── American_Robin
+│   │   │   │   ├── Black-throated_Green_Warbler
+│   │   │   │   ├── Cedar_Waxwing
+│   │   │   │   ├── Chimney_Swift
+│   │   │   │   ├── Common_Loon
+│   │   │   │   ├── Common_Nighthawk
+│   │   │   │   ├── Downy_Woodpecker
+│   │   │   │   ├── Eastern_Bluebird
+│   │   │   │   ├── Gray_Catbird
+│   │   │   │   ├── Mourning_Dove
+│   │   │   │   ├── Northern_Cardinal
+│   │   │   │   ├── Red-shouldered_Hawk
+│   │   │   │   ├── Rose-breasted_Grosbeak
+│   │   │   │   ├── Tufted_Titmouse
+│   │   │   │   ├── Whimbrel
+│   │   │   │   ├── White-breasted_Nuthatch
+│   │   │   │   ├── Yellow-billed_Cuckoo
+│   │   │   │   └── Yellow-throated_Vireo
+│   │   │   ├── 2026-06-28
+│   │   │   │   ├── American_Crow
+│   │   │   │   ├── American_Robin
+│   │   │   │   ├── Carolina_Wren
+│   │   │   │   ├── Chimney_Swift
+│   │   │   │   ├── Northern_Cardinal
+│   │   │   │   ├── Red-shouldered_Hawk
+│   │   │   │   ├── Red-tailed_Hawk
+│   │   │   │   ├── White-breasted_Nuthatch
+│   │   │   │   └── Yellow-throated_Vireo
+│   │   │   ├── 2026-06-29
+│   │   │   │   ├── American_Crow
+│   │   │   │   ├── American_Robin
+│   │   │   │   ├── Black-throated_Green_Warbler
+│   │   │   │   ├── Carolina_Wren
+│   │   │   │   ├── Cedar_Waxwing
+│   │   │   │   ├── Chimney_Swift
+│   │   │   │   ├── Fish_Crow
+│   │   │   │   ├── House_Sparrow
+│   │   │   │   ├── House_Wren
+│   │   │   │   ├── Northern_Cardinal
+│   │   │   │   ├── Red-eyed_Vireo
+│   │   │   │   ├── Tufted_Titmouse
+│   │   │   │   └── White-breasted_Nuthatch
+│   │   │   ├── 2026-06-30
+│   │   │   │   ├── American_Crow
+│   │   │   │   ├── American_Goldfinch
+│   │   │   │   ├── American_Robin
+│   │   │   │   ├── Black-throated_Green_Warbler
+│   │   │   │   ├── Broad-winged_Hawk
+│   │   │   │   ├── Chimney_Swift
+│   │   │   │   ├── Downy_Woodpecker
+│   │   │   │   ├── Fish_Crow
+│   │   │   │   ├── Northern_Cardinal
+│   │   │   │   ├── Red-bellied_Woodpecker
+│   │   │   │   ├── Ruby-throated_Hummingbird
+│   │   │   │   └── Tufted_Titmouse
+│   │   │   ├── 2026-07-01
+│   │   │   │   ├── American_Crow
+│   │   │   │   ├── American_Robin
+│   │   │   │   ├── Black-throated_Green_Warbler
+│   │   │   │   ├── Broad-winged_Hawk
+│   │   │   │   ├── Cedar_Waxwing
+│   │   │   │   ├── Chimney_Swift
+│   │   │   │   ├── Chipping_Sparrow
+│   │   │   │   ├── Downy_Woodpecker
+│   │   │   │   ├── Eastern_Bluebird
+│   │   │   │   ├── House_Finch
+│   │   │   │   ├── Song_Sparrow
+│   │   │   │   ├── Tufted_Titmouse
+│   │   │   │   └── White-breasted_Nuthatch
+│   │   │   ├── 2026-07-02
+│   │   │   │   ├── American_Robin
+│   │   │   │   ├── Black-throated_Green_Warbler
+│   │   │   │   ├── Carolina_Wren
+│   │   │   │   ├── Chimney_Swift
+│   │   │   │   ├── Downy_Woodpecker
+│   │   │   │   ├── Eastern_Phoebe
+│   │   │   │   ├── Gray_Catbird
+│   │   │   │   ├── Mourning_Dove
+│   │   │   │   ├── Northern_Cardinal
+│   │   │   │   ├── Red-bellied_Woodpecker
+│   │   │   │   ├── Red-eyed_Vireo
+│   │   │   │   └── Song_Sparrow
+│   │   │   ├── 2026-07-03
+│   │   │   │   ├── American_Crow
+│   │   │   │   ├── American_Robin
+│   │   │   │   ├── Black-throated_Green_Warbler
+│   │   │   │   ├── Carolina_Wren
+│   │   │   │   ├── Cedar_Waxwing
+│   │   │   │   ├── Chimney_Swift
+│   │   │   │   ├── Hairy_Woodpecker
+│   │   │   │   ├── House_Wren
+│   │   │   │   ├── Northern_Cardinal
+│   │   │   │   ├── Purple_Martin
+│   │   │   │   ├── Red-bellied_Woodpecker
+│   │   │   │   ├── Red-eyed_Vireo
+│   │   │   │   └── White-breasted_Nuthatch
+│   │   │   ├── 2026-07-04
+│   │   │   │   ├── American_Crow
+│   │   │   │   ├── American_Robin
+│   │   │   │   ├── Carolina_Wren
+│   │   │   │   ├── Cedar_Waxwing
+│   │   │   │   ├── Chimney_Swift
+│   │   │   │   ├── Common_Loon
+│   │   │   │   ├── Downy_Woodpecker
+│   │   │   │   ├── Northern_Cardinal
+│   │   │   │   ├── Red-bellied_Woodpecker
+│   │   │   │   ├── Tufted_Titmouse
+│   │   │   │   └── White-breasted_Nuthatch
+│   │   │   ├── 2026-07-05
+│   │   │   │   ├── American_Robin
+│   │   │   │   ├── Black-throated_Green_Warbler
+│   │   │   │   ├── Cedar_Waxwing
+│   │   │   │   ├── Chimney_Swift
+│   │   │   │   ├── Chipping_Sparrow
+│   │   │   │   ├── Common_Grackle
+│   │   │   │   ├── House_Finch
+│   │   │   │   ├── Northern_Cardinal
+│   │   │   │   ├── Northern_Flicker
+│   │   │   │   ├── Red-bellied_Woodpecker
+│   │   │   │   ├── Ruby-throated_Hummingbird
+│   │   │   │   ├── Tufted_Titmouse
+│   │   │   │   └── White-breasted_Nuthatch
+│   │   │   ├── 2026-07-06
+│   │   │   │   ├── American_Crow
+│   │   │   │   ├── American_Robin
+│   │   │   │   ├── Black-throated_Green_Warbler
+│   │   │   │   ├── Carolina_Wren
+│   │   │   │   ├── Cedar_Waxwing
+│   │   │   │   ├── Gray_Catbird
+│   │   │   │   ├── Northern_Cardinal
+│   │   │   │   ├── Tufted_Titmouse
+│   │   │   │   └── White-breasted_Nuthatch
+│   │   │   ├── 2026-07-07
+│   │   │   │   ├── American_Robin
+│   │   │   │   ├── Chipping_Sparrow
+│   │   │   │   ├── Northern_Cardinal
+│   │   │   │   └── Northern_Flicker
+│   │   │   ├── 2026-07-08
+│   │   │   │   ├── American_Robin
+│   │   │   │   ├── Carolina_Wren
+│   │   │   │   ├── Cedar_Waxwing
+│   │   │   │   ├── Chimney_Swift
+│   │   │   │   ├── Fish_Crow
+│   │   │   │   ├── Gray_Catbird
+│   │   │   │   ├── Northern_Cardinal
+│   │   │   │   ├── Northern_Flicker
+│   │   │   │   ├── Red-tailed_Hawk
+│   │   │   │   ├── Rock_Pigeon
+│   │   │   │   ├── Song_Sparrow
+│   │   │   │   ├── Tufted_Titmouse
+│   │   │   │   ├── White-breasted_Nuthatch
+│   │   │   │   └── Yellow-billed_Cuckoo
+│   │   │   ├── 2026-07-09
+│   │   │   │   ├── American_Crow
+│   │   │   │   ├── American_Robin
+│   │   │   │   ├── Carolina_Wren
+│   │   │   │   ├── Chimney_Swift
+│   │   │   │   ├── Common_Loon
+│   │   │   │   ├── Gray_Catbird
+│   │   │   │   ├── Northern_Cardinal
+│   │   │   │   ├── Red-breasted_Nuthatch
+│   │   │   │   ├── Red-tailed_Hawk
+│   │   │   │   └── Tufted_Titmouse
+│   │   │   ├── 2026-07-10
+│   │   │   │   ├── American_Crow
+│   │   │   │   ├── Cedar_Waxwing
+│   │   │   │   ├── Chimney_Swift
+│   │   │   │   ├── Downy_Woodpecker
+│   │   │   │   ├── Eastern_Kingbird
+│   │   │   │   ├── Fish_Crow
+│   │   │   │   ├── Northern_Cardinal
+│   │   │   │   ├── Rose-breasted_Grosbeak
+│   │   │   │   └── White-breasted_Nuthatch
+│   │   │   ├── 2026-07-11
+│   │   │   │   ├── American_Crow
+│   │   │   │   ├── American_Robin
+│   │   │   │   ├── Cedar_Waxwing
+│   │   │   │   ├── Chimney_Swift
+│   │   │   │   ├── Fish_Crow
+│   │   │   │   ├── Gray_Catbird
+│   │   │   │   ├── Northern_Cardinal
+│   │   │   │   └── White-breasted_Nuthatch
+│   │   │   ├── 2026-07-12
+│   │   │   │   ├── American_Crow
+│   │   │   │   ├── Black-throated_Green_Warbler
+│   │   │   │   ├── Cedar_Waxwing
+│   │   │   │   ├── Chimney_Swift
+│   │   │   │   ├── Chipping_Sparrow
+│   │   │   │   ├── Gray_Catbird
+│   │   │   │   ├── Northern_Cardinal
+│   │   │   │   ├── Song_Sparrow
+│   │   │   │   └── Tufted_Titmouse
+│   │   │   ├── 2026-07-13
+│   │   │   │   ├── American_Robin
+│   │   │   │   ├── Cedar_Waxwing
+│   │   │   │   ├── Chimney_Swift
+│   │   │   │   ├── Common_Loon
+│   │   │   │   ├── Downy_Woodpecker
+│   │   │   │   ├── Northern_Cardinal
+│   │   │   │   └── Red-bellied_Woodpecker
+│   │   │   ├── 2026-07-14
+│   │   │   │   ├── American_Crow
+│   │   │   │   ├── American_Robin
+│   │   │   │   ├── Chimney_Swift
+│   │   │   │   ├── Common_Raven
+│   │   │   │   ├── Fish_Crow
+│   │   │   │   ├── Gray_Catbird
+│   │   │   │   ├── Mourning_Dove
+│   │   │   │   ├── Northern_Cardinal
+│   │   │   │   └── Red-bellied_Woodpecker
+│   │   │   ├── 2026-07-15
+│   │   │   │   ├── American_Robin
+│   │   │   │   ├── Black-throated_Green_Warbler
+│   │   │   │   ├── Carolina_Wren
+│   │   │   │   ├── Cedar_Waxwing
+│   │   │   │   ├── Chimney_Swift
+│   │   │   │   ├── Fish_Crow
+│   │   │   │   ├── Gray_Catbird
+│   │   │   │   ├── Northern_Cardinal
+│   │   │   │   ├── Song_Sparrow
+│   │   │   │   └── Tufted_Titmouse
+│   │   │   ├── 2026-07-16
+│   │   │   │   ├── American_Crow
+│   │   │   │   ├── American_Robin
+│   │   │   │   ├── Black-throated_Green_Warbler
+│   │   │   │   ├── Blue_Jay
+│   │   │   │   ├── Chimney_Swift
+│   │   │   │   ├── Fish_Crow
+│   │   │   │   ├── Gray_Catbird
+│   │   │   │   ├── Northern_Cardinal
+│   │   │   │   ├── Red-bellied_Woodpecker
+│   │   │   │   ├── Song_Sparrow
+│   │   │   │   └── Tufted_Titmouse
+│   │   │   ├── 2026-07-17
+│   │   │   │   ├── American_Crow
+│   │   │   │   ├── American_Robin
+│   │   │   │   ├── Carolina_Wren
+│   │   │   │   ├── Cedar_Waxwing
+│   │   │   │   ├── Chimney_Swift
+│   │   │   │   ├── Fish_Crow
+│   │   │   │   ├── Gray_Catbird
+│   │   │   │   ├── Mallard
+│   │   │   │   ├── Northern_Cardinal
+│   │   │   │   ├── Red-tailed_Hawk
+│   │   │   │   ├── Rose-breasted_Grosbeak
+│   │   │   │   ├── Ruby-throated_Hummingbird
+│   │   │   │   ├── Song_Sparrow
+│   │   │   │   └── White-breasted_Nuthatch
+│   │   │   ├── 2026-07-18
+│   │   │   │   ├── American_Robin
+│   │   │   │   ├── Blue_Jay
+│   │   │   │   ├── Chimney_Swift
+│   │   │   │   ├── Fish_Crow
+│   │   │   │   ├── Gray_Catbird
+│   │   │   │   ├── Northern_Cardinal
+│   │   │   │   ├── Red-tailed_Hawk
+│   │   │   │   ├── Tufted_Titmouse
+│   │   │   │   └── White-breasted_Nuthatch
+│   │   │   ├── 2026-07-19
+│   │   │   │   ├── American_Robin
+│   │   │   │   ├── Black-throated_Green_Warbler
+│   │   │   │   ├── Carolina_Wren
+│   │   │   │   ├── Cedar_Waxwing
+│   │   │   │   ├── Chimney_Swift
+│   │   │   │   ├── Downy_Woodpecker
+│   │   │   │   ├── Fish_Crow
+│   │   │   │   ├── Gray_Catbird
+│   │   │   │   ├── Green_Heron
+│   │   │   │   ├── Northern_Cardinal
+│   │   │   │   ├── Pileated_Woodpecker
+│   │   │   │   ├── Song_Sparrow
+│   │   │   │   └── Tufted_Titmouse
+│   │   │   ├── 2026-07-20
+│   │   │   │   ├── American_Crow
+│   │   │   │   ├── American_Robin
+│   │   │   │   ├── Cedar_Waxwing
+│   │   │   │   ├── Chimney_Swift
+│   │   │   │   ├── Downy_Woodpecker
+│   │   │   │   ├── Eastern_Kingbird
+│   │   │   │   ├── Fish_Crow
+│   │   │   │   ├── Gray_Catbird
+│   │   │   │   ├── House_Finch
+│   │   │   │   ├── Mourning_Dove
+│   │   │   │   ├── Northern_Cardinal
+│   │   │   │   ├── Song_Sparrow
+│   │   │   │   ├── White-breasted_Nuthatch
+│   │   │   │   └── Wood_Duck
+│   │   │   ├── 2026-07-21
+│   │   │   │   ├── American_Crow
+│   │   │   │   ├── American_Robin
+│   │   │   │   ├── Common_Loon
+│   │   │   │   ├── Common_Raven
+│   │   │   │   ├── Downy_Woodpecker
+│   │   │   │   ├── Gray_Catbird
+│   │   │   │   ├── Tufted_Titmouse
+│   │   │   │   └── Yellow-billed_Cuckoo
+│   │   │   ├── 2026-07-22
+│   │   │   │   ├── American_Robin
+│   │   │   │   ├── Black-throated_Green_Warbler
+│   │   │   │   ├── Carolina_Wren
+│   │   │   │   ├── Cedar_Waxwing
+│   │   │   │   ├── Chimney_Swift
+│   │   │   │   ├── Common_Loon
+│   │   │   │   ├── Common_Raven
+│   │   │   │   ├── Downy_Woodpecker
+│   │   │   │   ├── Gray_Catbird
+│   │   │   │   ├── Mourning_Dove
+│   │   │   │   ├── Northern_Cardinal
+│   │   │   │   ├── Red-bellied_Woodpecker
+│   │   │   │   └── Scarlet_Tanager
+│   │   │   ├── 2026-07-23
+│   │   │   │   ├── American_Robin
+│   │   │   │   ├── Carolina_Wren
+│   │   │   │   ├── Downy_Woodpecker
+│   │   │   │   ├── Fish_Crow
+│   │   │   │   ├── Gray_Catbird
+│   │   │   │   ├── Northern_Cardinal
+│   │   │   │   ├── Ruby-throated_Hummingbird
+│   │   │   │   ├── Song_Sparrow
+│   │   │   │   └── Tufted_Titmouse
+│   │   │   ├── 2026-07-24
+│   │   │   │   ├── American_Goldfinch
+│   │   │   │   ├── American_Robin
+│   │   │   │   ├── Blue_Jay
+│   │   │   │   ├── Carolina_Wren
+│   │   │   │   ├── Cedar_Waxwing
+│   │   │   │   ├── Common_Grackle
+│   │   │   │   ├── Common_Raven
+│   │   │   │   ├── Downy_Woodpecker
+│   │   │   │   ├── Gray_Catbird
+│   │   │   │   ├── Northern_Cardinal
+│   │   │   │   ├── Red-breasted_Nuthatch
+│   │   │   │   ├── Red-tailed_Hawk
+│   │   │   │   ├── Song_Sparrow
+│   │   │   │   ├── Tufted_Titmouse
+│   │   │   │   └── White-breasted_Nuthatch
+│   │   │   ├── 2026-07-25
+│   │   │   │   ├── American_Crow
+│   │   │   │   ├── American_Robin
+│   │   │   │   ├── Carolina_Wren
+│   │   │   │   ├── Chimney_Swift
+│   │   │   │   ├── Downy_Woodpecker
+│   │   │   │   ├── Fish_Crow
+│   │   │   │   ├── Gray_Catbird
+│   │   │   │   ├── Northern_Cardinal
+│   │   │   │   ├── Tufted_Titmouse
+│   │   │   │   ├── White-breasted_Nuthatch
+│   │   │   │   └── Yellow-billed_Cuckoo
+│   │   │   ├── 2026-07-26
+│   │   │   │   ├── American_Crow
+│   │   │   │   ├── American_Goldfinch
+│   │   │   │   ├── American_Robin
+│   │   │   │   ├── Carolina_Wren
+│   │   │   │   ├── Cedar_Waxwing
+│   │   │   │   ├── Chimney_Swift
+│   │   │   │   ├── Downy_Woodpecker
+│   │   │   │   ├── Gray_Catbird
+│   │   │   │   ├── Northern_Cardinal
+│   │   │   │   ├── Red-breasted_Nuthatch
+│   │   │   │   ├── Scarlet_Tanager
+│   │   │   │   ├── Song_Sparrow
+│   │   │   │   ├── Tufted_Titmouse
+│   │   │   │   └── White-breasted_Nuthatch
+│   │   │   ├── 2026-07-27
+│   │   │   │   ├── American_Crow
+│   │   │   │   ├── American_Robin
+│   │   │   │   ├── Cedar_Waxwing
+│   │   │   │   ├── Chimney_Swift
+│   │   │   │   ├── Chipping_Sparrow
+│   │   │   │   ├── Common_Loon
+│   │   │   │   ├── Downy_Woodpecker
+│   │   │   │   ├── Fish_Crow
+│   │   │   │   ├── Gray_Catbird
+│   │   │   │   ├── Hairy_Woodpecker
+│   │   │   │   ├── House_Finch
+│   │   │   │   ├── Northern_Cardinal
+│   │   │   │   ├── Red-tailed_Hawk
+│   │   │   │   └── Tufted_Titmouse
+│   │   │   ├── 2026-07-28
+│   │   │   │   ├── American_Crow
+│   │   │   │   ├── American_Robin
+│   │   │   │   ├── Cedar_Waxwing
+│   │   │   │   ├── Common_Loon
+│   │   │   │   ├── Downy_Woodpecker
+│   │   │   │   ├── Fish_Crow
+│   │   │   │   ├── Gray_Catbird
+│   │   │   │   ├── Red-tailed_Hawk
+│   │   │   │   ├── Tufted_Titmouse
+│   │   │   │   └── White-breasted_Nuthatch
+│   │   │   ├── 2026-07-29
+│   │   │   │   ├── American_Crow
+│   │   │   │   ├── American_Robin
+│   │   │   │   └── Rock_Pigeon
+│   │   │   ├── 2026-07-30
+│   │   │   │   ├── Chimney_Swift
+│   │   │   │   ├── Common_Raven
+│   │   │   │   ├── Downy_Woodpecker
+│   │   │   │   ├── Rock_Pigeon
+│   │   │   │   ├── Tufted_Titmouse
+│   │   │   │   └── White-breasted_Nuthatch
+│   │   │   ├── 2026-07-31
+│   │   │   │   ├── American_Crow
+│   │   │   │   ├── American_Robin
+│   │   │   │   ├── Blue_Jay
+│   │   │   │   ├── Cedar_Waxwing
+│   │   │   │   ├── Chimney_Swift
+│   │   │   │   ├── Gray_Catbird
+│   │   │   │   ├── House_Finch
+│   │   │   │   ├── Northern_Cardinal
+│   │   │   │   ├── Song_Sparrow
+│   │   │   │   ├── Tufted_Titmouse
+│   │   │   │   └── White-breasted_Nuthatch
+│   │   │   ├── 2026-08-01
+│   │   │   │   ├── Chimney_Swift
+│   │   │   │   ├── Chipping_Sparrow
+│   │   │   │   ├── Common_Loon
+│   │   │   │   ├── Coopers_Hawk
+│   │   │   │   ├── Downy_Woodpecker
+│   │   │   │   ├── Gray_Catbird
+│   │   │   │   ├── Hairy_Woodpecker
+│   │   │   │   ├── Osprey
+│   │   │   │   ├── Red-bellied_Woodpecker
+│   │   │   │   └── Tufted_Titmouse
+│   │   │   └── 2026-08-02
+│   │   │       ├── American_Robin
+│   │   │       ├── Cedar_Waxwing
+│   │   │       ├── Chimney_Swift
+│   │   │       ├── Common_Raven
+│   │   │       ├── Downy_Woodpecker
+│   │   │       ├── Gray_Catbird
+│   │   │       ├── House_Sparrow
+│   │   │       ├── Red-bellied_Woodpecker
+│   │   │       ├── Tufted_Titmouse
+│   │   │       └── White-breasted_Nuthatch
+│   │   ├── Charts
+│   │   │   ├── Combo-2026-06-23.png
+│   │   │   ├── Combo-2026-06-24.png
+│   │   │   ├── Combo-2026-06-25.png
+│   │   │   ├── Combo-2026-06-26.png
+│   │   │   ├── Combo-2026-06-27.png
+│   │   │   ├── Combo-2026-06-28.png
+│   │   │   ├── Combo-2026-06-29.png
+│   │   │   ├── Combo-2026-06-30.png
+│   │   │   ├── Combo-2026-07-01.png
+│   │   │   ├── Combo-2026-07-02.png
+│   │   │   ├── Combo-2026-07-03.png
+│   │   │   ├── Combo-2026-07-04.png
+│   │   │   ├── Combo-2026-07-05.png
+│   │   │   ├── Combo-2026-07-06.png
+│   │   │   ├── Combo-2026-07-07.png
+│   │   │   ├── Combo-2026-07-08.png
+│   │   │   ├── Combo-2026-07-09.png
+│   │   │   ├── Combo-2026-07-10.png
+│   │   │   ├── Combo-2026-07-11.png
+│   │   │   ├── Combo-2026-07-12.png
+│   │   │   ├── Combo-2026-07-13.png
+│   │   │   ├── Combo-2026-07-14.png
+│   │   │   ├── Combo-2026-07-15.png
+│   │   │   ├── Combo-2026-07-16.png
+│   │   │   ├── Combo-2026-07-17.png
+│   │   │   ├── Combo-2026-07-18.png
+│   │   │   ├── Combo-2026-07-19.png
+│   │   │   ├── Combo-2026-07-20.png
+│   │   │   ├── Combo-2026-07-21.png
+│   │   │   ├── Combo-2026-07-22.png
+│   │   │   ├── Combo-2026-07-23.png
+│   │   │   ├── Combo-2026-07-24.png
+│   │   │   ├── Combo-2026-07-25.png
+│   │   │   ├── Combo-2026-07-26.png
+│   │   │   ├── Combo-2026-07-27.png
+│   │   │   ├── Combo-2026-07-28.png
+│   │   │   ├── Combo-2026-07-29.png
+│   │   │   ├── Combo-2026-07-30.png
+│   │   │   ├── Combo-2026-07-31.png
+│   │   │   ├── Combo-2026-08-01.png
+│   │   │   └── Combo-2026-08-02.png
+│   │   ├── debug_log.log
+│   │   ├── favicon.ico -> /home/birder/BirdNET-Pi/homepage/images/favicon.ico
+│   │   ├── history.php -> /home/birder/BirdNET-Pi/scripts/history.php
+│   │   ├── images -> /home/birder/BirdNET-Pi/homepage/images
+│   │   ├── index.php -> /home/birder/BirdNET-Pi/homepage/index.php
+│   │   ├── overview.php -> /home/birder/BirdNET-Pi/scripts/overview.php
+│   │   ├── phpsysinfo -> /home/birder/phpsysinfo
+│   │   ├── play.php -> /home/birder/BirdNET-Pi/scripts/play.php
+│   │   ├── scripts -> /home/birder/BirdNET-Pi/scripts
+│   │   ├── spectrogram.php -> /home/birder/BirdNET-Pi/scripts/spectrogram.php
+│   │   ├── spectrogram.png -> /home/birder/BirdSongs/StreamData/spectrogram.png
+│   │   ├── static -> /home/birder/BirdNET-Pi/homepage/static
+│   │   ├── stats.php -> /home/birder/BirdNET-Pi/scripts/stats.php
+│   │   ├── style.css -> /home/birder/BirdNET-Pi/homepage/style.css
+│   │   ├── todays_detections.php -> /home/birder/BirdNET-Pi/scripts/todays_detections.php
+│   │   ├── views.php -> /home/birder/BirdNET-Pi/homepage/views.php
+│   │   └── weekly_report.php -> /home/birder/BirdNET-Pi/scripts/weekly_report.php
+│   ├── index.html -> /home/birder/birdnet-ui/index.html
+│   ├── mixes
+│   ├── Processed
+│   └── StreamData
+│       ├── 2026-08-02-birdnet-18:32:55.wav.json
+│       ├── analyzing_now.txt
+│       └── spectrogram.png
+├── installation-2026-06-23.txt
+├── installation-2026-07-01.txt
+├── phpsysinfo
+│   ├── CHANGELOG.md
+│   ├── composer.json
+│   ├── COPYING
+│   ├── data
+│   │   ├── cpus.ini
+│   │   ├── distros.ini
+│   │   ├── languages.ini
+│   │   ├── ModelTranslation.txt
+│   │   ├── osnames.ini
+│   │   └── raspberry.ini
+│   ├── Dockerfile
+│   ├── gfx
+│   │   ├── ajax-loader.gif
+│   │   ├── ajaxLoader.gif
+│   │   ├── attention.gif
+│   │   ├── blank.gif
+│   │   ├── body.gif
+│   │   ├── bullet_toggle_minus.gif
+│   │   ├── bullet_toggle_plus.gif
+│   │   ├── close.gif
+│   │   ├── down_black.gif
+│   │   ├── down_gray.gif
+│   │   ├── favicon.gif
+│   │   ├── favicon.ico
+│   │   ├── html.gif
+│   │   ├── htmlrest.gif
+│   │   ├── htmlwarn.gif
+│   │   ├── images
+│   │   │   ├── 4MLinux.png
+│   │   │   ├── Absolute.png
+│   │   │   ├── AIX.png
+│   │   │   ├── Alma.png
+│   │   │   ├── Alpine.png
+│   │   │   ├── ALT.png
+│   │   │   ├── Amazon.png
+│   │   │   ├── Android.png
+│   │   │   ├── AnduinOS.png
+│   │   │   ├── antiX.png
+│   │   │   ├── Apple.png
+│   │   │   ├── Archcraft.png
+│   │   │   ├── Archman.png
+│   │   │   ├── Arch.png
+│   │   │   ├── Arco.png
+│   │   │   ├── Armbian.png
+│   │   │   ├── Artix.png
+│   │   │   ├── BigLinux.png
+│   │   │   ├── Bluestar.png
+│   │   │   ├── Bodhi.png
+│   │   │   ├── BOSS.png
+│   │   │   ├── CachyOS.png
+│   │   │   ├── Calculate.png
+│   │   │   ├── Canaima.png
+│   │   │   ├── CentOS.png
+│   │   │   ├── Chakra.png
+│   │   │   ├── Chimera.png
+│   │   │   ├── ClearOS.png
+│   │   │   ├── Clear.png
+│   │   │   ├── Cloud.png
+│   │   │   ├── Cobalt.png
+│   │   │   ├── Container.png
+│   │   │   ├── CoreOS.png
+│   │   │   ├── Crux.png
+│   │   │   ├── dahliaOS.png
+│   │   │   ├── Darwin.png
+│   │   │   ├── Debian.png
+│   │   │   ├── Deepin.png
+│   │   │   ├── Devuan.png
+│   │   │   ├── DragonFly.png
+│   │   │   ├── DrayOS.png
+│   │   │   ├── EasyOS.png
+│   │   │   ├── Eisfair.png
+│   │   │   ├── elementaryOS.png
+│   │   │   ├── Elive.png
+│   │   │   ├── EndeavourOS.png
+│   │   │   ├── Endless.png
+│   │   │   ├── EuroLinux.png
+│   │   │   ├── Exherbo.png
+│   │   │   ├── ExTiX.png
+│   │   │   ├── Fatdog.png
+│   │   │   ├── Fedora.png
+│   │   │   ├── Feren.png
+│   │   │   ├── Foresight.png
+│   │   │   ├── FortiOS.png
+│   │   │   ├── FreeBSD.png
+│   │   │   ├── FreeEOS.png
+│   │   │   ├── FreeNAS.png
+│   │   │   ├── Frugalware.png
+│   │   │   ├── Fuduntu.png
+│   │   │   ├── Garuda.png
+│   │   │   ├── Generations.png
+│   │   │   ├── Gentoo.png
+│   │   │   ├── gNewSense.png
+│   │   │   ├── Gnoppix.png
+│   │   │   ├── Gobo.png
+│   │   │   ├── Guix.png
+│   │   │   ├── Haiku.png
+│   │   │   ├── Handy.png
+│   │   │   ├── HipServ.png
+│   │   │   ├── HPUX.png
+│   │   │   ├── Hurd.png
+│   │   │   ├── IPFire.png
+│   │   │   ├── IYCC.png
+│   │   │   ├── JingOS.png
+│   │   │   ├── Kaisen.png
+│   │   │   ├── Kali.png
+│   │   │   ├── KaOS.png
+│   │   │   ├── KDEneon.png
+│   │   │   ├── Kodachi.png
+│   │   │   ├── Korora.png
+│   │   │   ├── Laclin.png
+│   │   │   ├── Lakka.png
+│   │   │   ├── LFS.png
+│   │   │   ├── LibreELEC.png
+│   │   │   ├── Linaro.png
+│   │   │   ├── Linspire.png
+│   │   │   ├── Linuxfx.png
+│   │   │   ├── LinuxLite.png
+│   │   │   ├── Linux.png
+│   │   │   ├── Lunar.png
+│   │   │   ├── LXLE.png
+│   │   │   ├── Mabox.png
+│   │   │   ├── Mageia.png
+│   │   │   ├── Makulu.png
+│   │   │   ├── Mandrake.png
+│   │   │   ├── Manjaro.png
+│   │   │   ├── Mauna.png
+│   │   │   ├── Mer.png
+│   │   │   ├── Milis.png
+│   │   │   ├── Minix.png
+│   │   │   ├── Mint.png
+│   │   │   ├── MX.png
+│   │   │   ├── NeoKylin.png
+│   │   │   ├── Neptune.png
+│   │   │   ├── NetBSD.png
+│   │   │   ├── NethServer.png
+│   │   │   ├── Netrunner.png
+│   │   │   ├── NexentaStor.png
+│   │   │   ├── Nitrux.png
+│   │   │   ├── NixOS.png
+│   │   │   ├── Nobara.png
+│   │   │   ├── NuTyX.png
+│   │   │   ├── Omarine.png
+│   │   │   ├── OmniOS.png
+│   │   │   ├── OpenBSD.png
+│   │   │   ├── OpenELEC.png
+│   │   │   ├── openEuler.png
+│   │   │   ├── OpenIndiana.png
+│   │   │   ├── OpenMamba.png
+│   │   │   ├── OpenMandriva.png
+│   │   │   ├── OpenSolaris.png
+│   │   │   ├── openSUSE.png
+│   │   │   ├── OpenWrt.png
+│   │   │   ├── Oracle.png
+│   │   │   ├── Parrot.png
+│   │   │   ├── Parsix.png
+│   │   │   ├── PCLinuxOS.png
+│   │   │   ├── Pear.png
+│   │   │   ├── Peppermint.png
+│   │   │   ├── pfSense.png
+│   │   │   ├── Photon.png
+│   │   │   ├── Pisi.png
+│   │   │   ├── PLD.png
+│   │   │   ├── Plop.png
+│   │   │   ├── Pop.png
+│   │   │   ├── Porteus.png
+│   │   │   ├── Proxmox.png
+│   │   │   ├── Puppy.png
+│   │   │   ├── PureOS.png
+│   │   │   ├── Q4OS.png
+│   │   │   ├── QNX.png
+│   │   │   ├── QTS.png
+│   │   │   ├── Qubes.png
+│   │   │   ├── QuemOS.png
+│   │   │   ├── Raspbian.png
+│   │   │   ├── ReactOS.png
+│   │   │   ├── RebeccaBlackOS.png
+│   │   │   ├── RebornOS.png
+│   │   │   ├── Redcore.png
+│   │   │   ├── RedFlag.png
+│   │   │   ├── RedHat.png
+│   │   │   ├── Regata.png
+│   │   │   ├── risiOS.png
+│   │   │   ├── RoboLinux.png
+│   │   │   ├── Rocky.png
+│   │   │   ├── ROSA.png
+│   │   │   ├── Rubix.png
+│   │   │   ├── Runtu.png
+│   │   │   ├── Sabayon.png
+│   │   │   ├── SalentOS.png
+│   │   │   ├── Salix.png
+│   │   │   ├── Scientific.png
+│   │   │   ├── Semplice.png
+│   │   │   ├── Septor.png
+│   │   │   ├── Siduction.png
+│   │   │   ├── Slackware.png
+│   │   │   ├── Slax.png
+│   │   │   ├── SliTaz.png
+│   │   │   ├── SmartOS.png
+│   │   │   ├── SMEServer.png
+│   │   │   ├── SMS.png
+│   │   │   ├── Snal.png
+│   │   │   ├── Solaris.png
+│   │   │   ├── SolusOS.png
+│   │   │   ├── Solus.png
+│   │   │   ├── SolydXK.png
+│   │   │   ├── Sparky.png
+│   │   │   ├── Springdale.png
+│   │   │   ├── StartOS.png
+│   │   │   ├── SteamOS.png
+│   │   │   ├── SunOS.png
+│   │   │   ├── SUSE.png
+│   │   │   ├── Synology.png
+│   │   │   ├── Tails.png
+│   │   │   ├── Tanglu.png
+│   │   │   ├── TinyCore.png
+│   │   │   ├── Tizen.png
+│   │   │   ├── Trisquel.png
+│   │   │   ├── TrueNAS.png
+│   │   │   ├── Trustix.png
+│   │   │   ├── Turbo.png
+│   │   │   ├── Tuxedo.png
+│   │   │   ├── Ubuntu.png
+│   │   │   ├── UltimateEdition.png
+│   │   │   ├── Ultramarine.png
+│   │   │   ├── unknown.png
+│   │   │   ├── UOS.png
+│   │   │   ├── Uruk.png
+│   │   │   ├── Vanilla.png
+│   │   │   ├── Vector.png
+│   │   │   ├── Venom.png
+│   │   │   ├── Virtuozzo.png
+│   │   │   ├── Void.png
+│   │   │   ├── VortexBox.png
+│   │   │   ├── Win11.png
+│   │   │   ├── Win2000.png
+│   │   │   ├── Win8.png
+│   │   │   ├── WINNT.png
+│   │   │   ├── WinVista.png
+│   │   │   ├── WinXP.png
+│   │   │   ├── XeroLinux.png
+│   │   │   ├── Zenwalk.png
+│   │   │   └── Zorin.png
+│   │   ├── logo_32.gif
+│   │   ├── next.gif
+│   │   ├── prev.gif
+│   │   ├── reload.gif
+│   │   ├── right_black.gif
+│   │   ├── right_gray.gif
+│   │   ├── sort_asc.gif
+│   │   ├── sort_both.gif
+│   │   ├── sort_desc.gif
+│   │   └── treeTable
+│   │       ├── blank.gif
+│   │       ├── tv-collapsable.gif
+│   │       ├── tv-collapsable-last.gif
+│   │       ├── tv-expandable.gif
+│   │       ├── tv-expandable-last.gif
+│   │       ├── tv-item.gif
+│   │       ├── tv-item-last.gif
+│   │       └── vertline.gif
+│   ├── includes
+│   │   ├── autoloader.inc.php
+│   │   ├── class.CommonFunctions.inc.php
+│   │   ├── class.Parser.inc.php
+│   │   ├── error
+│   │   │   └── class.PSI_Error.inc.php
+│   │   ├── interface
+│   │   │   ├── class.PSI_Interface_OS.inc.php
+│   │   │   ├── class.PSI_Interface_Output.inc.php
+│   │   │   ├── class.PSI_Interface_Plugin.inc.php
+│   │   │   ├── class.PSI_Interface_Sensor.inc.php
+│   │   │   └── class.PSI_Interface_UPS.inc.php
+│   │   ├── js
+│   │   │   ├── class.JavaScriptPacker.inc.php
+│   │   │   └── README
+│   │   ├── mb
+│   │   │   ├── class.cpumem.inc.php
+│   │   │   ├── class.fortisensor.inc.php
+│   │   │   ├── class.freeipmi.inc.php
+│   │   │   ├── class.hddtemp.inc.php
+│   │   │   ├── class.healthd.inc.php
+│   │   │   ├── class.hwmon.inc.php
+│   │   │   ├── class.hwsensors.inc.php
+│   │   │   ├── class.ipmicfg.inc.php
+│   │   │   ├── class.ipmitool.inc.php
+│   │   │   ├── class.ipmiutil.inc.php
+│   │   │   ├── class.k8temp.inc.php
+│   │   │   ├── class.lmsensors.inc.php
+│   │   │   ├── class.mbm5.inc.php
+│   │   │   ├── class.mbmon.inc.php
+│   │   │   ├── class.nvidiasmi.inc.php
+│   │   │   ├── class.ohm.inc.php
+│   │   │   ├── class.pitemp.inc.php
+│   │   │   ├── class.qtssnmp.inc.php
+│   │   │   ├── class.sensors.inc.php
+│   │   │   ├── class.speedfan.inc.php
+│   │   │   ├── class.thermalzone.inc.php
+│   │   │   └── class.thinkpad.inc.php
+│   │   ├── os
+│   │   │   ├── class.AIX.inc.php
+│   │   │   ├── class.Android.inc.php
+│   │   │   ├── class.BSDCommon.inc.php
+│   │   │   ├── class.Darwin.inc.php
+│   │   │   ├── class.DragonFly.inc.php
+│   │   │   ├── class.FreeBSD.inc.php
+│   │   │   ├── class.GNU.inc.php
+│   │   │   ├── class.Haiku.inc.php
+│   │   │   ├── class.HPUX.inc.php
+│   │   │   ├── class.Linux.inc.php
+│   │   │   ├── class.Minix.inc.php
+│   │   │   ├── class.NetBSD.inc.php
+│   │   │   ├── class.OpenBSD.inc.php
+│   │   │   ├── class.OS.inc.php
+│   │   │   ├── class.QNX.inc.php
+│   │   │   ├── class.SSH.inc.php
+│   │   │   ├── class.SunOS.inc.php
+│   │   │   └── class.WINNT.inc.php
+│   │   ├── output
+│   │   │   ├── class.Output.inc.php
+│   │   │   ├── class.Template.inc.php
+│   │   │   ├── class.Webpage.inc.php
+│   │   │   ├── class.WebpageXML.inc.php
+│   │   │   └── class.WebpageXSLT.inc.php
+│   │   ├── plugin
+│   │   │   └── class.PSI_Plugin.inc.php
+│   │   ├── to
+│   │   │   ├── class.MBInfo.inc.php
+│   │   │   ├── class.System.inc.php
+│   │   │   ├── class.UPSInfo.inc.php
+│   │   │   └── device
+│   │   │       ├── class.CpuDevice.inc.php
+│   │   │       ├── class.DiskDevice.inc.php
+│   │   │       ├── class.HWDevice.inc.php
+│   │   │       ├── class.NetDevice.inc.php
+│   │   │       ├── class.SensorDevice.inc.php
+│   │   │       └── class.UPSDevice.inc.php
+│   │   ├── ups
+│   │   │   ├── class.apcupsd.inc.php
+│   │   │   ├── class.nut.inc.php
+│   │   │   ├── class.pmset.inc.php
+│   │   │   ├── class.powersoftplus.inc.php
+│   │   │   ├── class.snmpups.inc.php
+│   │   │   └── class.ups.inc.php
+│   │   └── xml
+│   │       ├── class.SimpleXMLExtended.inc.php
+│   │       └── class.XML.inc.php
+│   ├── index.php
+│   ├── js
+│   │   ├── bootstrap
+│   │   │   ├── bootstrap-ie8nojs.js
+│   │   │   ├── bootstrap-ie9.js
+│   │   │   ├── console-shim.js
+│   │   │   ├── html5shiv-printshiv.js
+│   │   │   ├── jquery-treegrid.js
+│   │   │   ├── README
+│   │   │   ├── sorttable.js
+│   │   │   └── transparency.js
+│   │   ├── common
+│   │   │   ├── jquery.js
+│   │   │   └── README
+│   │   ├── dynamic
+│   │   │   ├── jquery.dataTables.js
+│   │   │   ├── jquery.ifixpng.js
+│   │   │   ├── jquery.jgrowl.js
+│   │   │   ├── jquery.nyroModal.js
+│   │   │   ├── jquery.timer.js
+│   │   │   ├── jquery.treeTable.js
+│   │   │   └── README
+│   │   ├── phpsysinfo_bootstrap.js
+│   │   └── phpsysinfo_dynamic.js
+│   ├── js.php
+│   ├── language
+│   │   ├── ar.xml
+│   │   ├── ast.xml
+│   │   ├── bg.xml
+│   │   ├── ca.xml
+│   │   ├── cz.xml
+│   │   ├── da.xml
+│   │   ├── de.xml
+│   │   ├── en.xml
+│   │   ├── es.xml
+│   │   ├── et.xml
+│   │   ├── fa.xml
+│   │   ├── fi.xml
+│   │   ├── fr.xml
+│   │   ├── gl.xml
+│   │   ├── gr.xml
+│   │   ├── he.xml
+│   │   ├── hr.xml
+│   │   ├── hu.xml
+│   │   ├── id.xml
+│   │   ├── is.xml
+│   │   ├── it.xml
+│   │   ├── ja.xml
+│   │   ├── ko.xml
+│   │   ├── language.php
+│   │   ├── nl.xml
+│   │   ├── no.xml
+│   │   ├── pl.xml
+│   │   ├── pt-br.xml
+│   │   ├── pt-pt.xml
+│   │   ├── ro.xml
+│   │   ├── ru.xml
+│   │   ├── sk.xml
+│   │   ├── sl.xml
+│   │   ├── sv.xml
+│   │   ├── th.xml
+│   │   ├── translation-plugin.xsd
+│   │   ├── translation.xsd
+│   │   ├── tr.xml
+│   │   ├── tw.xml
+│   │   ├── uk.xml
+│   │   └── zh.xml
+│   ├── phpsysinfo3.xsd
+│   ├── phpsysinfo.ini -> /home/birder/BirdNET-Pi/templates/phpsysinfo.ini
+│   ├── phpsysinfo.ini.new
+│   ├── plugins
+│   │   ├── bat
+│   │   │   ├── bat_bootstrap.html
+│   │   │   ├── class.bat.inc.php
+│   │   │   ├── js
+│   │   │   │   ├── bat_bootstrap.js
+│   │   │   │   └── bat_dynamic.js
+│   │   │   └── lang
+│   │   │       ├── cz.xml
+│   │   │       ├── de.xml
+│   │   │       ├── en.xml
+│   │   │       ├── fr.xml
+│   │   │       ├── gr.xml
+│   │   │       ├── pl.xml
+│   │   │       ├── ro.xml
+│   │   │       └── ru.xml
+│   │   ├── diskload
+│   │   │   ├── class.diskload.inc.php
+│   │   │   ├── diskload_bootstrap.html
+│   │   │   ├── js
+│   │   │   │   ├── diskload_bootstrap.js
+│   │   │   │   └── diskload_dynamic.js
+│   │   │   └── lang
+│   │   │       ├── en.xml
+│   │   │       └── pl.xml
+│   │   ├── docker
+│   │   │   ├── class.docker.inc.php
+│   │   │   ├── docker_bootstrap.html
+│   │   │   ├── js
+│   │   │   │   ├── docker_bootstrap.js
+│   │   │   │   └── docker_dynamic.js
+│   │   │   └── lang
+│   │   │       ├── en.xml
+│   │   │       ├── gr.xml
+│   │   │       └── pl.xml
+│   │   ├── hyperv
+│   │   │   ├── class.hyperv.inc.php
+│   │   │   ├── css
+│   │   │   │   └── hyperv.css
+│   │   │   ├── gfx
+│   │   │   │   ├── offline.gif
+│   │   │   │   └── online.gif
+│   │   │   ├── hyperv_bootstrap.html
+│   │   │   ├── js
+│   │   │   │   ├── hyperv_bootstrap.js
+│   │   │   │   └── hyperv_dynamic.js
+│   │   │   └── lang
+│   │   │       ├── en.xml
+│   │   │       ├── gr.xml
+│   │   │       └── pl.xml
+│   │   ├── pingtest
+│   │   │   ├── class.pingtest.inc.php
+│   │   │   ├── css
+│   │   │   │   └── pingtest.css
+│   │   │   ├── js
+│   │   │   │   ├── pingtest_bootstrap.js
+│   │   │   │   └── pingtest_dynamic.js
+│   │   │   ├── lang
+│   │   │   │   ├── cz.xml
+│   │   │   │   ├── de.xml
+│   │   │   │   ├── en.xml
+│   │   │   │   ├── gr.xml
+│   │   │   │   └── pl.xml
+│   │   │   └── pingtest_bootstrap.html
+│   │   ├── ps
+│   │   │   ├── class.ps.inc.php
+│   │   │   ├── js
+│   │   │   │   ├── ps_bootstrap.js
+│   │   │   │   └── ps_dynamic.js
+│   │   │   ├── lang
+│   │   │   │   ├── cz.xml
+│   │   │   │   ├── de.xml
+│   │   │   │   ├── en.xml
+│   │   │   │   ├── fr.xml
+│   │   │   │   ├── gr.xml
+│   │   │   │   ├── pl.xml
+│   │   │   │   ├── ro.xml
+│   │   │   │   ├── ru.xml
+│   │   │   │   └── uk.xml
+│   │   │   └── ps_bootstrap.html
+│   │   ├── psstatus
+│   │   │   ├── class.psstatus.inc.php
+│   │   │   ├── css
+│   │   │   │   └── psstatus.css
+│   │   │   ├── gfx
+│   │   │   │   ├── offline.gif
+│   │   │   │   └── online.gif
+│   │   │   ├── js
+│   │   │   │   ├── psstatus_bootstrap.js
+│   │   │   │   └── psstatus_dynamic.js
+│   │   │   ├── lang
+│   │   │   │   ├── cz.xml
+│   │   │   │   ├── de.xml
+│   │   │   │   ├── en.xml
+│   │   │   │   ├── fr.xml
+│   │   │   │   ├── gr.xml
+│   │   │   │   ├── pl.xml
+│   │   │   │   ├── ro.xml
+│   │   │   │   ├── ru.xml
+│   │   │   │   └── uk.xml
+│   │   │   └── psstatus_bootstrap.html
+│   │   ├── quotas
+│   │   │   ├── class.quotas.inc.php
+│   │   │   ├── css
+│   │   │   │   └── quotas.css
+│   │   │   ├── js
+│   │   │   │   ├── quotas_bootstrap.js
+│   │   │   │   └── quotas_dynamic.js
+│   │   │   ├── lang
+│   │   │   │   ├── cz.xml
+│   │   │   │   ├── de.xml
+│   │   │   │   ├── en.xml
+│   │   │   │   ├── fr.xml
+│   │   │   │   ├── gr.xml
+│   │   │   │   ├── pl.xml
+│   │   │   │   ├── ro.xml
+│   │   │   │   └── ru.xml
+│   │   │   └── quotas_bootstrap.html
+│   │   ├── raid
+│   │   │   ├── class.raid.inc.php
+│   │   │   ├── css
+│   │   │   │   └── raid.css
+│   │   │   ├── gfx
+│   │   │   │   ├── error.png
+│   │   │   │   ├── harddrivefail.png
+│   │   │   │   ├── harddriveok.png
+│   │   │   │   ├── harddrivespare.png
+│   │   │   │   ├── harddriveunc.png
+│   │   │   │   ├── harddrivewarn.png
+│   │   │   │   ├── soliddrivefail.png
+│   │   │   │   ├── soliddriveok.png
+│   │   │   │   ├── soliddrivespare.png
+│   │   │   │   ├── soliddriveunc.png
+│   │   │   │   └── soliddrivewarn.png
+│   │   │   ├── js
+│   │   │   │   ├── raid_bootstrap.js
+│   │   │   │   └── raid_dynamic.js
+│   │   │   ├── lang
+│   │   │   │   ├── cz.xml
+│   │   │   │   ├── de.xml
+│   │   │   │   ├── en.xml
+│   │   │   │   ├── fr.xml
+│   │   │   │   ├── gr.xml
+│   │   │   │   ├── ro.xml
+│   │   │   │   └── ru.xml
+│   │   │   └── raid_bootstrap.html
+│   │   ├── smart
+│   │   │   ├── class.smart.inc.php
+│   │   │   ├── css
+│   │   │   │   └── smart.css
+│   │   │   ├── js
+│   │   │   │   ├── smart_bootstrap.js
+│   │   │   │   └── smart_dynamic.js
+│   │   │   ├── lang
+│   │   │   │   ├── cz.xml
+│   │   │   │   ├── en.xml
+│   │   │   │   ├── fr.xml
+│   │   │   │   ├── gr.xml
+│   │   │   │   ├── pl.xml
+│   │   │   │   └── ro.xml
+│   │   │   └── smart_bootstrap.html
+│   │   ├── snmppinfo
+│   │   │   ├── class.snmppinfo.inc.php
+│   │   │   ├── js
+│   │   │   │   ├── snmppinfo_bootstrap.js
+│   │   │   │   └── snmppinfo_dynamic.js
+│   │   │   ├── lang
+│   │   │   │   ├── cz.xml
+│   │   │   │   ├── de.xml
+│   │   │   │   ├── en.xml
+│   │   │   │   ├── fr.xml
+│   │   │   │   ├── gr.xml
+│   │   │   │   ├── pl.xml
+│   │   │   │   ├── ro.xml
+│   │   │   │   └── ru.xml
+│   │   │   └── snmppinfo_bootstrap.html
+│   │   ├── stablebit
+│   │   │   ├── class.stablebit.inc.php
+│   │   │   ├── gfx
+│   │   │   │   ├── off.gif
+│   │   │   │   └── on.gif
+│   │   │   ├── js
+│   │   │   │   ├── stablebit_bootstrap.js
+│   │   │   │   └── stablebit_dynamic.js
+│   │   │   ├── lang
+│   │   │   │   ├── en.xml
+│   │   │   │   └── gr.xml
+│   │   │   └── stablebit_bootstrap.html
+│   │   ├── updatenotifier
+│   │   │   ├── class.updatenotifier.inc.php
+│   │   │   ├── js
+│   │   │   │   ├── updatenotifier_bootstrap.js
+│   │   │   │   └── updatenotifier_dynamic.js
+│   │   │   ├── lang
+│   │   │   │   ├── cz.xml
+│   │   │   │   ├── de.xml
+│   │   │   │   ├── en.xml
+│   │   │   │   ├── fr.xml
+│   │   │   │   ├── gr.xml
+│   │   │   │   ├── pl.xml
+│   │   │   │   ├── ro.xml
+│   │   │   │   └── ru.xml
+│   │   │   └── updatenotifier_bootstrap.html
+│   │   ├── uprecords
+│   │   │   ├── class.uprecords.inc.php
+│   │   │   ├── js
+│   │   │   │   ├── uprecords_bootstrap.js
+│   │   │   │   └── uprecords_dynamic.js
+│   │   │   ├── lang
+│   │   │   │   ├── en.xml
+│   │   │   │   ├── fr.xml
+│   │   │   │   ├── gr.xml
+│   │   │   │   ├── hu.xml
+│   │   │   │   ├── pl.xml
+│   │   │   │   ├── ro.xml
+│   │   │   │   └── ru.xml
+│   │   │   └── uprecords_bootstrap.html
+│   │   └── viewer
+│   │       ├── class.viewer.inc.php
+│   │       ├── js
+│   │       │   ├── viewer_bootstrap.js
+│   │       │   └── viewer_dynamic.js
+│   │       ├── lang
+│   │       │   ├── en.xml
+│   │       │   ├── gr.xml
+│   │       │   └── pl.xml
+│   │       └── viewer_bootstrap.html
+│   ├── read_config.php
+│   ├── README.md
+│   ├── README_PLUGIN.md
+│   ├── sample
+│   │   ├── aix
+│   │   │   ├── prtconf1.txt
+│   │   │   └── prtconf2.txt
+│   │   ├── distrotest
+│   │   │   ├── 4MLinux
+│   │   │   │   └── 10.0-server.txt
+│   │   │   ├── Absolute
+│   │   │   │   └── 15.0.txt
+│   │   │   ├── Alma
+│   │   │   │   └── 8.3.txt
+│   │   │   ├── Alpine
+│   │   │   │   └── 2.6.4.txt
+│   │   │   ├── ALT
+│   │   │   │   ├── 6.0.0.txt
+│   │   │   │   ├── 7.0.0-Simply.txt
+│   │   │   │   └── 7.0.1.txt
+│   │   │   ├── Amazon
+│   │   │   │   ├── 2013.09.txt
+│   │   │   │   └── 2016.09.txt
+│   │   │   ├── AnduinOS
+│   │   │   │   └── 1.4.0.txt
+│   │   │   ├── antiX
+│   │   │   │   └── 2012.07.06.txt
+│   │   │   ├── Arch
+│   │   │   │   ├── 2011.08.19-ISO.txt
+│   │   │   │   ├── 2013.11.01.txt
+│   │   │   │   ├── 2014.01.05.txt
+│   │   │   │   └── 2017.03.07-ARM.txt
+│   │   │   ├── Archcraft
+│   │   │   │   └── 2023.01.01.txt
+│   │   │   ├── Archman
+│   │   │   │   └── 2022-07.txt
+│   │   │   ├── Arco
+│   │   │   │   └── 22.01.10_l.txt
+│   │   │   ├── Armbian
+│   │   │   │   └── 23.02.2.txt
+│   │   │   ├── Artix
+│   │   │   │   └── 20210726.txt
+│   │   │   ├── BigLinux
+│   │   │   │   ├── 19.04.txt
+│   │   │   │   ├── 20.04_RC1.txt
+│   │   │   │   ├── 2023-04-11_15-10.txt
+│   │   │   │   └── 7.10.txt
+│   │   │   ├── Bluestar
+│   │   │   │   └── 5.16.15.txt
+│   │   │   ├── Bodhi
+│   │   │   │   └── 6.0.0.txt
+│   │   │   ├── BOSS
+│   │   │   │   ├── 1.0-server.txt
+│   │   │   │   └── 5.0.txt
+│   │   │   ├── CachyOS
+│   │   │   │   └── 221230.txt
+│   │   │   ├── Calculate
+│   │   │   │   └── 13.11.txt
+│   │   │   ├── Canaima
+│   │   │   │   └── 4.1.txt
+│   │   │   ├── CentOS
+│   │   │   │   ├── 5.6.txt
+│   │   │   │   ├── 6.5-SF.txt
+│   │   │   │   ├── 6.5.txt
+│   │   │   │   ├── 7.1.1503.txt
+│   │   │   │   └── Stream-8.txt
+│   │   │   ├── Chakra
+│   │   │   │   └── 2013.02.txt
+│   │   │   ├── Chimera
+│   │   │   │   └── rolling.txt
+│   │   │   ├── Clear
+│   │   │   │   └── 35000.txt
+│   │   │   ├── ClearOS
+│   │   │   │   └── 6.4.0-Beta.txt
+│   │   │   ├── Cloud
+│   │   │   │   ├── 5.10.txt
+│   │   │   │   ├── 6.4.txt
+│   │   │   │   └── 7.2.txt
+│   │   │   ├── Container
+│   │   │   │   └── 1409.2.0.txt
+│   │   │   ├── CoreOS
+│   │   │   │   └── 367.1.0.txt
+│   │   │   ├── Crux
+│   │   │   │   └── 2.8.txt
+│   │   │   ├── dahliaOS
+│   │   │   │   └── 220222.txt
+│   │   │   ├── Debian
+│   │   │   │   ├── 5.0.3.txt
+│   │   │   │   ├── 6.0.6.txt
+│   │   │   │   ├── 8-20140106-netinstall.txt
+│   │   │   │   └── 8-20140106.txt
+│   │   │   ├── Deepin
+│   │   │   │   ├── 20.08.txt
+│   │   │   │   ├── 2013.txt
+│   │   │   │   └── 23-alpha2.txt
+│   │   │   ├── Devuan
+│   │   │   │   └── 1.0.txt
+│   │   │   ├── EasyOS
+│   │   │   │   ├── 0.6.8.txt
+│   │   │   │   ├── 0.9.4.txt
+│   │   │   │   ├── 1.2.9.1.txt
+│   │   │   │   └── 2.1.11.txt
+│   │   │   ├── Eisfair
+│   │   │   │   ├── 1-2.6.5.txt
+│   │   │   │   ├── 2-1.8.1.txt
+│   │   │   │   └── 64-2.8.25.txt
+│   │   │   ├── elementaryOS
+│   │   │   │   ├── 0.2.txt
+│   │   │   │   ├── 0.4.txt
+│   │   │   │   └── 6.0.txt
+│   │   │   ├── Elive
+│   │   │   │   └── 3.8.30.txt
+│   │   │   ├── EndeavourOS
+│   │   │   │   └── 21.4.txt
+│   │   │   ├── Endless
+│   │   │   │   └── 3.3.16.txt
+│   │   │   ├── EuroLinux
+│   │   │   │   └── 8.4.txt
+│   │   │   ├── Exherbo
+│   │   │   │   └── 2019.09.08.txt
+│   │   │   ├── ExTiX
+│   │   │   │   └── 22.12.txt
+│   │   │   ├── Fatdog
+│   │   │   │   └── 813.txt
+│   │   │   ├── Fedora
+│   │   │   │   ├── 20-lsb.txt
+│   │   │   │   ├── 20.txt
+│   │   │   │   └── 4.txt
+│   │   │   ├── Feren
+│   │   │   │   └── 2020.07.txt
+│   │   │   ├── Foresight
+│   │   │   │   └── 2.5.3.txt
+│   │   │   ├── FreeEOS
+│   │   │   │   └── 1.3.3.txt
+│   │   │   ├── Frugalware
+│   │   │   │   └── 1.9.txt
+│   │   │   ├── Fuduntu
+│   │   │   │   └── 2013.2.txt
+│   │   │   ├── Garuda
+│   │   │   │   └── 220106.txt
+│   │   │   ├── Generations
+│   │   │   │   └── 3.1.txt
+│   │   │   ├── Gentoo
+│   │   │   │   ├── 2.2-NAME.txt
+│   │   │   │   └── 2.2.txt
+│   │   │   ├── gNewSense
+│   │   │   │   └── 3.0.txt
+│   │   │   ├── Gnoppix
+│   │   │   │   └── 22.txt
+│   │   │   ├── Gobo
+│   │   │   │   └── 015.beta2.txt
+│   │   │   ├── Guix
+│   │   │   │   └── 1.4.0.txt
+│   │   │   ├── Handy
+│   │   │   │   └── 2.0.txt
+│   │   │   ├── HipServ
+│   │   │   │   └── 2.6.txt
+│   │   │   ├── IPFire
+│   │   │   │   └── 2.13.txt
+│   │   │   ├── JingOS
+│   │   │   │   └── 0.8.1.txt
+│   │   │   ├── Kaisen
+│   │   │   │   └── 2.2.txt
+│   │   │   ├── Kali
+│   │   │   │   └── 2018.1.txt
+│   │   │   ├── KaOS
+│   │   │   │   └── 2014.0301.txt
+│   │   │   ├── KDEneon
+│   │   │   │   └── 5.21.txt
+│   │   │   ├── Kodachi
+│   │   │   │   └── 18.04.txt
+│   │   │   ├── Korora
+│   │   │   │   └── 20.txt
+│   │   │   ├── Laclin
+│   │   │   │   └── 1.txt
+│   │   │   ├── Lakka
+│   │   │   │   └── 2.0.txt
+│   │   │   ├── LibreELEC
+│   │   │   │   └── 8.0.1.txt
+│   │   │   ├── Linaro
+│   │   │   │   └── 13.12.txt
+│   │   │   ├── Linspire
+│   │   │   │   └── 12.0.1.txt
+│   │   │   ├── Linuxfx
+│   │   │   │   └── 11.1.1103.txt
+│   │   │   ├── LinuxLite
+│   │   │   │   └── 6.2.txt
+│   │   │   ├── Lunar
+│   │   │   │   └── 1.7.0-rc2.txt
+│   │   │   ├── LXLE
+│   │   │   │   └── 20.04.txt
+│   │   │   ├── Mabox
+│   │   │   │   └── 21.02.txt
+│   │   │   ├── Mageia
+│   │   │   │   └── 4.txt
+│   │   │   ├── Makulu
+│   │   │   │   └── 2021.12.15.txt
+│   │   │   ├── Mandrake
+│   │   │   │   ├── 2011.0.txt
+│   │   │   │   └── 9.2.txt
+│   │   │   ├── Manjaro
+│   │   │   │   ├── 0.8.8.txt
+│   │   │   │   └── 21.12-arm.txt
+│   │   │   ├── Mauna
+│   │   │   │   └── 24.5.txt
+│   │   │   ├── Mer
+│   │   │   │   └── 0.2011.txt
+│   │   │   ├── Milis
+│   │   │   │   └── 2.0.txt
+│   │   │   ├── Mint
+│   │   │   │   ├── 13.txt
+│   │   │   │   ├── 14.txt
+│   │   │   │   ├── 15.txt
+│   │   │   │   ├── 20.3.txt
+│   │   │   │   └── LMDE_5.txt
+│   │   │   ├── MX
+│   │   │   │   └── 17.1.txt
+│   │   │   ├── NeoKylin
+│   │   │   │   └── 6.0.txt
+│   │   │   ├── Neptune
+│   │   │   │   └── 7.5.txt
+│   │   │   ├── NethServer
+│   │   │   │   └── 7.9.2009.txt
+│   │   │   ├── Netrunner
+│   │   │   │   ├── 13.06-SE.txt
+│   │   │   │   ├── 13.06.txt
+│   │   │   │   └── 2014.04.txt
+│   │   │   ├── Nitrux
+│   │   │   │   └── 2.0.0-280122.txt
+│   │   │   ├── NixOS
+│   │   │   │   └── 13.10.txt
+│   │   │   ├── Nobara
+│   │   │   │   └── 37.txt
+│   │   │   ├── NuTyX
+│   │   │   │   └── 10.0.txt
+│   │   │   ├── Omarine
+│   │   │   │   └── 7.0.txt
+│   │   │   ├── OpenELEC
+│   │   │   │   └── 8.0.3.txt
+│   │   │   ├── openEuler
+│   │   │   │   └── 22.09.txt
+│   │   │   ├── OpenMamba
+│   │   │   │   └── 3.0.1.txt
+│   │   │   ├── OpenMandriva
+│   │   │   │   └── 2013.0-RC1.txt
+│   │   │   ├── openSUSE
+│   │   │   │   ├── 11.3.txt
+│   │   │   │   ├── 13.1.txt
+│   │   │   │   ├── 20211111.txt
+│   │   │   │   └── 42.3.txt
+│   │   │   ├── OpenWRT
+│   │   │   │   └── 22.03.2.txt
+│   │   │   ├── Oracle
+│   │   │   │   ├── 5.10-el.txt
+│   │   │   │   └── 6.3.txt
+│   │   │   ├── Parrot
+│   │   │   │   └── 5.0.txt
+│   │   │   ├── Parsix
+│   │   │   │   ├── 5.0.txt
+│   │   │   │   ├── 6.0.txt
+│   │   │   │   └── 8.15.txt
+│   │   │   ├── PCLinuxOS
+│   │   │   │   └── 2012.06.txt
+│   │   │   ├── Pear
+│   │   │   │   ├── 11.1.0.txt
+│   │   │   │   ├── 5.00.txt
+│   │   │   │   ├── 6.1-LTS.txt
+│   │   │   │   ├── 6.1.txt
+│   │   │   │   └── 7.0.txt
+│   │   │   ├── Peppermint
+│   │   │   │   ├── 3.txt
+│   │   │   │   └── 4-20131113.txt
+│   │   │   ├── Photon
+│   │   │   │   └── 5.0.txt
+│   │   │   ├── Pisi
+│   │   │   │   └── 1.0.txt
+│   │   │   ├── PLD
+│   │   │   │   └── 3.0.txt
+│   │   │   ├── Plop
+│   │   │   │   └── 23.1.txt
+│   │   │   ├── Pop
+│   │   │   │   └── 21.10.txt
+│   │   │   ├── Porteus
+│   │   │   │   └── 2.1.txt
+│   │   │   ├── Proxmox
+│   │   │   │   └── 8.0.3.txt
+│   │   │   ├── Puppy
+│   │   │   │   ├── 22.12.txt
+│   │   │   │   ├── 431.txt
+│   │   │   │   ├── 528-lucid.txt
+│   │   │   │   ├── 5.3.3-slacko.txt
+│   │   │   │   └── 5.3-wary.txt
+│   │   │   ├── PureOS
+│   │   │   │   ├── 10.0.txt
+│   │   │   │   └── 3.0beta1.txt
+│   │   │   ├── Q4OS
+│   │   │   │   └── 3.16.txt
+│   │   │   ├── QTS
+│   │   │   │   └── 3.1.2.txt
+│   │   │   ├── Qubes
+│   │   │   │   └── 3.0.txt
+│   │   │   ├── QuemOS
+│   │   │   │   └── 1.3.txt
+│   │   │   ├── Raspbian
+│   │   │   │   ├── 7.txt
+│   │   │   │   └── 8.0.txt
+│   │   │   ├── RebeccaBlackOS
+│   │   │   │   └── 20230116.txt
+│   │   │   ├── RebornOS
+│   │   │   │   └── 2022.04.10.txt
+│   │   │   ├── Redcore
+│   │   │   │   └── 1803.txt
+│   │   │   ├── RedFlag
+│   │   │   │   └── 8.0.txt
+│   │   │   ├── RedHat
+│   │   │   │   ├── 6.0.txt
+│   │   │   │   ├── 7.0-Beta.txt
+│   │   │   │   └── 7.5.txt
+│   │   │   ├── Regata
+│   │   │   │   └── 22.txt
+│   │   │   ├── risiOS
+│   │   │   │   └── 37.txt
+│   │   │   ├── RoboLinux
+│   │   │   │   └── 20.04.txt
+│   │   │   ├── Rocky
+│   │   │   │   ├── 8.3-RC1.txt
+│   │   │   │   └── 8.4.txt
+│   │   │   ├── ROSA
+│   │   │   │   ├── 2012.0.0-11-LTS.txt
+│   │   │   │   ├── 2012.0.0-6-LTS.txt
+│   │   │   │   ├── 2012.1.0-20.txt
+│   │   │   │   └── 6.5-Server.txt
+│   │   │   ├── Runtu
+│   │   │   │   └── 22.04.txt
+│   │   │   ├── Sabayon
+│   │   │   │   └── 14.01.txt
+│   │   │   ├── SalentOS
+│   │   │   │   └── 1.0.1.txt
+│   │   │   ├── Salix
+│   │   │   │   └── 14.0.txt
+│   │   │   ├── Scientific
+│   │   │   │   ├── 6.3-lsb.txt
+│   │   │   │   ├── 6.3.txt
+│   │   │   │   └── 6.4.txt
+│   │   │   ├── Semplice
+│   │   │   │   └── 6.txt
+│   │   │   ├── Septor
+│   │   │   │   └── 2021.txt
+│   │   │   ├── Siduction
+│   │   │   │   └── 22.1.txt
+│   │   │   ├── Slackware
+│   │   │   │   └── 14.0.txt
+│   │   │   ├── Slax
+│   │   │   │   └── 7.0.1.txt
+│   │   │   ├── SliTaz
+│   │   │   │   ├── 2014.02.16-cooking.txt
+│   │   │   │   └── 5.0-RC4.txt
+│   │   │   ├── SMEServer
+│   │   │   │   ├── 10.1.txt
+│   │   │   │   ├── 8.1beta3.txt
+│   │   │   │   └── 9.0beta3.txt
+│   │   │   ├── SMS
+│   │   │   │   └── 2.0.5.txt
+│   │   │   ├── Snal
+│   │   │   │   └── 1.24.txt
+│   │   │   ├── Solus
+│   │   │   │   ├── 1.0-rc1.txt
+│   │   │   │   └── 2017.01.01.0.txt
+│   │   │   ├── SolusOS
+│   │   │   │   ├── 1.3.txt
+│   │   │   │   └── 2-alpha7.txt
+│   │   │   ├── SolydXK
+│   │   │   │   ├── 2014.01-K.txt
+│   │   │   │   └── 2014.01-X.txt
+│   │   │   ├── Sparky
+│   │   │   │   └── 6.5.txt
+│   │   │   ├── Springdale
+│   │   │   │   ├── 6.9.txt
+│   │   │   │   └── 7.3.txt
+│   │   │   ├── StartOS
+│   │   │   │   ├── 5.0.txt
+│   │   │   │   └── 6.0.txt
+│   │   │   ├── SteamOS
+│   │   │   │   └── 1.0-beta.txt
+│   │   │   ├── SUSE
+│   │   │   │   └── 12.0.txt
+│   │   │   ├── Synology
+│   │   │   │   └── 4.1-2668.txt
+│   │   │   ├── Tails
+│   │   │   │   └── 0.22.1.txt
+│   │   │   ├── Tanglu
+│   │   │   │   └── 2.0-beta2.txt
+│   │   │   ├── TinyCore
+│   │   │   │   └── 5.0.alpha4.txt
+│   │   │   ├── Tizen
+│   │   │   │   ├── 2.2.0-Magnolia.txt
+│   │   │   │   └── 2.2.0-Tizen.txt
+│   │   │   ├── Trisquel
+│   │   │   │   └── 6.0.txt
+│   │   │   ├── Turbo
+│   │   │   │   └── 12.5.txt
+│   │   │   ├── Tuxedo
+│   │   │   │   └── 22.04.2.txt
+│   │   │   ├── Ubuntu
+│   │   │   │   ├── 10.04.txt
+│   │   │   │   ├── 12.04.txt
+│   │   │   │   ├── 13.10.txt
+│   │   │   │   └── 20.04.txt
+│   │   │   ├── UltimateEdition
+│   │   │   │   └── 3.9.txt
+│   │   │   ├── Ultramarine
+│   │   │   │   └── 36.0.txt
+│   │   │   ├── UOS
+│   │   │   │   └── 20.txt
+│   │   │   ├── Uruk
+│   │   │   │   └── 3.0.txt
+│   │   │   ├── Vanilla
+│   │   │   │   └── 22.10.txt
+│   │   │   ├── Vector
+│   │   │   │   └── 647.0.txt
+│   │   │   ├── Venom
+│   │   │   │   └── 4.0.txt
+│   │   │   ├── Virtuozzo
+│   │   │   │   └── 8.3.txt
+│   │   │   ├── Void
+│   │   │   │   └── 1.0-20160420.txt
+│   │   │   ├── VortexBox
+│   │   │   │   ├── 2.2.txt
+│   │   │   │   └── 2.3-beta.txt
+│   │   │   ├── XeroLinux
+│   │   │   │   └── 2022.12.txt
+│   │   │   ├── Zenwalk
+│   │   │   │   └── 7.4.txt
+│   │   │   └── Zorin
+│   │   │       ├── 6.txt
+│   │   │       ├── 7.txt
+│   │   │       └── 8.txt
+│   │   ├── forti
+│   │   │   ├── execute_sensor_list0.txt
+│   │   │   └── execute_sensor_list1.txt
+│   │   ├── freebsd
+│   │   │   ├── netstat1.txt
+│   │   │   ├── netstat2.txt
+│   │   │   └── netstat3.txt
+│   │   ├── logs
+│   │   │   ├── android21.log
+│   │   │   ├── android412.log
+│   │   │   ├── bluestacks.log
+│   │   │   ├── debian7.log
+│   │   │   └── sf.log
+│   │   ├── main
+│   │   │   ├── cpuinfo10.txt
+│   │   │   ├── cpuinfo11.txt
+│   │   │   ├── cpuinfo12.txt
+│   │   │   ├── cpuinfo13.txt
+│   │   │   ├── cpuinfo14.txt
+│   │   │   ├── cpuinfo15.txt
+│   │   │   ├── cpuinfo16.txt
+│   │   │   ├── cpuinfo1.txt
+│   │   │   ├── cpuinfo2.txt
+│   │   │   ├── cpuinfo3.txt
+│   │   │   ├── cpuinfo4.txt
+│   │   │   ├── cpuinfo5.txt
+│   │   │   ├── cpuinfo6.txt
+│   │   │   ├── cpuinfo7.txt
+│   │   │   ├── cpuinfo8.txt
+│   │   │   ├── cpuinfo9.txt
+│   │   │   ├── dev1.txt
+│   │   │   ├── dfiP1.txt
+│   │   │   ├── dfk1.txt
+│   │   │   ├── dfkP1.txt
+│   │   │   ├── dfP1.txt
+│   │   │   ├── mount1.txt
+│   │   │   ├── mount2.txt
+│   │   │   ├── nvme1.txt
+│   │   │   ├── nvme2.txt
+│   │   │   ├── README
+│   │   │   ├── swaps1.txt
+│   │   │   ├── vm_stat1.txt
+│   │   │   ├── vm_stat2.txt
+│   │   │   └── vm_stat3.txt
+│   │   ├── motherboard
+│   │   │   ├── freeipmi
+│   │   │   │   ├── freeipmi1.txt
+│   │   │   │   └── freeipmi2.txt
+│   │   │   ├── healthd
+│   │   │   │   └── healthd1.txt
+│   │   │   ├── hwsensors
+│   │   │   │   ├── hwsensors1.txt
+│   │   │   │   ├── hwsensors2.txt
+│   │   │   │   ├── hwsensors3.txt
+│   │   │   │   ├── hwsensors4.txt
+│   │   │   │   └── hwsensors5.txt
+│   │   │   ├── ipmicfg
+│   │   │   │   ├── ipmicfg1.txt
+│   │   │   │   ├── ipmicfg2.txt
+│   │   │   │   ├── ipmicfg3.txt
+│   │   │   │   └── ipmicfg4.txt
+│   │   │   ├── ipmitool
+│   │   │   │   ├── ipmitool1.txt
+│   │   │   │   ├── ipmitool2.txt
+│   │   │   │   └── ipmitool3.txt
+│   │   │   ├── ipmiutil
+│   │   │   │   └── ipmiutil1.txt
+│   │   │   ├── lmsensors
+│   │   │   │   ├── lmsensors10.txt
+│   │   │   │   ├── lmsensors11.txt
+│   │   │   │   ├── lmsensors12.txt
+│   │   │   │   ├── lmsensors13.txt
+│   │   │   │   ├── lmsensors14.txt
+│   │   │   │   ├── lmsensors1.txt
+│   │   │   │   ├── lmsensors2.txt
+│   │   │   │   ├── lmsensors3.txt
+│   │   │   │   ├── lmsensors4.txt
+│   │   │   │   ├── lmsensors5.txt
+│   │   │   │   ├── lmsensors6.txt
+│   │   │   │   ├── lmsensors7.txt
+│   │   │   │   ├── lmsensors8.txt
+│   │   │   │   └── lmsensors9.txt
+│   │   │   ├── mbm5
+│   │   │   │   └── MBM51.csv
+│   │   │   ├── nvidiasmi
+│   │   │   │   ├── nvidiasmi0.txt
+│   │   │   │   ├── nvidiasmi1.txt
+│   │   │   │   └── nvidiasmi2.txt
+│   │   │   └── thermalzone
+│   │   │       └── thermalzone0.txt
+│   │   ├── openbsd
+│   │   │   ├── netstat_nbdi1.txt
+│   │   │   ├── netstat_nbdi2.txt
+│   │   │   ├── netstat_ndi1.txt
+│   │   │   └── netstat_ndi2.txt
+│   │   ├── plugin_bat
+│   │   │   ├── ac_state1.txt
+│   │   │   ├── battery_info1.txt
+│   │   │   ├── battery_state1.txt
+│   │   │   ├── log_android233.txt
+│   │   │   ├── log_android412.txt
+│   │   │   ├── log_android422.txt
+│   │   │   ├── log_darwin_1.txt
+│   │   │   ├── log_freebsd_1.txt
+│   │   │   ├── log_freebsd_2.txt
+│   │   │   ├── log_LenovoT530.txt
+│   │   │   ├── log_test_1.txt
+│   │   │   ├── log_test_2.txt
+│   │   │   ├── log_virtualbox.txt
+│   │   │   ├── README
+│   │   │   ├── upower1.txt
+│   │   │   ├── upower2.txt
+│   │   │   ├── upower3.txt
+│   │   │   ├── upower4.txt
+│   │   │   └── upower5.txt
+│   │   ├── plugin_ps
+│   │   │   ├── ps1.txt
+│   │   │   ├── ps2.txt
+│   │   │   └── README
+│   │   ├── plugin_psstatus
+│   │   │   ├── psstatus1.txt
+│   │   │   └── README
+│   │   ├── plugin_quotas
+│   │   │   ├── quotas1.txt
+│   │   │   ├── quotas2.txt
+│   │   │   ├── quotas3.txt
+│   │   │   └── README
+│   │   ├── plugin_raid
+│   │   │   ├── raid3ware-status0.txt
+│   │   │   ├── raid3ware-status1.txt
+│   │   │   ├── raiddmraid1.txt
+│   │   │   ├── raiddmraid2.txt
+│   │   │   ├── raiddmraid3.txt
+│   │   │   ├── raiddmraid4.txt
+│   │   │   ├── raiddmraid5.txt
+│   │   │   ├── raidgraid1.txt
+│   │   │   ├── raidgraid2.txt
+│   │   │   ├── raididrac1.txt
+│   │   │   ├── raidmdstat10.txt
+│   │   │   ├── raidmdstat11.txt
+│   │   │   ├── raidmdstat12.txt
+│   │   │   ├── raidmdstat13.txt
+│   │   │   ├── raidmdstat14.txt
+│   │   │   ├── raidmdstat15.txt
+│   │   │   ├── raidmdstat1.txt
+│   │   │   ├── raidmdstat2.txt
+│   │   │   ├── raidmdstat3.txt
+│   │   │   ├── raidmdstat4.txt
+│   │   │   ├── raidmdstat5.txt
+│   │   │   ├── raidmdstat6.txt
+│   │   │   ├── raidmdstat7.txt
+│   │   │   ├── raidmdstat8.txt
+│   │   │   ├── raidmdstat9.txt
+│   │   │   ├── raidmegaclisas-status1.txt
+│   │   │   ├── raidmegaclisas-status2.txt
+│   │   │   ├── raidmegaclisas-status3.txt
+│   │   │   ├── raidmegaclisas-status4.txt
+│   │   │   ├── raidmegaclisas-status5.txt
+│   │   │   ├── raidmegactl1.txt
+│   │   │   ├── raidmegactl2.txt
+│   │   │   ├── raidmegactl3.txt
+│   │   │   ├── raidmegactl4.txt
+│   │   │   ├── raidmegasasctl1.txt
+│   │   │   ├── raidmegasasctl2.txt
+│   │   │   ├── raidmegasasctl3.txt
+│   │   │   ├── raidmegasasctl4.txt
+│   │   │   ├── raidmegasasctl5.txt
+│   │   │   ├── raidmegasasctl6.txt
+│   │   │   ├── raidmegasasctl7.txt
+│   │   │   ├── raidmegasasctl8.txt
+│   │   │   ├── raidperccli0.txt
+│   │   │   ├── raidstorcli0.txt
+│   │   │   ├── raidstorcli1.txt
+│   │   │   ├── raidstorcli2.txt
+│   │   │   ├── raidzpool10.txt
+│   │   │   ├── raidzpool11.txt
+│   │   │   ├── raidzpool12.txt
+│   │   │   ├── raidzpool13.txt
+│   │   │   ├── raidzpool1.txt
+│   │   │   ├── raidzpool2.txt
+│   │   │   ├── raidzpool3.txt
+│   │   │   ├── raidzpool4.txt
+│   │   │   ├── raidzpool5.txt
+│   │   │   ├── raidzpool6.txt
+│   │   │   ├── raidzpool7.txt
+│   │   │   ├── raidzpool8.txt
+│   │   │   └── raidzpool9.txt
+│   │   ├── plugin_smart
+│   │   │   ├── smart0.txt
+│   │   │   ├── smart1.txt
+│   │   │   ├── smart2.txt
+│   │   │   ├── smart3.txt
+│   │   │   └── smart4.txt
+│   │   ├── plugin_updatenotifier
+│   │   │   ├── ubuntu-landscape1.txt
+│   │   │   ├── ubuntu-landscape2.txt
+│   │   │   ├── ubuntu-landscape3.txt
+│   │   │   ├── ubuntu-landscape4.txt
+│   │   │   ├── ubuntu-landscape5.txt
+│   │   │   ├── ubuntu-landscape6.txt
+│   │   │   ├── ubuntu-landscape7.txt
+│   │   │   └── universal-format.txt
+│   │   ├── processes
+│   │   │   └── processes.txt
+│   │   └── ups
+│   │       ├── apcupsd.txt
+│   │       ├── nutDell2700.txt
+│   │       ├── nutPW5110.txt
+│   │       ├── pmset1.txt
+│   │       ├── pmset2.txt
+│   │       ├── pmset3.txt
+│   │       ├── pmset4.txt
+│   │       ├── pmset5.txt
+│   │       ├── pmset6.txt
+│   │       ├── pmset7.txt
+│   │       ├── powersoftplus.txt
+│   │       └── snmpups.txt
+│   ├── SECURITY.md
+│   ├── templates
+│   │   ├── bootstrap
+│   │   │   ├── catppuccin-frappe.css
+│   │   │   ├── catppuccin-macchiato.css
+│   │   │   ├── catppuccin-mocha.css
+│   │   │   ├── dark.css
+│   │   │   ├── green.css
+│   │   │   ├── phpsysinfo.css
+│   │   │   ├── schabau.css
+│   │   │   ├── tokyo-night-storm.css
+│   │   │   ├── tomorrow-night-eighties.css
+│   │   │   └── vendor
+│   │   │       ├── bootstrap.min.css
+│   │   │       ├── chrome25.css
+│   │   │       ├── chrome28.css
+│   │   │       ├── firefox15.css
+│   │   │       ├── firefox20.css
+│   │   │       ├── firefox27.css
+│   │   │       ├── firefox28.css
+│   │   │       ├── ie8.css
+│   │   │       ├── ie9.css
+│   │   │       ├── midori04.css
+│   │   │       ├── midori05.css
+│   │   │       ├── opera11.css
+│   │   │       ├── safari5.css
+│   │   │       ├── safari8.css
+│   │   │       └── webapp.css
+│   │   ├── common
+│   │   │   └── emptyfile.css
+│   │   ├── dynamic
+│   │   │   ├── aqua
+│   │   │   │   └── aq_background.gif
+│   │   │   ├── aqua.css
+│   │   │   ├── blue
+│   │   │   │   ├── bar.png
+│   │   │   │   ├── barrest.png
+│   │   │   │   ├── barwarn.png
+│   │   │   │   ├── bg.png
+│   │   │   │   └── title.png
+│   │   │   ├── blue.css
+│   │   │   ├── catppuccin-frappe.css
+│   │   │   ├── catppuccin-macchiato.css
+│   │   │   ├── catppuccin-mocha.css
+│   │   │   ├── clean.css
+│   │   │   ├── cleansyn.css
+│   │   │   ├── cream
+│   │   │   │   └── bg.gif
+│   │   │   ├── cream.css
+│   │   │   ├── css.php
+│   │   │   ├── idash
+│   │   │   │   ├── bg.png
+│   │   │   │   ├── html.gif
+│   │   │   │   ├── htmlrest.gif
+│   │   │   │   └── htmlwarn.gif
+│   │   │   ├── idash.css
+│   │   │   ├── jstyle_blue.css
+│   │   │   ├── jstyle_green.css
+│   │   │   ├── lingruby
+│   │   │   │   └── background.png
+│   │   │   ├── lingruby.css
+│   │   │   ├── nextgen
+│   │   │   │   └── nextgen_bg.png
+│   │   │   ├── nextgen.css
+│   │   │   ├── phpsysinfo.css
+│   │   │   ├── plugin
+│   │   │   │   ├── jquery.dataTables.css
+│   │   │   │   ├── jquery.jgrowl.css
+│   │   │   │   ├── jquery.treeTable.css
+│   │   │   │   └── nyroModal.full.css
+│   │   │   ├── schabau.css
+│   │   │   ├── tokyo-night-storm.css
+│   │   │   ├── tomorrow-night-eighties.css
+│   │   │   ├── two
+│   │   │   │   └── gradient.png
+│   │   │   └── two.css
+│   │   ├── error_config.html
+│   │   ├── green_bootstrap.css -> /home/birder/BirdNET-Pi/templates/green_bootstrap.css
+│   │   ├── html -> /home/birder/BirdNET-Pi/templates/index_bootstrap.html
+│   │   ├── index_all.html
+│   │   ├── index_bootstrap.html
+│   │   ├── index_dynamic.html
+│   │   └── index_static.xslt
+│   ├── tools
+│   │   ├── checkdistro.php
+│   │   ├── checkpng.php
+│   │   ├── cputest.php
+│   │   ├── distrotest.php
+│   │   ├── phptest.php
+│   │   ├── README
+│   │   └── speedfan
+│   │       ├── SpeedFanGet_bin.zip
+│   │       └── SpeedFanGet_src.zip
+│   └── xml.php
+└── pi_file_tree.txt
+
+834 directories, 2081 files
