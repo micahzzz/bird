@@ -91,7 +91,7 @@
         
         <div class="p-4 mx-4 mb-2 bg-[var(--bn-panel)] rounded-xl border border-[var(--bn-border)] space-y-2 text-sm font-semibold">
             <div class="flex justify-between items-center"><span class="text-white">Total</span><span id="sb-total" class="text-link">0</span></div>
-            <div class="flex justify-between items-center"><span class="text-white">Today</span><span id="sb-today" class="text-link cursor-pointer" onclick="switchGallery('today'); document.querySelector('[data-tab=\'gallery\']').click();">0</span></div>
+            <div class="flex justify-between items-center"><span class="text-white">Today</span><span id="sb-today" class="text-link cursor-pointer" onclick="switchGallery('today'); document.querySelector('[data-tab=gallery]').click();">0</span></div>
             <div class="flex justify-between items-center"><span class="text-white">Last Hour</span><span id="sb-hour" class="text-link">0</span></div>
             <div class="flex justify-between items-center"><span class="text-white text-xs w-24 leading-tight">Species Detected Today</span><span id="sb-species-today" class="text-link">0</span></div>
             <div class="flex justify-between items-center border-t border-[var(--bn-border)] pt-2 mt-2"><span class="text-white text-xs w-20 leading-tight">Total Number of Species</span><span id="sb-species-total" class="text-link">0</span></div>
@@ -176,9 +176,8 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
                     <div>
                         <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Species</label>
-                        <select id="db-filter-species" class="w-full bg-[var(--bn-bg)] text-white border border-[var(--bn-border)] rounded-lg px-3 py-2 focus:outline-none focus:border-[var(--bn-highlight)]">
-                            <option value="all">All Species</option>
-                        </select>
+                        <input type="text" id="db-filter-species" list="species-list-options" placeholder="Start typing a species name..." class="w-full bg-[var(--bn-bg)] text-white border border-[var(--bn-border)] rounded-lg px-3 py-2 focus:outline-none focus:border-[var(--bn-highlight)]">
+                        <datalist id="species-list-options"></datalist>
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Date Range</label>
@@ -618,6 +617,11 @@
         
         let modalChart = null;
 
+        function escapeAttr(str) {
+            if (!str) return '';
+            return str.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        }
+
         let audioCtx;
         let trackNode;
         let gainNode;
@@ -652,7 +656,7 @@
                     await fetchGallery();
                 } else if (tabId === 'gallery') {
                     if (!document.querySelector('#tab-gallery .toggle-btn.active')) {
-                        switchGallery('recent', document.querySelector('#tab-gallery .toggle-btn[onclick*="\'recent\'"]'));
+                        switchGallery('recent', document.querySelector("#tab-gallery .toggle-btn[onclick*='recent']"));
                     }
                 }
                 if (tabId === 'tools') populateConfigForm();
@@ -823,7 +827,7 @@
                 }
 
                 feed.innerHTML += `
-                    <div onclick="searchAndPlay('${d.Com_Name}', '${d.Sci_Name}', '${d.Date}', '${d.Time}', '${pct}')" class="flex justify-between items-center bg-[var(--bn-panel)] p-3 rounded-lg border border-[var(--bn-border)] cursor-pointer hover:bg-[var(--bn-bg)] transition-colors group">
+                    <div onclick="searchAndPlay('${escapeAttr(d.Com_Name)}', '${escapeAttr(d.Sci_Name)}', '${d.Date}', '${d.Time}', '${pct}')" class="flex justify-between items-center bg-[var(--bn-panel)] p-3 rounded-lg border border-[var(--bn-border)] cursor-pointer hover:bg-[var(--bn-bg)] transition-colors group">
                         <div class="flex items-center gap-3 overflow-hidden">
                             <div class="w-8 h-8 rounded-full bg-[var(--bn-card)] text-[var(--bn-highlight)] flex items-center justify-center border border-[var(--bn-border)] group-hover:bg-[var(--bn-highlight)] group-hover:text-[#122617] transition-colors shrink-0">
                                 <svg class="w-4 h-4 ml-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path></svg>
@@ -939,7 +943,7 @@
                     <td class="p-3 text-slate-400 italic">${d.Sci_Name}</td>
                     <td class="p-3 text-[var(--bn-highlight)] font-mono">${pct}%</td>
                     <td class="p-3 text-right">
-                        <button onclick="searchAndPlay('${d.Com_Name}', '${d.Sci_Name}', '${d.Date}', '${d.Time}', '${pct}')" class="text-[var(--bn-highlight)] hover:text-white transition-colors" title="Play Audio">
+                        <button onclick="searchAndPlay('${escapeAttr(d.Com_Name)}', '${escapeAttr(d.Sci_Name)}', '${d.Date}', '${d.Time}', '${pct}')" class="text-[var(--bn-highlight)] hover:text-white transition-colors" title="Play Audio">
                             <svg class="w-6 h-6 inline" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path></svg>
                         </button>
                     </td>
@@ -950,10 +954,13 @@
         }
 
         function populateDatabaseFilter() {
-            const speciesSet = new Set(dbData.map(d => d.Com_Name));
-            const select = document.getElementById('db-filter-species');
-            select.innerHTML = '<option value="all">All Species</option>' + 
-                Array.from(speciesSet).sort().map(s => `<option value="${s}">${s}</option>`).join('');
+            const speciesSet = new Set(dbData.map(d => d.Com_Name).filter(Boolean));
+            const dataList = document.getElementById('species-list-options');
+            
+            const inputEl = document.getElementById('db-filter-species');
+            inputEl.placeholder = `Search among ${speciesSet.size} species...`;
+            
+            dataList.innerHTML = Array.from(speciesSet).sort().map(s => `<option value="${s.replace(/"/g, '&quot;')}"></option>`).join('');
         }
 
         // Old function now just calls the new search function.
@@ -1262,7 +1269,7 @@
                 const sciName = dbMatch ? dbMatch.Sci_Name : '';
                 
                 container.innerHTML += `
-                    <div class="bird-card p-4 hover:bg-[var(--bn-bg)] transition-colors cursor-pointer flex flex-col group" onclick="openDetectionModal('${f.filepath}', '${f.species}', '${sciName}', '${pct}', '${f.filename}')">
+                    <div class="bird-card p-4 hover:bg-[var(--bn-bg)] transition-colors cursor-pointer flex flex-col group" onclick="openDetectionModal('${escapeAttr(f.filepath)}', '${escapeAttr(f.species)}', '${escapeAttr(sciName)}', '${pct}', '${escapeAttr(f.filename)}')">
                         <div class="flex justify-between items-start mb-4">
                             <h4 class="text-white font-bold text-sm leading-tight group-hover:text-[var(--bn-highlight)] transition-colors">${f.species}</h4>
                             <span class="text-xs font-mono px-2 py-1 bg-[var(--bn-panel)] border border-[var(--bn-border)] rounded text-[var(--bn-highlight)]">${pct}%</span>
@@ -1288,7 +1295,7 @@
                 if(d.Time > stats[d.Com_Name].last) stats[d.Com_Name].last = d.Time;
             });
             Object.entries(stats).sort((a,b)=>b[1].c - a[1].c).forEach(([sp, d]) => {
-                tbody.innerHTML += `<tr class="hover:bg-[var(--bn-bg)] transition-colors cursor-pointer border-b border-[var(--bn-border)]" onclick="searchAndPlay('${sp}', '${d.sci}', '${todayStr}', '${d.last}', '')"><td class="p-4 font-bold text-white">${sp}</td><td class="p-4 text-slate-300">${d.c}</td><td class="p-4 text-slate-300">${d.last}</td></tr>`;
+                tbody.innerHTML += `<tr class="hover:bg-[var(--bn-bg)] transition-colors cursor-pointer border-b border-[var(--bn-border)]" onclick="searchAndPlay('${escapeAttr(sp)}', '${escapeAttr(d.sci)}', '${todayStr}', '${d.last}', '')"><td class="p-4 font-bold text-white">${sp}</td><td class="p-4 text-slate-300">${d.c}</td><td class="p-4 text-slate-300">${d.last}</td></tr>`;
             });
         }
 
@@ -2049,7 +2056,13 @@
                 const res = await fetch(API_BASE + '/api/log');
                 const text = await res.text();
                 const out = document.getElementById('log-output');
-                if(out.innerText !== text) { out.innerText = text; out.scrollTop = out.scrollHeight; }
+
+                const formattedText = text.replace(/\\n/g, '\n');
+
+                if(out.textContent !== formattedText) {
+                    out.textContent = formattedText;
+                    out.scrollTop = out.scrollHeight;
+                }
             } catch(e) {}
         }
 
