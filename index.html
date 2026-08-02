@@ -613,7 +613,7 @@
     </div>
 
     <script>
-        const API_BASE = 'http://' + (window.location.hostname || 'localhost') + ':9998';
+        const API_BASE = 'http://' + (window.location.hostname || 'localhost') + ':9999';
         let dbData = [];
         let configData = {};
         let activeChart = null;
@@ -2292,7 +2292,7 @@
             const canvas = document.createElement('canvas');
             canvas.width = targetWidth;
             canvas.height = targetHeight;
-            canvas.style.cssText = 'display: block; width: 100%; height: auto; max-height: 85vh; object-fit: contain; background-color: #204b2e; box-shadow: 0 10px 25px rgba(0,0,0,0.5); border-radius: 8px;';
+            canvas.style.cssText = 'display: block; width: 100%; height: 100%; max-height: 85vh; object-fit: contain; background-color: #204b2e; box-shadow: 0 10px 25px rgba(0,0,0,0.5); border-radius: 8px;';
             container.appendChild(canvas);
             const ctx = canvas.getContext('2d');
 
@@ -2318,6 +2318,7 @@
             const aspect = targetWidth / targetHeight;
             console.log(`[Collage] Using dimensions: ${targetWidth}x${targetHeight}. Aspect: ${aspect}.`);
             
+            // Restore HiDPI scaling
             var dpr = window.devicePixelRatio || 1;
             canvas.width = targetWidth * dpr;
             canvas.height = targetHeight * dpr;
@@ -2326,7 +2327,7 @@
             console.log(`[Collage] Canvas created. Dimensions: ${canvas.width}x${canvas.height}. Aspect: ${aspect}.`);
 
             console.log("[Collage] Calculating layout with maskPack...");
-            var layout = maskPack(items, aspect, masks, targetWidth);
+            var layout = maskPack(items, aspect, masks);
             console.log("[Collage] Layout calculated:", layout);
 
             if (!layout || layout.length === 0) {
@@ -2336,40 +2337,48 @@
 
             var promises = layout.map(d => {
                 return new Promise((resolve) => {
-                    let artUrl = getBirdImageUrl(d);
-                    if (!artUrl) return resolve(null); // Skip if no URL generated
+                    let artUrl = getBirdImageUrl(d, d.item ? d.item.pose : 1);
+                    if (!artUrl) return resolve(null); 
 
                     const img = new Image();
                     img.crossOrigin = 'Anonymous';
-                    
-                    img.onload = () => {
-                        d.img = img;
-                        resolve(d);
-                    };
-                    
+                    img.onload = () => resolve({ ...d, img: img });
                     img.onerror = () => {
                         console.warn('Local art missing, skipping collage drawing for:', d.sci);
-                        resolve(null); // Skip silently, no wiki fallback
+                        resolve(d); 
                     };
-                    
                     img.src = artUrl;
                 });
             });
 
             Promise.all(promises).then(function(loadedLayout) {
-                            console.log("[Collage] All image promises resolved. Painting canvas.", loadedLayout);
-                            ctx.clearRect(0, 0, canvas.width, canvas.height);
-                            loadedLayout.forEach(function(d) {
-                                if (d && d.img) {
-                                    try {
-                                    // Draw the image exactly where the grid dictates
-                                    ctx.drawImage(d.img, d.x, d.y, d.w, d.h);
-                                    } catch (e) {
-                                        console.error('Draw failed for', d.sci, e);
-                                    }
-                                }
-                            });
-                            console.log("[Collage] Canvas painting complete.");
+                console.log("[Collage] All image promises resolved. Painting canvas.");
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                const finalWidth = targetWidth;
+                const finalHeight = targetHeight;
+
+                loadedLayout.forEach(function(d, i) {
+                    if (d) {
+                        const x = (d.x / 100) * finalWidth;
+                        const y = (d.y / 100) * finalHeight;
+                        const w = (d.w / 100) * finalWidth;
+                        const h = (d.h / 100) * finalHeight;
+
+                        if (d.img) {
+                            try {
+                                ctx.drawImage(d.img, x, y, w, h);
+                            } catch (e) {
+                                console.error('Draw failed for', d.sci, e);
+                            }
+                        } else {
+                            // Keep this fallback for cases where an image truly fails to load.
+                            ctx.fillStyle = 'rgba(255, 0, 0, 0.4)';
+                            ctx.fillRect(x, y, w, h);
+                        }
+                    }
+                });
+                console.log("[Collage] Canvas painting complete.");
             });
         }
         
@@ -2383,19 +2392,18 @@
           return { s: 0.24, w: 1, c: 6, r: 6 };
         }
 
-        function maskPack(items, aspect, masks, targetWidth) {
+        function maskPack(items, aspect, masks) {
             if (!items || !items.length) return [];
             var n = items.length;
             var t = tuning(n);
             var gridW = t.c || 1;
             var gridH = Math.ceil(n / gridW);
-            var cellW = 1 / gridW;
-            var cellH = cellW / aspect;
-            var totalH = cellH * gridH;
-            if (totalH < 1) {
-                cellH = 1 / gridH;
-                cellW = cellH * aspect;
-            }
+
+            // FIX: This is the core of the rendering bug. The cell dimensions must
+            // be constrained by the overall canvas aspect ratio to prevent distortion.
+            const cellH = Math.min(1 / (gridW * aspect), 1 / gridH);
+            const cellW = cellH * aspect;
+
             var layout = [];
             var maskKeys = Object.keys(masks);
 
@@ -2420,15 +2428,18 @@
                         h = cellH;
                         w = h * maskAspect;
                     }
+                    
+                    var col = i % gridW;
+                    var row = Math.floor(i / gridW);
 
-                    x = (Math.random() * (cellW - w));
-                    y = (i * cellH) + (Math.random() * (cellH - h));
+                    x = (col * cellW) + (Math.random() * (cellW - w));
+                    y = (row * cellH) + (Math.random() * (cellH - h));
 
                     var poses = maskData.poses || [1];
                     pose = poses[Math.floor(Math.random() * poses.length)];
 
                     layout.push({
-                        x: x * 100, y: y * 100,
+                        x: x * 100, y: y * 100, // Return as percentages
                         w: w * 100, h: h * 100,
                         sci: item.sci,
                         item: { ...item, mask: maskName, pose: pose }
@@ -2437,28 +2448,7 @@
                     console.error("[Collage] Error processing item in maskPack:", items[i], e);
                 }
             }
-            
-            // This final mapping step seems to have an issue in the original logic,
-            // as it converts percentage-based layout to a fixed 100x100 container,
-            // which might not match the canvas size. The actual drawing context
-            // should handle the scaling. We will use the direct canvas dimensions
-            // for calculation.
-            return layout.map(function(d) {
-                const containerW = 100; // Let's keep it percentage based for drawing
-                const containerH = 100;
-                var w_pct = d.w / containerW;
-                var h_pct = d.h / containerH;
-                var x_pct = d.x / containerW;
-                var y_pct = d.y / containerH;
-                const finalWidth = targetWidth || collageTab.clientWidth || 1200;
-                return {
-                    ...d,
-                    x: x_pct * finalWidth,
-                    y: y_pct * finalWidth / aspect, // Use aspect to get correct y
-                    w: w_pct * finalWidth,
-                    h: h_pct * finalWidth / aspect,
-                };
-            });
+            return layout;
         }
     })();
     </script>

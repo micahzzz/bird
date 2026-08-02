@@ -130,16 +130,22 @@ def setup_database(db_path):
 
 
 class SidecarHandler(http.server.SimpleHTTPRequestHandler):
-    
+    # Set the server's root directory to be the script's directory
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, directory=os.path.dirname(os.path.realpath(__file__)), **kwargs)
+
     def get_db_path(self):
+        # Use robust paths based on the user's home directory
+        home = os.path.expanduser('~')
         paths = [
-            os.path.expanduser('~/BirdNET-Pi/scripts/birds.db'),
-            os.path.expanduser('~/BirdNET-Pi/birds.db'),
-            os.path.expanduser('~/BirdSongs/birds.db'),
-            '/home/pi/BirdNET-Pi/scripts/birds.db',
-            '/home/birder/BirdNET-Pi/scripts/birds.db'
+            os.path.join(home, 'BirdNET-Pi', 'birds.db'),
+            os.path.join(home, 'BirdNET-Pi', 'scripts', 'birds.db'),
         ]
-        return next((p for p in paths if os.path.exists(p)), None)
+        for path in paths:
+            if os.path.exists(path):
+                return path
+        print("CRITICAL: Database not found at any known location.")
+        return None
 
     def do_POST(self):
         try:
@@ -147,6 +153,8 @@ class SidecarHandler(http.server.SimpleHTTPRequestHandler):
             post_data = self.rfile.read(content_length)
             payload = json.loads(post_data.decode('utf-8'))
             
+            home_dir = os.path.expanduser('~')
+
             if self.path == '/api/compile':
                 target_species = payload.get('species')
                 min_conf = float(payload.get('min_conf', 0.7))
@@ -158,7 +166,7 @@ class SidecarHandler(http.server.SimpleHTTPRequestHandler):
                     self.send_error(400, "Species required")
                     return
                 
-                base_dir = os.path.expanduser('~/BirdSongs')
+                base_dir = os.path.join(home_dir, 'BirdSongs')
                 mix_dir = os.path.join(base_dir, 'mixes')
                 os.makedirs(mix_dir, exist_ok=True)
                 
@@ -237,7 +245,7 @@ class SidecarHandler(http.server.SimpleHTTPRequestHandler):
                     self.send_error(400, "Invalid species list name")
                     return
 
-                list_path = os.path.join(os.path.expanduser('~/BirdNET-Pi'), allowed_lists[list_name])
+                list_path = os.path.join(home_dir, 'BirdNET-Pi', allowed_lists[list_name])
 
                 with open(list_path, 'w', encoding='utf-8') as f:
                     f.write(content)
@@ -250,7 +258,7 @@ class SidecarHandler(http.server.SimpleHTTPRequestHandler):
             elif self.path == '/api/service_control':
                 action = payload.get('action')
                 service = payload.get('service')
-                script_path = '/home/birder/BirdNET-Pi/scripts/'
+                script_path = os.path.join(home_dir, 'BirdNET-Pi', 'scripts')
                 
                 allowed_actions = ['stop', 'restart', 'enable', 'disable']
                 allowed_services = [
@@ -288,371 +296,323 @@ class SidecarHandler(http.server.SimpleHTTPRequestHandler):
                 else:
                     self.send_error(400, "Invalid service")
             elif self.path == '/api/system_control':
-                            action = payload.get('action')
-                            # Whitelist of allowed system commands
-                            actions = {
-                                'reboot': ['sudo', '/sbin/reboot'],
-                                'shutdown': ['sudo', '/sbin/shutdown', 'now']
-                            }
-                            if action in actions:
-                                subprocess.Popen(actions[action]) # Popen because reboot/shutdown kills the process
-                                self.send_response(200)
-                                self.end_headers()
-                            else:
-                                self.send_error(400, "Invalid system action")
+                action = payload.get('action')
+                actions = {'reboot': ['sudo', '/sbin/reboot'], 'shutdown': ['sudo', '/sbin/shutdown', 'now']}
+                if action in actions:
+                    subprocess.Popen(actions[action])
+                    self.send_response(200)
+                    self.end_headers()
+                else:
+                    self.send_error(400, "Invalid system action")
         except Exception as e:
             self.send_error(500, str(e))
 
     def do_GET(self):
-        if self.path.startswith('/api/detections'):
-            db_path = self.get_db_path()
-            if not db_path:
-                self.send_error(404, "Database not found")
-                return
-            try:
-                query_components = parse_qs(urlparse(self.path).query)
-                limit = int(query_components.get('limit', [50])[0])
-                offset = int(query_components.get('offset', [0])[0])
-                sp = query_components.get('sp', [None])[0]
-                d_start = query_components.get('dStart', [None])[0]
-                d_end = query_components.get('dEnd', [None])[0]
-                t_start = query_components.get('tStart', [None])[0]
-                t_end = query_components.get('tEnd', [None])[0]
-                min_conf = float(query_components.get('minConf', [0])[0])
-
-                conn = sqlite3.connect(db_path)
-                conn.row_factory = sqlite3.Row
-                cursor = conn.cursor()
-
-                where_clauses = []
-                params = []
-
-                if sp and sp != 'all':
-                    where_clauses.append("Com_Name = ?")
-                    params.append(sp)
-                if d_start:
-                    where_clauses.append("Date >= ?")
-                    params.append(d_start)
-                if d_end:
-                    where_clauses.append("Date <= ?")
-                    params.append(d_end)
-                if t_start:
-                    where_clauses.append("Time >= ?")
-                    params.append(t_start)
-                if t_end:
-                    where_clauses.append("Time <= ?")
-                    params.append(t_end)
-                if min_conf > 0:
-                    where_clauses.append("Confidence >= ?")
-                    params.append(min_conf)
-
-                where_sql = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
-
-                # Get total count for filters
-                count_query = f"SELECT COUNT(*) FROM detections {where_sql}"
-                cursor.execute(count_query, params)
-                total_count = cursor.fetchone()[0]
-                
-                # Get paginated data
-                query_params = params + [limit, offset]
-                query = f"SELECT Date, Time, Sci_Name, Com_Name, Confidence FROM detections {where_sql} ORDER BY Date DESC, Time DESC LIMIT ? OFFSET ?"
-                
-                cursor.execute(query, query_params)
-                rows = cursor.fetchall()
-                
-                detections_with_insights = []
-                for row in rows:
-                    detection_dict = dict(row)
-                    insight = get_insight(detection_dict['Com_Name'], detection_dict['Date'])
-                    detection_dict['insight'] = insight
-                    detections_with_insights.append(detection_dict)
-                
-                conn.close()
-
-                response_payload = {
-                    "detections": detections_with_insights,
-                    "total_count": total_count
-                }
-                
-                self.send_response(200)
-                self.send_header('Content-type', 'application/json')
-                self.end_headers()
-                self.wfile.write(json.dumps(response_payload).encode('utf-8'))
-            except Exception as e:
-                self.send_error(500, str(e))
-        
-        elif self.path.startswith('/api/stats'):
-            db_path = self.get_db_path()
-            if not db_path:
-                self.send_error(404, "Database not found")
-                return
-            try:
-                from datetime import datetime, timedelta
-                query_components = parse_qs(urlparse(self.path).query)
-                days_str = query_components.get('days', [None])[0]
-
-                today_str = datetime.now().strftime('%Y-%m-%d')
-                
-                conn = sqlite3.connect(db_path)
-                cursor = conn.cursor()
-
-                # Time-filtered stats
-                where_clause = ""
-                params = []
-                if days_str and days_str != 'all':
-                    if days_str == 'today':
-                        where_clause = "WHERE Date = ?"
-                        params.append(today_str)
-                    elif days_str.isdigit():
-                        start_date = datetime.now() - timedelta(days=int(days_str))
-                        where_clause = "WHERE Date >= ?"
-                        params.append(start_date.strftime('%Y-%m-%d'))
-
-                cursor.execute(f"SELECT COUNT(*) FROM detections {where_clause}", params)
-                total_detections = cursor.fetchone()[0]
-                
-                cursor.execute(f"SELECT COUNT(DISTINCT Com_Name) FROM detections {where_clause}", params)
-                total_species = cursor.fetchone()[0]
-
-                cursor.execute(f"SELECT Com_Name, COUNT(*) as count FROM detections {where_clause} GROUP BY Com_Name ORDER BY count DESC", params)
-                species_counts = [{"Com_Name": row[0], "count": row[1]} for row in cursor.fetchall()]
-
-                # Unfiltered stats for sidebar/today view
-                cursor.execute("SELECT COUNT(*) FROM detections WHERE Date = ?", (today_str,))
-                today_detections = cursor.fetchone()[0]
-                
-                cursor.execute("SELECT COUNT(DISTINCT Com_Name) FROM detections WHERE Date = ?", (today_str,))
-                today_species = cursor.fetchone()[0]
-
-                last_hour_str = datetime.now().strftime('%H')
-                cursor.execute("SELECT COUNT(*) FROM detections WHERE Date = ? AND SUBSTR(Time, 1, 2) = ?", (today_str, last_hour_str))
-                hour_detections = cursor.fetchone()[0]
-
-                conn.close()
-
-                stats = {
-                    "total_detections": total_detections,
-                    "total_species": total_species,
-                    "species_counts": species_counts,
-                    "today_detections": today_detections,
-                    "today_species": today_species,
-                    "hour_detections": hour_detections
-                }
-                
-                self.send_response(200)
-                self.send_header('Content-type', 'application/json')
-                self.end_headers()
-                self.wfile.write(json.dumps(stats).encode('utf-8'))
-            except Exception as e:
-                self.send_error(500, str(e))
-                
-        elif self.path == '/api/system':
-            try:
-                temp = subprocess.getoutput("cat /sys/class/thermal/thermal_zone0/temp")
-                temp_c = round(int(temp) / 1000.0, 1) if temp.isdigit() else 0.0
-                mem = subprocess.getoutput("free -m | awk 'NR==2 {printf \"%.1f\", $3*100/$2}'")
-                disk = subprocess.getoutput("df -h / | awk 'NR==2 {print $5}'").replace('%', '')
-                uptime = subprocess.getoutput("uptime -p").replace('up ', '')
-                data = {"temp": temp_c, "memory": float(mem) if mem else 0, "disk": int(disk) if disk.isdigit() else 0, "uptime": uptime}
-                self.send_response(200)
-                self.send_header('Content-type', 'application/json')
-                self.end_headers()
-                self.wfile.write(json.dumps(data).encode())
-            except Exception as e:
-                self.send_error(500, str(e))
-
-        elif self.path == '/api/services/status':
-            try:
-                services = [
-                    'livestream.service', 'icecast2.service', 'web_terminal.service', 
-                    'birdnet_log.service', 'birdnet_analysis.service', 'birdnet_stats.service', 
-                    'birdnet_recording.service', 'chart_viewer.service', 'spectrogram_viewer.service'
-                ]
-                status_data = {}
-                for s in services:
-                    active_res = subprocess.run(['systemctl', 'is-active', s], capture_output=True, text=True)
-                    enabled_res = subprocess.run(['systemctl', 'is-enabled', s], capture_output=True, text=True)
-                    status_data[s] = {
-                        "active": active_res.stdout.strip(),
-                        "enabled": enabled_res.stdout.strip()
-                    }
-                self.send_response(200)
-                self.send_header('Content-type', 'application/json')
-                self.end_headers()
-                self.wfile.write(json.dumps(status_data).encode())
-            except Exception as e:
-                self.send_error(500, str(e))
-                
-        elif self.path == '/api/config':
-            self.send_response(200)
-            self.send_header('Content-type', 'application/json')
-            self.end_headers()
-            self.wfile.write(json.dumps(get_config()).encode())
-            
-        elif self.path == '/api/log':
-            try:
-                log_output = subprocess.getoutput("journalctl -u birdnet_analysis.service -n 100 --no-pager")
-                self.send_response(200)
-                self.send_header('Content-type', 'text/plain')
-                self.end_headers()
-                self.wfile.write(log_output.encode())
-            except Exception as e:
-                self.send_error(500, str(e))
-
-        elif self.path == '/api/gallery':
-            try:
-                recent = []
-                best_map = {}
-                valid_exts = {'.wav', '.mp3', '.flac', '.m4a'}
-                
-                base_dir = os.path.expanduser('~/BirdSongs')
-                
-                for root, _, files in os.walk(base_dir):
-                    if "streamdata" in root.lower() or "mixes" in root.lower() or root == base_dir: continue
-                    for file in files:
-                        if os.path.splitext(file)[1].lower() in valid_exts and "birdnet" in file.lower():
-                            filepath = os.path.join(root, file)
-                            try:
-                                stat = os.stat(filepath)
-                                match = re.search(r"^(.*?)-(\d{2,3})-\d{4}-\d{2}-\d{2}", file)
-                                species = match.group(1).replace("_", " ") if match else "Unknown"
-                                conf = float(match.group(2)) / 100.0 if match else 0.5
-                                
-                                web_path = filepath.replace(base_dir, '')
-                                if web_path.startswith('/'): web_path = web_path[1:]
-                                
-                                file_obj = {
-                                    "filepath": web_path,
-                                    "filename": file,
-                                    "species": species,
-                                    "confidence": conf,
-                                    "size_kb": stat.st_size // 1024,
-                                    "mtime": stat.st_mtime,
-                                    "date_str": re.search(r"\d{4}-\d{2}-\d{2}", file).group(0) if re.search(r"\d{4}-\d{2}-\d{2}", file) else "Unknown"
-                                }
-                                
-                                recent.append(file_obj)
-                                if species not in best_map or conf > best_map[species]["confidence"]:
-                                    best_map[species] = file_obj
-                            except Exception: pass
-                
-                recent.sort(key=lambda x: x["mtime"], reverse=True)
-                payload = {"recent": recent[:200], "best": list(best_map.values())}
-                
-                self.send_response(200)
-                self.send_header('Content-type', 'application/json')
-                self.end_headers()
-                self.wfile.write(json.dumps(payload).encode())
-            except Exception as e:
-                self.send_error(500, str(e))
-
-        elif self.path.startswith('/api/species_list'):
-            self.get_species_list()
-
-        elif self.path == '/api/stream':
-            config = get_config()
-            password = config.get('BIRDNETPI_PASSWORD', '')
-            
-            hosts_to_try = ['localhost', '127.0.0.1', self.headers.get('Host', 'localhost').split(':')[0]]
-            success = False
-            last_err = ""
-            
-            for h in set(hosts_to_try):
+        # API endpoints are handled first
+        if self.path.startswith('/api/'):
+            # All API logic goes here...
+            if self.path.startswith('/api/collage-stats'):
                 try:
-                    stream_url = f"http://birdnet:{password}@{h}:8000/stream" if password else f"http://{h}:8000/stream"
-                    req = urllib.request.Request(stream_url)
-                    with urllib.request.urlopen(req, timeout=3) as response:
-                        self.send_response(200)
-                        self.send_header('Content-Type', 'audio/mpeg')
-                        self.send_header('Access-Control-Allow-Origin', '*') 
-                        self.send_header('Cache-Control', 'no-cache')
-                        self.end_headers()
+                    from datetime import datetime, timedelta
+                    db_path = self.get_db_path()
+                    if not db_path:
+                        self.send_error(404, "Database not found")
+                        return
+
+                    query_params = parse_qs(urlparse(self.path).query)
+                    days_str = query_params.get('days', ['30'])[0]
+
+                    conn = sqlite3.connect(db_path)
+                    cursor = conn.cursor()
+                    
+                    where_clause = ""
+                    params = []
+                    if days_str and days_str != 'all':
+                        if days_str == 'today':
+                            where_clause = "WHERE Date = date('now')"
+                        elif days_str.isdigit():
+                            where_clause = "WHERE Date >= date('now', ?)"
+                            params.append(f'-{days_str} days')
+
+                    query = f"SELECT Sci_Name, Com_Name, COUNT(*) as n, MAX(Date || ' ' || Time) as last_seen FROM detections {where_clause} GROUP BY Sci_Name, Com_Name ORDER BY n DESC"
+                    
+                    cursor.execute(query, params)
+                    
+                    species_data = [{'sci': r[0], 'com': r[1], 'n': r[2], 'last_seen': r[3]} for r in cursor.fetchall()]
+                    conn.close()
+                    
+                    self.send_response(200)
+                    self.send_header('Content-type', 'application/json')
+                    self.end_headers()
+                    self.wfile.write(json.dumps({'species': species_data}).encode('utf-8'))
+
+                except Exception as e:
+                    self.send_error(500, f"Collage stats error: {e}")
+                return
+
+            if self.path.startswith('/api/detections'):
+                db_path = self.get_db_path()
+                if not db_path:
+                    self.send_error(404, "Database not found")
+                    return
+                try:
+                    query_components = parse_qs(urlparse(self.path).query)
+                    limit = int(query_components.get('limit', [50])[0])
+                    offset = int(query_components.get('offset', [0])[0])
+                    sp = query_components.get('sp', [None])[0]
+                    d_start = query_components.get('dStart', [None])[0]
+                    d_end = query_components.get('dEnd', [None])[0]
+                    t_start = query_components.get('tStart', [None])[0]
+                    t_end = query_components.get('tEnd', [None])[0]
+                    min_conf = float(query_components.get('minConf', [0])[0])
+
+                    conn = sqlite3.connect(db_path)
+                    conn.row_factory = sqlite3.Row
+                    cursor = conn.cursor()
+
+                    where_clauses = []
+                    params = []
+
+                    if sp and sp != 'all': where_clauses.append("Com_Name = ?"); params.append(sp)
+                    if d_start: where_clauses.append("Date >= ?"); params.append(d_start)
+                    if d_end: where_clauses.append("Date <= ?"); params.append(d_end)
+                    if t_start: where_clauses.append("Time >= ?"); params.append(t_start)
+                    if t_end: where_clauses.append("Time <= ?"); params.append(t_end)
+                    if min_conf > 0: where_clauses.append("Confidence >= ?"); params.append(min_conf)
+
+                    where_sql = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
+                    
+                    cursor.execute(f"SELECT COUNT(*) FROM detections {where_sql}", params)
+                    total_count = cursor.fetchone()[0]
+                    
+                    cursor.execute(f"SELECT Date, Time, Sci_Name, Com_Name, Confidence FROM detections {where_sql} ORDER BY Date DESC, Time DESC LIMIT ? OFFSET ?", params + [limit, offset])
+                    
+                    detections_with_insights = [dict(row, insight=get_insight(dict(row)['Com_Name'], dict(row)['Date'])) for row in cursor.fetchall()]
+                    conn.close()
+
+                    self.send_response(200)
+                    self.send_header('Content-type', 'application/json')
+                    self.end_headers()
+                    self.wfile.write(json.dumps({"detections": detections_with_insights, "total_count": total_count}).encode('utf-8'))
+                except Exception as e:
+                    self.send_error(500, str(e))
+                return
+
+            if self.path.startswith('/api/stats'):
+                db_path = self.get_db_path()
+                if not db_path:
+                    self.send_error(404, "Database not found")
+                    return
+                try:
+                    from datetime import datetime, timedelta
+                    query_components = parse_qs(urlparse(self.path).query)
+                    days_str = query_components.get('days', [None])[0]
+
+                    today_str = datetime.now().strftime('%Y-%m-%d')
+                    
+                    conn = sqlite3.connect(db_path)
+                    cursor = conn.cursor()
+
+                    where_clause = ""
+                    params = []
+                    if days_str and days_str != 'all':
+                        if days_str == 'today':
+                            where_clause = "WHERE Date = ?"
+                            params.append(today_str)
+                        elif days_str.isdigit():
+                            start_date = datetime.now() - timedelta(days=int(days_str))
+                            where_clause = "WHERE Date >= ?"
+                            params.append(start_date.strftime('%Y-%m-%d'))
+
+                    cursor.execute(f"SELECT COUNT(*) FROM detections {where_clause}", params)
+                    total_detections = cursor.fetchone()[0]
+                    
+                    cursor.execute(f"SELECT COUNT(DISTINCT Com_Name) FROM detections {where_clause}", params)
+                    total_species = cursor.fetchone()[0]
+
+                    cursor.execute(f"SELECT Com_Name, COUNT(*) as count FROM detections {where_clause} GROUP BY Com_Name ORDER BY count DESC", params)
+                    species_counts = [{"Com_Name": r[0], "count": r[1]} for r in cursor.fetchall()]
+
+                    cursor.execute("SELECT COUNT(*) FROM detections WHERE Date = ?", (today_str,))
+                    today_detections = cursor.fetchone()[0]
+                    
+                    cursor.execute("SELECT COUNT(DISTINCT Com_Name) FROM detections WHERE Date = ?", (today_str,))
+                    today_species = cursor.fetchone()[0]
+
+                    last_hour_str = datetime.now().strftime('%H')
+                    cursor.execute("SELECT COUNT(*) FROM detections WHERE Date = ? AND SUBSTR(Time, 1, 2) = ?", (today_str, last_hour_str))
+                    hour_detections = cursor.fetchone()[0]
+
+                    conn.close()
+
+                    self.send_response(200)
+                    self.send_header('Content-type', 'application/json')
+                    self.end_headers()
+                    self.wfile.write(json.dumps({
+                        "total_detections": total_detections, "total_species": total_species,
+                        "species_counts": species_counts, "today_detections": today_detections,
+                        "today_species": today_species, "hour_detections": hour_detections
+                    }).encode('utf-8'))
+                except Exception as e:
+                    self.send_error(500, str(e))
+                return
+
+            if self.path == '/api/system':
+                try:
+                    temp = subprocess.getoutput("cat /sys/class/thermal/thermal_zone0/temp")
+                    temp_c = round(int(temp) / 1000.0, 1) if temp.isdigit() else 0.0
+                    mem = subprocess.getoutput("free -m | awk 'NR==2 {printf \"%.1f\", $3*100/$2}'")
+                    disk = subprocess.getoutput("df -h / | awk 'NR==2 {print $5}'").replace('%', '')
+                    uptime = subprocess.getoutput("uptime -p").replace('up ', '')
+                    data = {"temp": temp_c, "memory": float(mem) if mem else 0, "disk": int(disk) if disk.isdigit() else 0, "uptime": uptime}
+                    self.send_response(200)
+                    self.send_header('Content-type', 'application/json')
+                    self.end_headers()
+                    self.wfile.write(json.dumps(data).encode())
+                except Exception as e:
+                    self.send_error(500, str(e))
+                return
+
+            if self.path == '/api/services/status':
+                try:
+                    services = ['livestream.service', 'icecast2.service', 'web_terminal.service', 'birdnet_log.service', 'birdnet_analysis.service', 'birdnet_stats.service', 'birdnet_recording.service', 'chart_viewer.service', 'spectrogram_viewer.service']
+                    status_data = {}
+                    for s in services:
+                        active_res = subprocess.run(['systemctl', 'is-active', s], capture_output=True, text=True)
+                        enabled_res = subprocess.run(['systemctl', 'is-enabled', s], capture_output=True, text=True)
+                        status_data[s] = {"active": active_res.stdout.strip(), "enabled": enabled_res.stdout.strip()}
+                    self.send_response(200)
+                    self.send_header('Content-type', 'application/json')
+                    self.end_headers()
+                    self.wfile.write(json.dumps(status_data).encode())
+                except Exception as e:
+                    self.send_error(500, str(e))
+                return
+            
+            if self.path == '/api/config':
+                self.send_response(200); self.send_header('Content-type', 'application/json'); self.end_headers()
+                self.wfile.write(json.dumps(get_config()).encode())
+                return
+            
+            if self.path == '/api/log':
+                try:
+                    log_output = subprocess.getoutput("journalctl -u birdnet_analysis.service -n 100 --no-pager")
+                    self.send_response(200); self.send_header('Content-type', 'text/plain'); self.end_headers()
+                    self.wfile.write(log_output.encode())
+                except Exception as e:
+                    self.send_error(500, str(e))
+                return
+
+            if self.path == '/api/gallery':
+                try:
+                    recent, best_map = [], {}
+                    base_dir = os.path.join(os.path.expanduser('~'), 'BirdSongs')
+                    for root, _, files in os.walk(base_dir):
+                        if any(x in root.lower() for x in ["streamdata", "mixes"]) or root == base_dir: continue
+                        for file in files:
+                            if "birdnet" in file.lower() and os.path.splitext(file)[1].lower() in {'.wav', '.mp3', '.flac', '.m4a'}:
+                                try:
+                                    filepath = os.path.join(root, file)
+                                    stat, match = os.stat(filepath), re.search(r"^(.*?)-(\d{2,3})-\d{4}-\d{2}-\d{2}", file)
+                                    species, conf = (match.group(1).replace("_", " "), float(match.group(2)) / 100.0) if match else ("Unknown", 0.5)
+                                    web_path = os.path.relpath(filepath, base_dir)
+                                    file_obj = {
+                                        "filepath": web_path, "filename": file, "species": species, "confidence": conf,
+                                        "size_kb": stat.st_size // 1024, "mtime": stat.st_mtime,
+                                        "date_str": (re.search(r"\d{4}-\d{2}-\d{2}", file) or ['Unknown'])[0]
+                                    }
+                                    recent.append(file_obj)
+                                    if species not in best_map or conf > best_map[species]["confidence"]: best_map[species] = file_obj
+                                except Exception: pass
+                    recent.sort(key=lambda x: x["mtime"], reverse=True)
+                    self.send_response(200); self.send_header('Content-type', 'application/json'); self.end_headers()
+                    self.wfile.write(json.dumps({"recent": recent[:200], "best": list(best_map.values())}).encode())
+                except Exception as e:
+                    self.send_error(500, str(e))
+                return
+
+            if self.path.startswith('/api/species_list'):
+                try:
+                    list_name = parse_qs(urlparse(self.path).query).get('list', [None])[0]
+                    allowed_lists = {'confirmed': 'confirmed_species_list.txt', 'excluded': 'exclude_species_list.txt', 'whitelisted': 'whitelist_species_list.txt'}
+                    if list_name not in allowed_lists:
+                        self.send_error(400, "Invalid list name"); return
+                    
+                    list_path = os.path.join(os.path.expanduser('~'), 'BirdNET-Pi', allowed_lists[list_name])
+                    content = ""
+                    if os.path.exists(list_path):
+                        with open(list_path, 'r', encoding='utf-8') as f: content = f.read()
+                    
+                    self.send_response(200); self.send_header('Content-type', 'application/json'); self.end_headers()
+                    self.wfile.write(json.dumps({"list_name": list_name, "content": content}).encode())
+                except Exception as e:
+                    self.send_error(500, f"Error getting list: {e}")
+                return
+
+            if self.path == '/api/stream':
+                try:
+                    config = get_config()
+                    password = config.get('BIRDNETPI_PASSWORD', '')
+                    host = self.headers.get('Host', 'localhost').split(':')[0]
+                    stream_url = f"http://birdnet:{password}@{host}:8000/stream" if password else f"http://{host}:8000/stream"
+                    
+                    with urllib.request.urlopen(urllib.request.Request(stream_url), timeout=3) as response:
+                        self.send_response(200); self.send_header('Content-Type', 'audio/mpeg'); self.end_headers()
                         while True:
                             chunk = response.read(8192)
                             if not chunk: break
                             self.wfile.write(chunk)
-                        success = True
-                        break
                 except Exception as e:
-                    last_err = str(e)
-                    continue
-                    
-            if not success:
-                self.send_error(503, f"Stream proxy failed across all hosts: {last_err}")
+                    self.send_error(503, f"Stream proxy failed: {e}")
+                return
 
-        else:
-            if self.path == '/': 
-                self.path = '/index.html'
+        # Fallback for serving files from outside the project directory (e.g., audio, spectrograms)
+        # This is for requests that are not to the API or to /static
+        if any(self.path.endswith(ext) for ext in ['.mp3', '.wav', '.png', '.jpg', '.jpeg']):
+                home_dir = os.path.expanduser('~')
+                # Sanitize path to prevent directory traversal
+                clean_path = os.path.normpath(urllib.parse.unquote(self.path).lstrip('/'))
                 
-            if self.path.startswith('/images/'):
-                clean_path = urllib.parse.unquote(self.path.replace('/images/', ''))
-                target_path = os.path.join(os.path.expanduser('~/BirdNET-Pi/homepage/images'), clean_path)
-                
-                if os.path.exists(target_path):
-                    try:
-                        with open(target_path, 'rb') as f:
-                            self.send_response(200)
-                            if target_path.endswith('.svg'): 
-                                self.send_header('Content-type', 'image/svg+xml')
-                            elif target_path.endswith('.png'): 
-                                self.send_header('Content-type', 'image/png')
-                            self.end_headers()
-                            self.wfile.write(f.read())
-                        return
-                    except Exception: pass
-            
-            if any(self.path.endswith(ext) for ext in ['.mp3', '.wav', '.png', '.jpg', '.jpeg']):
-                clean_path = urllib.parse.unquote(self.path.lstrip('/'))
-                target_path = os.path.join(os.path.expanduser('~/BirdSongs'), clean_path)
-                
+                # Construct path inside BirdSongs directory
+                target_path = os.path.join(home_dir, 'BirdSongs', clean_path)
+
+                # Ensure the resolved path is actually within BirdSongs
+                if not os.path.realpath(target_path).startswith(os.path.join(home_dir, 'BirdSongs')):
+                    self.send_error(403, "Access denied")
+                    return
+
+                # Handle alternate spectrogram extensions
                 if not os.path.exists(target_path) and target_path.endswith('.png'):
-                    alt_mp3 = target_path[:-4] + '.mp3.png'
-                    alt_wav = target_path[:-4] + '.wav.png'
-                    if os.path.exists(alt_mp3):
-                        target_path = alt_mp3
-                    elif os.path.exists(alt_wav):
-                        target_path = alt_wav
-
+                    for alt_ext in ['.mp3.png', '.wav.png']:
+                        alt_path = target_path[:-4] + alt_ext
+                        if os.path.exists(alt_path):
+                            target_path = alt_path
+                            break
+                
                 if os.path.exists(target_path):
                     try:
                         with open(target_path, 'rb') as f:
                             self.send_response(200)
                             if target_path.endswith('.png'): self.send_header('Content-type', 'image/png')
-                            elif target_path.endswith('.jpg') or target_path.endswith('.jpeg'): self.send_header('Content-type', 'image/jpeg')
+                            elif any(target_path.endswith(e) for e in ['.jpg', '.jpeg']): self.send_header('Content-type', 'image/jpeg')
                             else: self.send_header('Content-type', 'audio/mpeg')
                             self.end_headers()
                             self.wfile.write(f.read())
                         return
-                    except Exception: pass
-            
-            try: 
-                super().do_GET()
-            except ConnectionError: 
-                pass
+                    except Exception as e:
+                        self.send_error(500, f"Failed to serve media: {e}")
+                        return
 
-    def get_species_list(self):
+        # If not an API call or special media file, serve from the script's directory
+        # This handles index.html and /static files
+        if self.path == '/':
+            self.path = 'index.html'
+        
         try:
-            list_name = self.path.split('?list=')[-1]
-            allowed_lists = {'confirmed': 'confirmed_species_list.txt', 'excluded': 'exclude_species_list.txt', 'whitelisted': 'whitelist_species_list.txt'}
-            
-            if list_name not in allowed_lists:
-                self.send_error(400, "Invalid species list name")
-                return
-
-            list_path = os.path.join(os.path.expanduser('~/BirdNET-Pi'), allowed_lists[list_name])
-            
-            content = ""
-            if os.path.exists(list_path):
-                with open(list_path, 'r', encoding='utf-8') as f:
-                    content = f.read()
-            
-            self.send_response(200)
-            self.send_header('Content-type', 'application/json')
-            self.end_headers()
-            self.wfile.write(json.dumps({"list_name": list_name, "content": content}).encode())
-
-        except Exception as e:
-            self.send_error(500, f"Error getting species list: {e}")
+            return super().do_GET()
+        except (BrokenPipeError, ConnectionResetError):
+            # These are common when the client closes the connection and are not critical server errors.
+            pass
 
 
 class ThreadingServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
