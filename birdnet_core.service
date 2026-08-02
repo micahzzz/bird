@@ -1,0 +1,14 @@
+[Unit]
+Description=BirdNET Core UI Server
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/python3 /home/birder/birdnet-ui/birdnet_core.py
+WorkingDirectory=/home/birder/birdnet-ui
+StandardOutput=inherit
+StandardError=inherit
+Restart=always
+User=birder
+
+[Install]
+WantedBy=multi-user.target
