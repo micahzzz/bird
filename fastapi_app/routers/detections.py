@@ -39,6 +39,16 @@ class Stats(BaseModel):
     detections_by_date: Dict[str, int] = {}
     species_by_date: Dict[str, Any] = {}
 
+class CollageSpecies(BaseModel):
+    sci: str = Field(..., alias="Sci_Name")
+    com: str = Field(..., alias="Com_Name")
+    n: int
+    last_seen: str
+
+class CollageResponse(BaseModel):
+    species: List[CollageSpecies]
+
+
 
 # --- In-Memory Cache for Species Insights ---
 species_history_cache: Dict[str, Dict] = {}
@@ -260,6 +270,55 @@ async def get_stats(
             "detections_by_date": detections_by_date,
             "species_by_date": species_by_date
         }
+    except ConnectionError as e:
+        raise HTTPException(status_code=503, detail=str(e))
+    except sqlite3.Error as e:
+        raise HTTPException(status_code=500, detail=f"Database query failed: {e}")
+
+
+@router.get("/collage-stats", response_model=CollageResponse, summary="Get species stats for collage view")
+async def get_collage_stats(
+    days: str | None = Query("7", description="Timeframe to filter stats (e.g., '7', '30', 'today', 'all').")
+):
+    """
+    Provides aggregated species data tailored for the collage visualization.
+    For each species, it returns the scientific name, common name, total detection count,
+    and the timestamp of the last sighting within the specified timeframe.
+    """
+    where_clause = ""
+    params = []
+    if days and days != 'all':
+        if days == 'today':
+            where_clause = "WHERE Date = date('now', 'localtime')"
+        elif days.isdigit():
+            where_clause = "WHERE Date >= date('now', 'localtime', ?)"
+            params.append(f'-{int(days)} days')
+
+    query = f"""
+        SELECT
+            Sci_Name,
+            Com_Name,
+            COUNT(*) as n,
+            MAX(Date || ' ' || Time) as last_seen
+        FROM
+            detections
+        {where_clause}
+        GROUP BY
+            Sci_Name, Com_Name
+        ORDER BY
+            last_seen DESC
+    """
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(query, params)
+        rows = cursor.fetchall()
+        conn.close()
+
+        # Pydantic will automatically handle the alias mapping from the DB columns
+        # to the model fields (e.g., Sci_Name -> sci).
+        return {"species": [dict(row) for row in rows]}
+
     except ConnectionError as e:
         raise HTTPException(status_code=503, detail=str(e))
     except sqlite3.Error as e:

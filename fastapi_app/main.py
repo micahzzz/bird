@@ -1,5 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+import os
 
 # Import your routers here
 from routers import system, detections, gallery, compiler, streaming
@@ -39,6 +41,10 @@ app.include_router(detections.router, prefix="/api", tags=["Detections & Stats"]
 app.include_router(gallery.router, prefix="/api", tags=["Media Gallery"])
 app.include_router(compiler.router, prefix="/api", tags=["Audio Compiler"])
 app.include_router(streaming.router, prefix="/api", tags=["Live Streaming"])
+
+static_dir = os.path.join(os.path.dirname(__file__), "static")
+if os.path.exists(static_dir):
+    app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 @app.get("/", tags=["Root"])
 async def read_root():

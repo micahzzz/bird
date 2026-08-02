@@ -414,6 +414,9 @@ class SidecarHandler(http.server.SimpleHTTPRequestHandler):
                 cursor.execute(f"SELECT COUNT(DISTINCT Com_Name) FROM detections {where_clause}", params)
                 total_species = cursor.fetchone()[0]
 
+                cursor.execute(f"SELECT Com_Name, COUNT(*) as count FROM detections {where_clause} GROUP BY Com_Name ORDER BY count DESC", params)
+                species_counts = [{"Com_Name": row[0], "count": row[1]} for row in cursor.fetchall()]
+
                 # Unfiltered stats for sidebar/today view
                 cursor.execute("SELECT COUNT(*) FROM detections WHERE Date = ?", (today_str,))
                 today_detections = cursor.fetchone()[0]
@@ -430,6 +433,7 @@ class SidecarHandler(http.server.SimpleHTTPRequestHandler):
                 stats = {
                     "total_detections": total_detections,
                     "total_species": total_species,
+                    "species_counts": species_counts,
                     "today_detections": today_detections,
                     "today_species": today_species,
                     "hour_detections": hour_detections

@@ -84,6 +84,9 @@
             <div class="nav-item" data-tab="compiler">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg> Audio Compiler
             </div>
+            <div class="nav-item" data-tab="collage">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16v4m-2-2h4m5 10v4m-2-2h4M17 3l-4 4-4-4M7 21l4-4 4 4"></path></svg> Live Collage
+            </div>
             <div class="nav-item" data-tab="log">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg> Live Log
             </div>
@@ -347,6 +350,11 @@
                 </div>
                 <div id="compile-status" class="mt-4 text-sm font-semibold hidden"></div>
             </div>
+        </div>
+
+        <!-- COLLAGE TAB -->
+        <div id="tab-collage" class="tab-content custom-scrollbar h-full w-full min-h-[700px] overflow-y-auto p-4" style="display: none; background-color: #1b452b;">
+            <div id="collage-container" class="w-full flex justify-center items-center min-h-[600px]"></div>
         </div>
 
         <!-- LIVE LOG TAB -->
@@ -2159,6 +2167,300 @@
         }
 
         init();
+    </script>
+    <script>
+    (function() {
+        const SKETCH_VERSION = 'v1';
+        const collageTab = document.getElementById('tab-collage');
+        const navItem = document.querySelector('.nav-item[data-tab="collage"]');
+        let collageInitialized = false;
+
+        if (navItem) {
+            navItem.addEventListener('click', () => {
+                if (!collageInitialized) {
+                    // Defer initCollage to allow the tab display block style to apply and reflow before clientWidth is calculated
+                    setTimeout(() => {
+                        initCollage();
+                        collageInitialized = true;
+                    }, 50);
+                }
+            });
+        }
+        
+        async function fetchJson(url) {
+            const res = await fetch(url);
+            if (!res.ok) {
+                throw new Error(`HTTP error! status: ${res.status}`);
+            }
+            return res.json();
+        }
+
+        async function initCollage() {
+            console.log("[Collage] Initializing...");
+            const container = document.getElementById('collage-container');
+            if (container) {
+                container.innerHTML = '<p class="text-center text-slate-300">Loading collage data...</p>';
+            }
+
+            const days = document.getElementById('global-date-filter').value;
+            
+            try {
+                const [dims, masks, data] = await Promise.all([
+                    fetchJson(`${API_BASE}/static/dims.json`),
+                    fetchJson(`${API_BASE}/static/masks.json`),
+                    fetchJson(`${API_BASE}/api/collage-stats?days=${days}`)
+                ]);
+                
+                console.log("[Collage] Fetched Data:", { dims, masks, data });
+                
+                const speciesData = data.species || [];
+                if(speciesData.length === 0) {
+                    if (container) {
+                        container.innerHTML = '<p class="text-center text-slate-400">No detections found for this timeframe.</p>';
+                    }
+                    console.log("[Collage] No species data to render.");
+                    return;
+                }
+
+                console.log("[Collage] Starting render process...");
+                renderCollage({
+                    dims: dims,
+                    masks: masks,
+                    species: speciesData
+                });
+
+            } catch (error) {
+                console.error('Failed to initialize collage (detailed error):', error);
+                if (container) {
+                    container.innerHTML = `<p class="text-center text-red-400">Failed to load collage data. Please try again later.</p>`;
+                }
+            }
+        }
+
+        function getBirdImageUrl(speciesObj, pose = 1) {
+            let sciName = '';
+            let comName = '';
+            
+            if (typeof speciesObj === 'string') {
+                sciName = speciesObj;
+            } else if (speciesObj && typeof speciesObj === 'object') {
+                sciName = speciesObj.sci || speciesObj.Sci_Name || '';
+                comName = speciesObj.com || speciesObj.Com_Name || '';
+            }
+            
+            sciName = sciName ? String(sciName).trim() : '';
+            comName = comName ? String(comName).trim() : '';
+            
+            if (!sciName && !comName) {
+                return null;
+            }
+            
+            if (!sciName) {
+                return null;
+            }
+            
+            const formattedSci = sciName.toLowerCase().replace(/\s+/g, '-');
+            const poseSuffix = (pose && parseInt(pose) > 1) ? `-${pose}` : '';
+            return `${API_BASE}/static/bird_art/${formattedSci}${poseSuffix}.png`;
+        }
+
+        async function fetchWikipediaImage(species) {
+            if (!species) return null;
+            try {
+                const url = `https://en.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(species)}&prop=pageimages&format=json&pithumbsize=500&redirects=1&origin=*`;
+                const res = await fetch(url);
+                const data = await res.json();
+                const pages = data.query.pages;
+                const pageId = Object.keys(pages)[0];
+                if (pageId !== "-1" && pages[pageId].thumbnail) {
+                    return pages[pageId].thumbnail.source;
+                }
+            } catch (e) {
+                console.error("Failed to fetch Wikipedia image", e);
+            }
+            return null;
+        }
+
+        function renderCollage(data) {
+            console.log("[Collage] renderCollage called with:", data);
+
+            const container = document.getElementById('collage-container') || document.getElementById('tab-collage');
+            const targetWidth = container.clientWidth > 50 ? container.clientWidth : 1200;
+            const targetHeight = container.clientHeight > 50 ? container.clientHeight : 800;
+
+            container.innerHTML = '';
+            const canvas = document.createElement('canvas');
+            canvas.width = targetWidth;
+            canvas.height = targetHeight;
+            canvas.style.cssText = 'display: block; width: 100%; height: auto; max-height: 85vh; object-fit: contain; background-color: #204b2e; box-shadow: 0 10px 25px rgba(0,0,0,0.5); border-radius: 8px;';
+            container.appendChild(canvas);
+            const ctx = canvas.getContext('2d');
+
+            var items = (data.species || [])
+                .map(function(d) {
+                    // Robustly handle different key casings
+                    return {
+                        sci: d.sci || d.Sci_Name,
+                        com: d.com || d.Com_Name,
+                        n: +d.n || +d.count || 0,
+                        last_seen: d.last_seen
+                    };
+                })
+                .sort(function(a, b) {
+                    return new Date(b.last_seen) - new Date(a.last_seen);
+                });
+
+            console.log("[Collage] Normalized and sorted items:", items);
+
+            var dims = data.dims || {};
+            var masks = data.masks || {};
+
+            const aspect = targetWidth / targetHeight;
+            console.log(`[Collage] Using dimensions: ${targetWidth}x${targetHeight}. Aspect: ${aspect}.`);
+            
+            var dpr = window.devicePixelRatio || 1;
+            canvas.width = targetWidth * dpr;
+            canvas.height = targetHeight * dpr;
+            ctx.scale(dpr, dpr);
+
+            console.log(`[Collage] Canvas created. Dimensions: ${canvas.width}x${canvas.height}. Aspect: ${aspect}.`);
+
+            console.log("[Collage] Calculating layout with maskPack...");
+            var layout = maskPack(items, aspect, masks, targetWidth);
+            console.log("[Collage] Layout calculated:", layout);
+
+            if (!layout || layout.length === 0) {
+                console.warn("[Collage] Layout calculation returned no items. Aborting render.");
+                return;
+            }
+
+            var promises = layout.map(d => {
+                return new Promise((resolve) => {
+                    let artUrl = getBirdImageUrl(d);
+                    if (!artUrl) return resolve(null); // Skip if no URL generated
+
+                    const img = new Image();
+                    img.crossOrigin = 'Anonymous';
+                    
+                    img.onload = () => {
+                        d.img = img;
+                        resolve(d);
+                    };
+                    
+                    img.onerror = () => {
+                        console.warn('Local art missing, skipping collage drawing for:', d.sci);
+                        resolve(null); // Skip silently, no wiki fallback
+                    };
+                    
+                    img.src = artUrl;
+                });
+            });
+
+            Promise.all(promises).then(function(loadedLayout) {
+                            console.log("[Collage] All image promises resolved. Painting canvas.", loadedLayout);
+                            ctx.clearRect(0, 0, canvas.width, canvas.height);
+                            loadedLayout.forEach(function(d) {
+                                if (d && d.img) {
+                                    try {
+                                    // Draw the image exactly where the grid dictates
+                                    ctx.drawImage(d.img, d.x, d.y, d.w, d.h);
+                                    } catch (e) {
+                                        console.error('Draw failed for', d.sci, e);
+                                    }
+                                }
+                            });
+                            console.log("[Collage] Canvas painting complete.");
+            });
+        }
+        
+        function tuning(n) {
+          if (n <= 1) return { s: 0.9, w: 1, p: 2, c: 1, r: 1 };
+          if (n <= 4) return { s: 0.75, w: 1, p: 1, c: 2, r: 2 };
+          if (n <= 9) return { s: 0.48, w: 1, c: 3, r: 3 };
+          if (n <= 12) return { s: 0.42, w: 1, c: 4, r: 3 };
+          if (n <= 16) return { s: 0.35, w: 1, c: 4, r: 4 };
+          if (n <= 25) return { s: 0.28, w: 1, c: 5, r: 5 };
+          return { s: 0.24, w: 1, c: 6, r: 6 };
+        }
+
+        function maskPack(items, aspect, masks, targetWidth) {
+            if (!items || !items.length) return [];
+            var n = items.length;
+            var t = tuning(n);
+            var gridW = t.c || 1;
+            var gridH = Math.ceil(n / gridW);
+            var cellW = 1 / gridW;
+            var cellH = cellW / aspect;
+            var totalH = cellH * gridH;
+            if (totalH < 1) {
+                cellH = 1 / gridH;
+                cellW = cellH * aspect;
+            }
+            var layout = [];
+            var maskKeys = Object.keys(masks);
+
+            for (var i = 0; i < n; i++) {
+                try {
+                    var item = items[i];
+                    var maskName = maskKeys[i % maskKeys.length]; 
+                    var maskData = masks[maskName];
+
+                    if (!maskData) {
+                        console.warn(`[Collage] Mask '${maskName}' not found for item`, item);
+                        continue;
+                    }
+
+                    var maskAspect = maskData.w / maskData.h;
+                    var w, h, x, y, pose = 1;
+
+                    if (maskAspect > cellW / cellH) {
+                        w = cellW;
+                        h = w / maskAspect;
+                    } else {
+                        h = cellH;
+                        w = h * maskAspect;
+                    }
+
+                    x = (Math.random() * (cellW - w));
+                    y = (i * cellH) + (Math.random() * (cellH - h));
+
+                    var poses = maskData.poses || [1];
+                    pose = poses[Math.floor(Math.random() * poses.length)];
+
+                    layout.push({
+                        x: x * 100, y: y * 100,
+                        w: w * 100, h: h * 100,
+                        sci: item.sci,
+                        item: { ...item, mask: maskName, pose: pose }
+                    });
+                } catch (e) {
+                    console.error("[Collage] Error processing item in maskPack:", items[i], e);
+                }
+            }
+            
+            // This final mapping step seems to have an issue in the original logic,
+            // as it converts percentage-based layout to a fixed 100x100 container,
+            // which might not match the canvas size. The actual drawing context
+            // should handle the scaling. We will use the direct canvas dimensions
+            // for calculation.
+            return layout.map(function(d) {
+                const containerW = 100; // Let's keep it percentage based for drawing
+                const containerH = 100;
+                var w_pct = d.w / containerW;
+                var h_pct = d.h / containerH;
+                var x_pct = d.x / containerW;
+                var y_pct = d.y / containerH;
+                const finalWidth = targetWidth || collageTab.clientWidth || 1200;
+                return {
+                    ...d,
+                    x: x_pct * finalWidth,
+                    y: y_pct * finalWidth / aspect, // Use aspect to get correct y
+                    w: w_pct * finalWidth,
+                    h: h_pct * finalWidth / aspect,
+                };
+            });
+        }
+    })();
     </script>
 </body>
 </html>
