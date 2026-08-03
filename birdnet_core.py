@@ -810,6 +810,8 @@ class SidecarHandler(http.server.SimpleHTTPRequestHandler):
         # This handles index.html and /static files
         if self.path == '/':
             self.path = 'index.html'
+        elif self.path.startswith('/static/'):
+            self.path = 'fastapi_app' + self.path
         
         try:
             return super().do_GET()
