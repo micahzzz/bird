@@ -381,8 +381,7 @@ const API_BASE = 'http://' + (window.location.hostname || 'localhost') + ':9999'
                 csvRows.push(`${d.Date},${d.Time},"${d.Sci_Name}","${d.Com_Name}",${d.Confidence}`);
             });
             
-            const blob = new Blob([csvRows.join('
-')], { type: 'text/csv' });
+            const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.setAttribute('href', url);
