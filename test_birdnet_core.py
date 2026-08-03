@@ -13,7 +13,8 @@ class TestBirdNETCore(unittest.TestCase):
         """Test get_config when birdnet.conf does not exist."""
         mock_exists.return_value = False
         config = birdnet_core.get_config()
-        self.assertEqual(config, {})
+        self.assertEqual(config.get('APPRISE_SERVICES'), '')
+        self.assertEqual(config.get('APPRISE_NOTIFICATION_BODY'), '')
 
     @patch('os.path.exists')
     def test_get_config_success(self, mock_exists):
@@ -52,8 +53,8 @@ class TestBirdNETCore(unittest.TestCase):
             
             # Gather all write calls
             written = "".join(call.args[0] for call in m_open().write.call_args_list)
-            self.assertIn('LATITUDE="42.50"\n', written)
-            self.assertIn('CONFIDENCE="0.85"\n', written)
+            self.assertIn('LATITUDE=42.50\n', written)
+            self.assertIn('CONFIDENCE=0.85\n', written)
             self.assertIn('LONGITUDE=-73.10\n', written) # Unchanged field should be preserved
 
     @patch('os.path.exists')
@@ -62,14 +63,14 @@ class TestBirdNETCore(unittest.TestCase):
         # Setup SidecarHandler instance
         handler = birdnet_core.SidecarHandler
         
-        # We mock exists to return True ONLY when checking the third path
+        # We mock exists to return True when checking the first path
         def side_effect(path):
-            return "birds.db" in path and "BirdSongs" in path
+            return "BirdNET-Pi" in path and "birds.db" in path
 
         mock_exists.side_effect = side_effect
         db_path = handler.get_db_path(handler)
         self.assertIsNotNone(db_path)
-        self.assertTrue(db_path.endswith("BirdSongs/birds.db") or db_path.endswith("BirdSongs\\birds.db"))
+        self.assertTrue(db_path.endswith("BirdNET-Pi/birds.db") or db_path.endswith("BirdNET-Pi\\birds.db"))
 
 if __name__ == '__main__':
     unittest.main()

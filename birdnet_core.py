@@ -25,6 +25,23 @@ def get_config():
                 if '=' in line and not line.startswith('#'):
                     key, val = line.strip().split('=', 1)
                     config[key] = val.strip(' "\'\n')
+    
+    # Load APPRISE_SERVICES if exists
+    apprise_path = os.path.expanduser('~/BirdNET-Pi/apprise.txt')
+    if os.path.exists(apprise_path):
+        with open(apprise_path, 'r', encoding='utf-8') as f:
+            config['APPRISE_SERVICES'] = f.read()
+    else:
+        config['APPRISE_SERVICES'] = ''
+
+    # Load APPRISE_NOTIFICATION_BODY if exists
+    body_path = os.path.expanduser('~/BirdNET-Pi/body.txt')
+    if os.path.exists(body_path):
+        with open(body_path, 'r', encoding='utf-8') as f:
+            config['APPRISE_NOTIFICATION_BODY'] = f.read()
+    else:
+        config['APPRISE_NOTIFICATION_BODY'] = ''
+        
     return config
 
 def update_config(updates):
@@ -43,28 +60,43 @@ def update_config(updates):
     }
 
     try:
-        with open(CONFIG_PATH, 'r') as f:
-            content = f.read()
+        # Separate Apprise services & notification body from standard config updates
+        apprise_services = updates.pop('APPRISE_SERVICES', None)
+        apprise_body = updates.pop('APPRISE_NOTIFICATION_BODY', None)
 
-        for key, value in updates.items():
-            # Sanitize value to prevent injection issues, although we control the keys
-            value_str = str(value)
+        if apprise_services is not None:
+            apprise_path = os.path.expanduser('~/BirdNET-Pi/apprise.txt')
+            with open(apprise_path, 'w', encoding='utf-8') as f:
+                f.write(apprise_services)
+
+        if apprise_body is not None:
+            body_path = os.path.expanduser('~/BirdNET-Pi/body.txt')
+            with open(body_path, 'w', encoding='utf-8') as f:
+                f.write(apprise_body)
+
+        if updates:
+            with open(CONFIG_PATH, 'r') as f:
+                content = f.read()
+
+            for key, value in updates.items():
+                # Sanitize value to prevent injection issues, although we control the keys
+                value_str = str(value)
+                
+                # Decide on quoting
+                formatted_value = value_str if key in unquoted_keys else f'"{value_str}"'
+                
+                # Pattern to find the key, optionally commented out
+                pattern = re.compile(f"^(#\\s*)?{key}=.*", re.MULTILINE)
+                
+                if pattern.search(content):
+                    # Key exists, so we replace it, making sure to uncomment it
+                    content = pattern.sub(f"{key}={formatted_value}", content)
+                else:
+                    # Key doesn't exist, append it to the end
+                    content += f"\n{key}={formatted_value}"
             
-            # Decide on quoting
-            formatted_value = value_str if key in unquoted_keys else f'"{value_str}"'
-            
-            # Pattern to find the key, optionally commented out
-            pattern = re.compile(f"^(#\\s*)?{key}=.*", re.MULTILINE)
-            
-            if pattern.search(content):
-                # Key exists, so we replace it, making sure to uncomment it
-                content = pattern.sub(f"{key}={formatted_value}", content)
-            else:
-                # Key doesn't exist, append it to the end
-                content += f"\n{key}={formatted_value}"
-        
-        with open(CONFIG_PATH, 'w') as f:
-            f.write(content)
+            with open(CONFIG_PATH, 'w') as f:
+                f.write(content)
             
         return True, "Configuration updated successfully."
         
@@ -262,7 +294,7 @@ class SidecarHandler(http.server.SimpleHTTPRequestHandler):
                     'REC_CARD', 'CHANNELS', 'RECORDING_LENGTH', 'EXTRACTION_LENGTH', 'HIGHPASS_FREQ', 'AUDIOFMT',
                     'MODEL', 'DATA_MODEL_VERSION', 'SF_THRESH', 'RARE_SPECIES_THRESHOLD', 
                     'SILENCE_UPDATE_INDICATOR', 'AUTOMATIC_UPDATE', 'RAW_SPECTROGRAM',
-                    'APPRISE_SERVICES', 'APPRISE_NOTIFICATION_TITLE', 'APPRISE_NOTIFY_EACH_DETECTION',
+                    'APPRISE_SERVICES', 'APPRISE_NOTIFICATION_TITLE', 'APPRISE_NOTIFICATION_BODY', 'APPRISE_NOTIFY_EACH_DETECTION',
                     'APPRISE_NOTIFY_NEW_SPECIES', 'APPRISE_NOTIFY_NEW_SPECIES_EACH_DAY', 'APPRISE_WEEKLY_REPORT',
                     'APPRISE_MINIMUM_SECONDS_BETWEEN_NOTIFICATIONS_PER_SPECIES', 'APPRISE_ONLY_NOTIFY_SPECIES_NAMES',
                     'APPRISE_ONLY_NOTIFY_SPECIES_NAMES_2', 'SITE_NAME', 'BIRDWEATHER_ID', 'DATABASE_LANG', 
@@ -283,6 +315,45 @@ class SidecarHandler(http.server.SimpleHTTPRequestHandler):
                 self.send_header('Content-type', 'application/json')
                 self.end_headers()
                 self.wfile.write(json.dumps({"success": success, "message": message}).encode())
+
+            elif self.path == '/api/config/test_notification':
+                apprise_services = payload.get('apprise_services', '')
+                title = payload.get('title', 'BirdNET-Pi Test')
+                body = payload.get('body', 'This is a test notification from BirdNET-Pi.')
+                
+                # Create temporary files for body and config
+                t_conf_fd, t_conf_path = tempfile.mkstemp()
+                t_body_fd, t_body_path = tempfile.mkstemp()
+                
+                try:
+                    with os.fdopen(t_conf_fd, 'w', encoding='utf-8') as f:
+                        f.write(apprise_services)
+                    with os.fdopen(t_body_fd, 'w', encoding='utf-8') as f:
+                        f.write(body)
+                    
+                    python_bin = os.path.join(home_dir, 'BirdNET-Pi', 'birdnet', 'bin', 'python3')
+                    script_path = os.path.join(home_dir, 'BirdNET-Pi', 'scripts', 'send_test_notification.py')
+                    
+                    cmd = [python_bin, script_path, '--body', t_body_path, '--config', t_conf_path, '--title', title]
+                    # Run subprocess and capture output
+                    res = subprocess.run(cmd, capture_output=True, text=True)
+                    
+                    success = res.returncode == 0
+                    message = res.stdout + "\n" + res.stderr
+                    
+                    self.send_response(200 if success else 500)
+                    self.send_header('Content-type', 'application/json')
+                    self.end_headers()
+                    self.wfile.write(json.dumps({"success": success, "message": message}).encode('utf-8'))
+                except Exception as e:
+                    self.send_response(500)
+                    self.send_header('Content-type', 'application/json')
+                    self.end_headers()
+                    self.wfile.write(json.dumps({"success": False, "message": str(e)}).encode('utf-8'))
+                finally:
+                    # Clean up temporary files
+                    if os.path.exists(t_conf_path): os.remove(t_conf_path)
+                    if os.path.exists(t_body_path): os.remove(t_body_path)
 
             elif self.path == '/api/species_list/update':
                 list_name = payload.get('list_name')
