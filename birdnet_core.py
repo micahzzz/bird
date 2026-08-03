@@ -672,11 +672,16 @@ class SidecarHandler(http.server.SimpleHTTPRequestHandler):
                 try:
                     config = get_config()
                     password = config.get('BIRDNETPI_PASSWORD', '')
-                    host = self.headers.get('Host', 'localhost').split(':')[0]
-                    stream_url = f"http://birdnet:{password}@{host}:8000/stream" if password else f"http://{host}:8000/stream"
+                    # Always connect to the local loopback interface for the Icecast stream on the Pi
+                    stream_url = f"http://birdnet:{password}@127.0.0.1:8000/stream" if password else "http://127.0.0.1:8000/stream"
                     
-                    with urllib.request.urlopen(urllib.request.Request(stream_url), timeout=3) as response:
-                        self.send_response(200); self.send_header('Content-Type', 'audio/mpeg'); self.end_headers()
+                    req = urllib.request.Request(stream_url)
+                    with urllib.request.urlopen(req) as response:
+                        self.send_response(200)
+                        self.send_header('Content-Type', 'audio/mpeg')
+                        self.send_header('Access-Control-Allow-Origin', '*')
+                        self.send_header('Cache-Control', 'no-cache')
+                        self.end_headers()
                         while True:
                             chunk = response.read(8192)
                             if not chunk: break

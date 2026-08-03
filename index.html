@@ -48,6 +48,45 @@
         .insight-badge { font-size: 0.6rem; font-weight: 700; padding: 0.1rem 0.4rem; border-radius: 0.25rem; margin-left: 0.5rem; vertical-align: middle; text-transform: uppercase; }
         .insight-new { background-color: #3b82f6; color: white; }
         .insight-rare { background-color: #f59e0b; color: white; }
+
+        .tooltip-container { position: relative; display: inline-flex; align-items: center; }
+        .tooltip-icon { color: #6b7280; cursor: pointer; }
+        .tooltip-icon:hover { color: #9ca3af; }
+        .tooltip { 
+            position: absolute; 
+            bottom: 100%; 
+            left: 50%; 
+            transform: translateX(-50%); 
+            margin-bottom: 8px;
+            background-color: #111827; 
+            color: #d1d5db; 
+            font-size: 0.75rem;
+            padding: 8px 12px; 
+            border-radius: 6px; 
+            width: 280px; 
+            text-align: left;
+            opacity: 0; 
+            visibility: hidden;
+            transition: opacity 0.2s, visibility 0.2s;
+            pointer-events: none;
+            z-index: 10;
+            border: 1px solid var(--bn-border);
+            line-height: 1.5;
+        }
+        .tooltip::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -5px;
+            border-width: 5px;
+            border-style: solid;
+            border-color: #111827 transparent transparent transparent;
+        }
+        .tooltip-container:hover .tooltip {
+            opacity: 1;
+            visibility: visible;
+        }
     </style>
 </head>
 <body class="flex h-screen">
@@ -153,6 +192,44 @@
                 <div class="bird-card p-6">
                     <h3 class="text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Total Species</h3>
                     <p id="dash-species-total" class="text-3xl font-bold text-link">0</p>
+                </div>
+            </div>
+
+            <!-- System Telemetry Panel -->
+            <div class="bird-card p-6 mb-8">
+                <h3 class="text-xs font-semibold text-slate-300 uppercase tracking-wider mb-4">System Telemetry</h3>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="bg-[var(--bn-bg)] p-4 rounded-lg border border-[var(--bn-border)]">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="block text-xs font-bold text-slate-400 uppercase">Temperature</span>
+                            <span id="sys-temp" class="text-lg font-bold text-white">--.-°C</span>
+                        </div>
+                        <div class="w-full bg-[#111a14] h-2 rounded-full overflow-hidden border border-[var(--bn-border)]">
+                            <div id="sys-temp-bar" class="bg-red-500 h-full w-0 transition-all duration-500"></div>
+                        </div>
+                    </div>
+                    <div class="bg-[var(--bn-bg)] p-4 rounded-lg border border-[var(--bn-border)]">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="block text-xs font-bold text-slate-400 uppercase">Memory</span>
+                            <span id="sys-mem" class="text-lg font-bold text-white">--%</span>
+                        </div>
+                        <div class="w-full bg-[#111a14] h-2 rounded-full overflow-hidden border border-[var(--bn-border)]">
+                            <div id="sys-mem-bar" class="bg-[var(--bn-highlight)] h-full w-0 transition-all duration-500"></div>
+                        </div>
+                    </div>
+                    <div class="bg-[var(--bn-bg)] p-4 rounded-lg border border-[var(--bn-border)]">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="block text-xs font-bold text-slate-400 uppercase">Disk</span>
+                            <span id="sys-disk" class="text-lg font-bold text-white">--%</span>
+                        </div>
+                        <div class="w-full bg-[#111a14] h-2 rounded-full overflow-hidden border border-[var(--bn-border)]">
+                            <div id="sys-disk-bar" class="bg-[var(--bn-highlight)] h-full w-0 transition-all duration-500"></div>
+                        </div>
+                    </div>
+                    <div class="bg-[var(--bn-bg)] p-4 rounded-lg border border-[var(--bn-border)] flex flex-col justify-center">
+                        <span class="block text-xs font-bold text-slate-400 uppercase mb-1">Uptime</span>
+                        <span id="sys-uptime" class="text-sm font-bold text-white truncate block">--</span>
+                    </div>
                 </div>
             </div>
 
@@ -386,29 +463,65 @@
                     <h3 class="text-lg font-bold text-white mb-4">General Site Settings</h3>
                     <div class="space-y-4">
                         <div>
-                            <label for="config-SITE_NAME" class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Site Name</label>
+                            <div class="flex items-center gap-2 mb-1">
+                                <label for="config-SITE_NAME" class="block text-xs font-bold text-slate-300 uppercase tracking-wider">Site Name</label>
+                                <div class="tooltip-container">
+                                    <svg class="w-4 h-4 tooltip-icon" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg>
+                                    <div class="tooltip">The name of your station, which will be displayed on the local web interface and used for services like BirdWeather.</div>
+                                </div>
+                            </div>
                             <input type="text" id="config-SITE_NAME" class="w-full bg-[var(--bn-bg)] text-white border border-[var(--bn-border)] rounded px-3 py-2 font-mono text-sm">
                         </div>
                         <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <label for="config-LATITUDE" class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Latitude</label>
+                                <div class="flex items-center gap-2 mb-1">
+                                    <label for="config-LATITUDE" class="block text-xs font-bold text-slate-300 uppercase tracking-wider">Latitude</label>
+                                    <div class="tooltip-container">
+                                        <svg class="w-4 h-4 tooltip-icon" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg>
+                                        <div class="tooltip">Your station's north-south geographic coordinate. Used for species range calculations and weather data.</div>
+                                    </div>
+                                </div>
                                 <input type="number" step="0.0001" id="config-LATITUDE" class="w-full bg-[var(--bn-bg)] text-white border border-[var(--bn-border)] rounded px-3 py-2 font-mono text-sm">
                             </div>
                             <div>
-                                <label for="config-LONGITUDE" class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Longitude</label>
+                                <div class="flex items-center gap-2 mb-1">
+                                    <label for="config-LONGITUDE" class="block text-xs font-bold text-slate-300 uppercase tracking-wider">Longitude</label>
+                                    <div class="tooltip-container">
+                                        <svg class="w-4 h-4 tooltip-icon" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg>
+                                        <div class="tooltip">Your station's east-west geographic coordinate. Used for species range calculations and weather data.</div>
+                                    </div>
+                                </div>
                                 <input type="number" step="0.0001" id="config-LONGITUDE" class="w-full bg-[var(--bn-bg)] text-white border border-[var(--bn-border)] rounded px-3 py-2 font-mono text-sm">
                             </div>
                         </div>
                         <div>
-                            <label for="config-TIMEZONE" class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Timezone</label>
+                             <div class="flex items-center gap-2 mb-1">
+                                <label for="config-TIMEZONE" class="block text-xs font-bold text-slate-300 uppercase tracking-wider">Timezone</label>
+                                <div class="tooltip-container">
+                                    <svg class="w-4 h-4 tooltip-icon" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg>
+                                    <div class="tooltip">Your local timezone (e.g., 'America/New_York'). This ensures all timestamps for detections and reports are accurate.</div>
+                                </div>
+                            </div>
                             <input type="text" id="config-TIMEZONE" class="w-full bg-[var(--bn-bg)] text-white border border-[var(--bn-border)] rounded px-3 py-2 font-mono text-sm" placeholder="e.g., America/New_York">
                         </div>
                         <div>
-                            <label for="config-BIRDWEATHER_ID" class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">BirdWeather ID</label>
+                            <div class="flex items-center gap-2 mb-1">
+                                <label for="config-BIRDWEATHER_ID" class="block text-xs font-bold text-slate-300 uppercase tracking-wider">BirdWeather ID</label>
+                                <div class="tooltip-container">
+                                    <svg class="w-4 h-4 tooltip-icon" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg>
+                                    <div class="tooltip">Optional. Your station ID from birdweather.com to contribute your data to their global network.</div>
+                                </div>
+                            </div>
                             <input type="text" id="config-BIRDWEATHER_ID" class="w-full bg-[var(--bn-bg)] text-white border border-[var(--bn-border)] rounded px-3 py-2 font-mono text-sm">
                         </div>
                          <div>
-                            <label for="config-DATABASE_LANG" class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Database Language</label>
+                            <div class="flex items-center gap-2 mb-1">
+                                <label for="config-DATABASE_LANG" class="block text-xs font-bold text-slate-300 uppercase tracking-wider">Database Language</label>
+                                <div class="tooltip-container">
+                                    <svg class="w-4 h-4 tooltip-icon" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg>
+                                    <div class="tooltip">The language used for species names in the database. Defaults to 'English'. Can be set to other supported languages.</div>
+                                </div>
+                            </div>
                             <input type="text" id="config-DATABASE_LANG" class="w-full bg-[var(--bn-bg)] text-white border border-[var(--bn-border)] rounded px-3 py-2 font-mono text-sm">
                         </div>
                     </div>
@@ -428,22 +541,37 @@
                     <h3 class="text-lg font-bold text-white mb-4">Disk Management</h3>
                     <div class="space-y-4">
                         <div>
-                            <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Full Disk Behavior</label>
+                            <div class="flex items-center gap-2 mb-2">
+                                <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider">Full Disk Behavior</label>
+                                <div class="tooltip-container">
+                                    <svg class="w-4 h-4 tooltip-icon" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg>
+                                    <div class="tooltip">Determines what the system should do when the disk reaches its usage threshold. 'Purge' will delete the oldest recordings to free up space. 'Keep' will stop the recording and analysis services to prevent further disk usage.</div>
+                                </div>
+                            </div>
                             <div class="flex items-center space-x-4">
                                 <label class="flex items-center text-white"><input type="radio" id="config-FULL_DISK-purge" name="FULL_DISK" value="purge" class="mr-2 h-4 w-4 text-blue-600 bg-gray-700 border-gray-600 focus:ring-blue-500">Purge</label>
                                 <label class="flex items-center text-white"><input type="radio" id="config-FULL_DISK-keep" name="FULL_DISK" value="keep" class="mr-2 h-4 w-4 text-blue-600 bg-gray-700 border-gray-600 focus:ring-blue-500">Keep</label>
                             </div>
-                            <p class="text-xs text-gray-400 mt-1">Choose 'purge' to delete old files or 'keep' to stop services when disk is full.</p>
                         </div>
                         <div>
-                            <label for="config-PURGE_THRESHOLD" class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Purge Threshold (%)</label>
+                            <div class="flex items-center gap-2 mb-1">
+                                <label for="config-PURGE_THRESHOLD" class="block text-xs font-bold text-slate-300 uppercase tracking-wider">Purge Threshold (%)</label>
+                                <div class="tooltip-container">
+                                    <svg class="w-4 h-4 tooltip-icon" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg>
+                                    <div class="tooltip">The disk usage percentage that will trigger the 'Full Disk Behavior'. For example, if set to 90, the system will act when the disk is 90% full.</div>
+                                </div>
+                            </div>
                             <input type="number" id="config-PURGE_THRESHOLD" name="PURGE_THRESHOLD" min="20" max="99" step="1" class="w-full bg-[var(--bn-bg)] text-white border border-[var(--bn-border)] rounded px-3 py-2 font-mono text-sm focus:outline-none focus:border-[var(--bn-highlight)]">
-                            <p class="text-xs text-gray-400 mt-1">Disk usage % to trigger purge or service stop.</p>
                         </div>
                         <div>
-                            <label for="config-MAX_FILES_SPECIES" class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Max Recordings per Species</label>
+                            <div class="flex items-center gap-2 mb-1">
+                                <label for="config-MAX_FILES_SPECIES" class="block text-xs font-bold text-slate-300 uppercase tracking-wider">Max Recordings per Species</label>
+                                <div class="tooltip-container">
+                                    <svg class="w-4 h-4 tooltip-icon" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg>
+                                    <div class="tooltip">The maximum number of recording files to keep for any single species. Once this limit is reached, the oldest recording for that species will be deleted to make room for a new one. Set to 0 for unlimited.</div>
+                                </div>
+                            </div>
                             <input type="number" id="config-MAX_FILES_SPECIES" name="MAX_FILES_SPECIES" min="0" step="1" class="w-full bg-[var(--bn-bg)] text-white border border-[var(--bn-border)] rounded px-3 py-2 font-mono text-sm focus:outline-none focus:border-[var(--bn-highlight)]">
-                            <p class="text-xs text-gray-400 mt-1">0 for unlimited. Oldest recordings are deleted first.</p>
                         </div>
                     </div>
                 </div>
@@ -453,27 +581,63 @@
                     <h3 class="text-lg font-bold text-white mb-4">Audio Settings</h3>
                     <div class="space-y-4">
                         <div>
-                            <label for="config-REC_CARD" class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Recording Device</label>
+                            <div class="flex items-center gap-2 mb-1">
+                                <label for="config-REC_CARD" class="block text-xs font-bold text-slate-300 uppercase tracking-wider">Recording Device</label>
+                                <div class="tooltip-container">
+                                    <svg class="w-4 h-4 tooltip-icon" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg>
+                                    <div class="tooltip">The ALSA identifier for your microphone (e.g., 'hw:1,0'). 'Default' usually works, but specify if you have multiple sound cards.</div>
+                                </div>
+                            </div>
                             <input type="text" id="config-REC_CARD" class="w-full bg-[var(--bn-bg)] text-white border border-[var(--bn-border)] rounded px-3 py-2 font-mono text-sm" placeholder="Default">
                         </div>
                         <div>
-                            <label for="config-CHANNELS" class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Channels</label>
+                            <div class="flex items-center gap-2 mb-1">
+                                <label for="config-CHANNELS" class="block text-xs font-bold text-slate-300 uppercase tracking-wider">Channels</label>
+                                <div class="tooltip-container">
+                                    <svg class="w-4 h-4 tooltip-icon" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg>
+                                    <div class="tooltip">Set to 1 for mono microphones or 2 for stereo.</div>
+                                </div>
+                            </div>
                             <input type="number" id="config-CHANNELS" min="1" max="2" step="1" class="w-full bg-[var(--bn-bg)] text-white border border-[var(--bn-border)] rounded px-3 py-2 font-mono text-sm">
                         </div>
                         <div>
-                            <label for="config-RECORDING_LENGTH" class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Recording Length (s)</label>
+                            <div class="flex items-center gap-2 mb-1">
+                                <label for="config-RECORDING_LENGTH" class="block text-xs font-bold text-slate-300 uppercase tracking-wider">Recording Length (s)</label>
+                                <div class="tooltip-container">
+                                    <svg class="w-4 h-4 tooltip-icon" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg>
+                                    <div class="tooltip">The duration of each individual audio recording chunk in seconds. 15 seconds is a common default.</div>
+                                </div>
+                            </div>
                             <input type="number" id="config-RECORDING_LENGTH" min="1" class="w-full bg-[var(--bn-bg)] text-white border border-[var(--bn-border)] rounded px-3 py-2 font-mono text-sm">
                         </div>
                         <div>
-                            <label for="config-EXTRACTION_LENGTH" class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Extraction Length (s)</label>
+                            <div class="flex items-center gap-2 mb-1">
+                                <label for="config-EXTRACTION_LENGTH" class="block text-xs font-bold text-slate-300 uppercase tracking-wider">Extraction Length (s)</label>
+                                <div class="tooltip-container">
+                                    <svg class="w-4 h-4 tooltip-icon" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg>
+                                    <div class="tooltip">The length of the audio segment (in seconds) to extract from a recording when a bird is detected. This must be less than or equal to the Recording Length.</div>
+                                </div>
+                            </div>
                             <input type="number" id="config-EXTRACTION_LENGTH" min="1" class="w-full bg-[var(--bn-bg)] text-white border border-[var(--bn-border)] rounded px-3 py-2 font-mono text-sm">
                         </div>
                          <div>
-                            <label for="config-HIGHPASS_FREQ" class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">High-Pass Filter (Hz)</label>
+                             <div class="flex items-center gap-2 mb-1">
+                                <label for="config-HIGHPASS_FREQ" class="block text-xs font-bold text-slate-300 uppercase tracking-wider">High-Pass Filter (Hz)</label>
+                                <div class="tooltip-container">
+                                    <svg class="w-4 h-4 tooltip-icon" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg>
+                                    <div class="tooltip">Applies a high-pass filter to the audio, removing frequencies below this value (in Hz). Useful for cutting out low-frequency noise like wind or traffic rumble. Set to 0 to disable.</div>
+                                </div>
+                            </div>
                             <input type="number" id="config-HIGHPASS_FREQ" min="0" step="50" class="w-full bg-[var(--bn-bg)] text-white border border-[var(--bn-border)] rounded px-3 py-2 font-mono text-sm">
                         </div>
                         <div>
-                            <label for="config-AUDIOFMT" class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Audio Format</label>
+                            <div class="flex items-center gap-2 mb-1">
+                                <label for="config-AUDIOFMT" class="block text-xs font-bold text-slate-300 uppercase tracking-wider">Audio Format</label>
+                                <div class="tooltip-container">
+                                    <svg class="w-4 h-4 tooltip-icon" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg>
+                                    <div class="tooltip">The file format for saved recordings. 'wav' is lossless but uses more space. 'mp3' is compressed and saves space.</div>
+                                </div>
+                            </div>
                             <input type="text" id="config-AUDIOFMT" class="w-full bg-[var(--bn-bg)] text-white border border-[var(--bn-border)] rounded px-3 py-2 font-mono text-sm">
                         </div>
                     </div>
@@ -484,19 +648,43 @@
                     <h3 class="text-lg font-bold text-white mb-4">Analysis & Model Settings</h3>
                     <div class="space-y-4">
                         <div>
-                            <label for="config-MODEL" class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Analysis Model</label>
+                            <div class="flex items-center gap-2 mb-1">
+                                <label for="config-MODEL" class="block text-xs font-bold text-slate-300 uppercase tracking-wider">Analysis Model</label>
+                                <div class="tooltip-container">
+                                    <svg class="w-4 h-4 tooltip-icon" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg>
+                                    <div class="tooltip">The machine learning model used for species identification. Different models may have different geographic coverage or performance characteristics.</div>
+                                </div>
+                            </div>
                             <input type="text" id="config-MODEL" class="w-full bg-[var(--bn-bg)] text-white border border-[var(--bn-border)] rounded px-3 py-2 font-mono text-sm">
                         </div>
                         <div>
-                            <label for="config-SF_THRESH" class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Species Validation Threshold</label>
+                            <div class="flex items-center gap-2 mb-1">
+                                <label for="config-SF_THRESH" class="block text-xs font-bold text-slate-300 uppercase tracking-wider">Species Validation Threshold</label>
+                                <div class="tooltip-container">
+                                    <svg class="w-4 h-4 tooltip-icon" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg>
+                                    <div class="tooltip">A confidence score between 0 and 1. Detections with a score below this 'species validation' threshold but above the main 'confidence' threshold are logged but marked as uncertain. It acts as a secondary filter for very high confidence sightings.</div>
+                                </div>
+                            </div>
                             <input type="number" id="config-SF_THRESH" step="0.01" class="w-full bg-[var(--bn-bg)] text-white border border-[var(--bn-border)] rounded px-3 py-2 font-mono text-sm">
                         </div>
                         <div>
-                            <label for="config-RARE_SPECIES_THRESHOLD" class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Rare Species Threshold (Days)</label>
+                            <div class="flex items-center gap-2 mb-1">
+                                <label for="config-RARE_SPECIES_THRESHOLD" class="block text-xs font-bold text-slate-300 uppercase tracking-wider">Rare Species Threshold (Days)</label>
+                                <div class="tooltip-container">
+                                    <svg class="w-4 h-4 tooltip-icon" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg>
+                                    <div class="tooltip">If a species has not been detected for this many days, its next detection will be marked as 'Rare' in the interface.</div>
+                                </div>
+                            </div>
                             <input type="number" id="config-RARE_SPECIES_THRESHOLD" min="1" class="w-full bg-[var(--bn-bg)] text-white border border-[var(--bn-border)] rounded px-3 py-2 font-mono text-sm">
                         </div>
                         <div>
-                            <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Raw Spectrogram</label>
+                            <div class="flex items-center gap-2 mb-1">
+                                <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider">Raw Spectrogram</label>
+                                <div class="tooltip-container">
+                                    <svg class="w-4 h-4 tooltip-icon" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg>
+                                    <div class="tooltip">For developers. If 'true', saves an unprocessed, raw spectrogram image alongside the standard one.</div>
+                                </div>
+                            </div>
                             <input type="text" id="config-RAW_SPECTROGRAM" class="w-full bg-[var(--bn-bg)] text-white border border-[var(--bn-border)] rounded px-3 py-2 font-mono text-sm">
                         </div>
                     </div>
@@ -508,90 +696,95 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div class="space-y-4">
                             <div>
-                                <label for="config-APPRISE_SERVICES" class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Apprise Service URLs</label>
+                                <div class="flex items-center gap-2 mb-1">
+                                    <label for="config-APPRISE_SERVICES" class="block text-xs font-bold text-slate-300 uppercase tracking-wider">Apprise Service URLs</label>
+                                    <div class="tooltip-container">
+                                        <svg class="w-4 h-4 tooltip-icon" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg>
+                                        <div class="tooltip">Enter your Apprise service URLs here, one per line. Apprise supports over 80 notification services including Email, Pushbullet, Telegram, etc.</div>
+                                    </div>
+                                </div>
                                 <textarea id="config-APPRISE_SERVICES" rows="4" class="w-full bg-[var(--bn-bg)] text-white border border-[var(--bn-border)] rounded px-3 py-2 font-mono text-sm" placeholder="One service URL per line..."></textarea>
                             </div>
                             <div>
-                                <label for="config-APPRISE_NOTIFICATION_TITLE" class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Notification Title</label>
+                                <div class="flex items-center gap-2 mb-1">
+                                    <label for="config-APPRISE_NOTIFICATION_TITLE" class="block text-xs font-bold text-slate-300 uppercase tracking-wider">Notification Title</label>
+                                    <div class="tooltip-container">
+                                        <svg class="w-4 h-4 tooltip-icon" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg>
+                                        <div class="tooltip">The title of the notification message. You can use variables like $comname, $sciname, and $confidence.</div>
+                                    </div>
+                                </div>
                                 <input type="text" id="config-APPRISE_NOTIFICATION_TITLE" class="w-full bg-[var(--bn-bg)] text-white border border-[var(--bn-border)] rounded px-3 py-2 font-mono text-sm">
                             </div>
                             <div>
-                                <label for="config-APPRISE_NOTIFICATION_BODY" class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Notification Body</label>
+                                <div class="flex items-center gap-2 mb-1">
+                                    <label for="config-APPRISE_NOTIFICATION_BODY" class="block text-xs font-bold text-slate-300 uppercase tracking-wider">Notification Body</label>
+                                    <div class="tooltip-container">
+                                        <svg class="w-4 h-4 tooltip-icon" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg>
+                                        <div class="tooltip">The main content of the notification message. Supports the same variables as the title.</div>
+                                    </div>
+                                </div>
                                 <textarea id="config-APPRISE_NOTIFICATION_BODY" rows="3" class="w-full bg-[var(--bn-bg)] text-white border border-[var(--bn-border)] rounded px-3 py-2 font-mono text-sm" placeholder="A $comname ($sciname) was just detected..."></textarea>
                             </div>
                              <div>
-                                <label for="config-APPRISE_MINIMUM_SECONDS_BETWEEN_NOTIFICATIONS_PER_SPECIES" class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Notification Cooldown (s)</label>
+                                <div class="flex items-center gap-2 mb-1">
+                                    <label for="config-APPRISE_MINIMUM_SECONDS_BETWEEN_NOTIFICATIONS_PER_SPECIES" class="block text-xs font-bold text-slate-300 uppercase tracking-wider">Notification Cooldown (s)</label>
+                                    <div class="tooltip-container">
+                                        <svg class="w-4 h-4 tooltip-icon" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg>
+                                        <div class="tooltip">To prevent spam, this sets the minimum time in seconds before another notification for the same species will be sent.</div>
+                                    </div>
+                                </div>
                                 <input type="number" id="config-APPRISE_MINIMUM_SECONDS_BETWEEN_NOTIFICATIONS_PER_SPECIES" min="0" class="w-full bg-[var(--bn-bg)] text-white border border-[var(--bn-border)] rounded px-3 py-2 font-mono text-sm">
                             </div>
                             <div class="flex items-center space-x-3 pt-2 pb-2">
                                 <button id="btn-test-notification" type="button" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-1.5 px-3 rounded text-xs transition-colors">Send Test Notification</button>
                                 <span id="test-notification-status" class="text-xs font-bold hidden"></span>
                             </div>
-                            <div class="flex items-center">
+                            <div class="flex items-center tooltip-container">
                                 <input id="config-APPRISE_NOTIFY_EACH_DETECTION" type="checkbox" class="h-4 w-4 rounded bg-[var(--bn-bg)] border-[var(--bn-border)] text-[var(--bn-highlight)] focus:ring-[var(--bn-highlight)]">
                                 <label for="config-APPRISE_NOTIFY_EACH_DETECTION" class="ml-2 block text-sm text-slate-200">Notify For Each Detection</label>
+                                <svg class="w-4 h-4 tooltip-icon ml-2" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg>
+                                <div class="tooltip">If checked, a notification will be sent for every single detection that meets the confidence threshold (respecting the cooldown).</div>
                             </div>
-                            <div class="flex items-center">
+                            <div class="flex items-center tooltip-container">
                                 <input id="config-APPRISE_NOTIFY_NEW_SPECIES" type="checkbox" class="h-4 w-4 rounded bg-[var(--bn-bg)] border-[var(--bn-border)] text-[var(--bn-highlight)] focus:ring-[var(--bn-highlight)]">
                                 <label for="config-APPRISE_NOTIFY_NEW_SPECIES" class="ml-2 block text-sm text-slate-200">Notify For New Species (All Time)</label>
+                                <svg class="w-4 h-4 tooltip-icon ml-2" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg>
+                                <div class="tooltip">Sends a notification only the very first time a species is ever detected by your station.</div>
                             </div>
-                            <div class="flex items-center">
+                            <div class="flex items-center tooltip-container">
                                 <input id="config-APPRISE_NOTIFY_NEW_SPECIES_EACH_DAY" type="checkbox" class="h-4 w-4 rounded bg-[var(--bn-bg)] border-[var(--bn-border)] text-[var(--bn-highlight)] focus:ring-[var(--bn-highlight)]">
                                 <label for="config-APPRISE_NOTIFY_NEW_SPECIES_EACH_DAY" class="ml-2 block text-sm text-slate-200">Notify For New Species (Daily)</label>
+                                <svg class="w-4 h-4 tooltip-icon ml-2" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg>
+                                <div class="tooltip">Sends a notification the first time a species is detected on any given day.</div>
                             </div>
-                            <div class="flex items-center">
+                            <div class="flex items-center tooltip-container">
                                 <input id="config-APPRISE_WEEKLY_REPORT" type="checkbox" class="h-4 w-4 rounded bg-[var(--bn-bg)] border-[var(--bn-border)] text-[var(--bn-highlight)] focus:ring-[var(--bn-highlight)]">
                                 <label for="config-APPRISE_WEEKLY_REPORT" class="ml-2 block text-sm text-slate-200">Send Weekly Report</label>
+                                <svg class="w-4 h-4 tooltip-icon ml-2" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg>
+                                <div class="tooltip">If checked, a weekly summary report of all detections will be sent via your Apprise services.</div>
                             </div>
                         </div>
                         <div class="space-y-4">
                             <div>
-                                <label for="config-APPRISE_ONLY_NOTIFY_SPECIES_NAMES_2" class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Include Species List</label>
+                                <div class="flex items-center gap-2 mb-1">
+                                    <label for="config-APPRISE_ONLY_NOTIFY_SPECIES_NAMES_2" class="block text-xs font-bold text-slate-300 uppercase tracking-wider">Include Species List</label>
+                                    <div class="tooltip-container">
+                                        <svg class="w-4 h-4 tooltip-icon" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg>
+                                        <div class="tooltip">A whitelist. If this list is not empty, notifications will ONLY be sent for species on this list. One species name per line.</div>
+                                    </div>
+                                </div>
                                 <textarea id="config-APPRISE_ONLY_NOTIFY_SPECIES_NAMES_2" rows="5" class="w-full bg-[var(--bn-bg)] text-white border border-[var(--bn-border)] rounded px-3 py-2 font-mono text-sm" placeholder="One species name per line..."></textarea>
-                                <p class="text-xs text-gray-400 mt-1">Only send notifications for these species.</p>
                             </div>
                              <div>
-                                <label for="config-APPRISE_ONLY_NOTIFY_SPECIES_NAMES" class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Exclude Species List</label>
+                                <div class="flex items-center gap-2 mb-1">
+                                    <label for="config-APPRISE_ONLY_NOTIFY_SPECIES_NAMES" class="block text-xs font-bold text-slate-300 uppercase tracking-wider">Exclude Species List</label>
+                                    <div class="tooltip-container">
+                                        <svg class="w-4 h-4 tooltip-icon" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg>
+                                        <div class="tooltip">A blacklist. Notifications will NEVER be sent for any species on this list, regardless of other settings. One species name per line.</div>
+                                    </div>
+                                </div>
                                 <textarea id="config-APPRISE_ONLY_NOTIFY_SPECIES_NAMES" rows="5" class="w-full bg-[var(--bn-bg)] text-white border border-[var(--bn-border)] rounded px-3 py-2 font-mono text-sm" placeholder="One species name per line..."></textarea>
-                                <p class="text-xs text-gray-400 mt-1">Never send notifications for these species.</p>
                             </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="bird-card p-6 flex flex-col justify-start">
-                    <h3 class="text-lg font-bold text-white mb-4">System Telemetry</h3>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div class="bg-[var(--bn-bg)] p-4 rounded-lg border border-[var(--bn-border)]">
-                            <div class="flex justify-between items-center mb-1">
-                                <span class="block text-xs font-bold text-slate-400 uppercase">Temperature</span>
-                                <span id="sys-temp" class="text-lg font-bold text-white">--.-°C</span>
-                            </div>
-                            <div class="w-full bg-[#111a14] h-2 rounded-full overflow-hidden border border-[var(--bn-border)]">
-                                <div id="sys-temp-bar" class="bg-red-500 h-full w-0 transition-all duration-500"></div>
-                            </div>
-                        </div>
-                        <div class="bg-[var(--bn-bg)] p-4 rounded-lg border border-[var(--bn-border)]">
-                            <div class="flex justify-between items-center mb-1">
-                                <span class="block text-xs font-bold text-slate-400 uppercase">Memory</span>
-                                <span id="sys-mem" class="text-lg font-bold text-white">--%</span>
-                            </div>
-                            <div class="w-full bg-[#111a14] h-2 rounded-full overflow-hidden border border-[var(--bn-border)]">
-                                <div id="sys-mem-bar" class="bg-[var(--bn-highlight)] h-full w-0 transition-all duration-500"></div>
-                            </div>
-                        </div>
-                        <div class="bg-[var(--bn-bg)] p-4 rounded-lg border border-[var(--bn-border)]">
-                            <div class="flex justify-between items-center mb-1">
-                                <span class="block text-xs font-bold text-slate-400 uppercase">Disk</span>
-                                <span id="sys-disk" class="text-lg font-bold text-white">--%</span>
-                            </div>
-                            <div class="w-full bg-[#111a14] h-2 rounded-full overflow-hidden border border-[var(--bn-border)]">
-                                <div id="sys-disk-bar" class="bg-[var(--bn-highlight)] h-full w-0 transition-all duration-500"></div>
-                            </div>
-                        </div>
-                        <div class="bg-[var(--bn-bg)] p-4 rounded-lg border border-[var(--bn-border)] flex flex-col justify-center">
-                            <span class="block text-xs font-bold text-slate-400 uppercase mb-1">Uptime</span>
-                            <span id="sys-uptime" class="text-sm font-bold text-white truncate block">--</span>
                         </div>
                     </div>
                 </div>
