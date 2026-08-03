@@ -526,31 +526,58 @@ class SidecarHandler(http.server.SimpleHTTPRequestHandler):
                     from datetime import datetime, timedelta
                     query_components = parse_qs(urlparse(self.path).query)
                     days_str = query_components.get('days', [None])[0]
+                    species_of_interest = query_components.get('species_of_interest', [None])[0]
 
                     today_str = datetime.now().strftime('%Y-%m-%d')
                     
                     conn = sqlite3.connect(db_path)
                     cursor = conn.cursor()
 
+                    # Base date filtering logic
                     where_clause = ""
                     params = []
+                    start_date_obj = None
                     if days_str and days_str != 'all':
                         if days_str == 'today':
                             where_clause = "WHERE Date = ?"
                             params.append(today_str)
+                            start_date_obj = datetime.now()
                         elif days_str.isdigit():
-                            start_date = datetime.now() - timedelta(days=int(days_str))
+                            start_date_obj = datetime.now() - timedelta(days=int(days_str))
                             where_clause = "WHERE Date >= ?"
-                            params.append(start_date.strftime('%Y-%m-%d'))
+                            params.append(start_date_obj.strftime('%Y-%m-%d'))
 
+                    # Build query for species of interest if provided
+                    soi_where_clause = where_clause
+                    soi_params = list(params)
+                    if species_of_interest:
+                        soi_where_clause += " AND " if where_clause else "WHERE "
+                        soi_where_clause += "Com_Name = ?"
+                        soi_params.append(species_of_interest)
+
+                    # Detections by date for the main query
+                    cursor.execute(f"SELECT Date, COUNT(*) FROM detections {where_clause} GROUP BY Date", params)
+                    detections_by_date = {r[0]: r[1] for r in cursor.fetchall()}
+                    
+                    # Species by date for the main query
+                    cursor.execute(f"SELECT Date, Com_Name FROM detections {where_clause} ORDER BY Date", params)
+                    species_by_date_raw = cursor.fetchall()
+                    species_by_date = {}
+                    for date, com_name in species_by_date_raw:
+                        if date not in species_by_date: species_by_date[date] = []
+                        if com_name not in species_by_date[date]: species_by_date[date].append(com_name)
+
+                    # For species of interest, we need its specific detection counts by date
+                    if species_of_interest:
+                        cursor.execute(f"SELECT Date, COUNT(*) FROM detections {soi_where_clause} GROUP BY Date", soi_params)
+                        species_by_date = {species_of_interest: {r[0]: r[1] for r in cursor.fetchall()}}
+
+                    # General stats
                     cursor.execute(f"SELECT COUNT(*) FROM detections {where_clause}", params)
                     total_detections = cursor.fetchone()[0]
                     
                     cursor.execute(f"SELECT COUNT(DISTINCT Com_Name) FROM detections {where_clause}", params)
                     total_species = cursor.fetchone()[0]
-
-                    cursor.execute(f"SELECT Com_Name, COUNT(*) as count FROM detections {where_clause} GROUP BY Com_Name ORDER BY count DESC", params)
-                    species_counts = [{"Com_Name": r[0], "count": r[1]} for r in cursor.fetchall()]
 
                     cursor.execute("SELECT COUNT(*) FROM detections WHERE Date = ?", (today_str,))
                     today_detections = cursor.fetchone()[0]
@@ -558,8 +585,8 @@ class SidecarHandler(http.server.SimpleHTTPRequestHandler):
                     cursor.execute("SELECT COUNT(DISTINCT Com_Name) FROM detections WHERE Date = ?", (today_str,))
                     today_species = cursor.fetchone()[0]
 
-                    last_hour_str = datetime.now().strftime('%H')
-                    cursor.execute("SELECT COUNT(*) FROM detections WHERE Date = ? AND SUBSTR(Time, 1, 2) = ?", (today_str, last_hour_str))
+                    last_hour_str = (datetime.now() - timedelta(hours=1)).strftime('%H')
+                    cursor.execute("SELECT COUNT(*) FROM detections WHERE Date = ? AND SUBSTR(Time, 1, 2) >= ?", (today_str, last_hour_str))
                     hour_detections = cursor.fetchone()[0]
 
                     conn.close()
@@ -569,8 +596,10 @@ class SidecarHandler(http.server.SimpleHTTPRequestHandler):
                     self.end_headers()
                     self.wfile.write(json.dumps({
                         "total_detections": total_detections, "total_species": total_species,
-                        "species_counts": species_counts, "today_detections": today_detections,
-                        "today_species": today_species, "hour_detections": hour_detections
+                        "today_detections": today_detections, "today_species": today_species, 
+                        "hour_detections": hour_detections,
+                        "detections_by_date": detections_by_date,
+                        "species_by_date": species_by_date,
                     }).encode('utf-8'))
                 except Exception as e:
                     self.send_error(500, str(e))
@@ -580,10 +609,60 @@ class SidecarHandler(http.server.SimpleHTTPRequestHandler):
                 try:
                     temp = subprocess.getoutput("cat /sys/class/thermal/thermal_zone0/temp")
                     temp_c = round(int(temp) / 1000.0, 1) if temp.isdigit() else 0.0
-                    mem = subprocess.getoutput("free -m | awk 'NR==2 {printf \"%.1f\", $3*100/$2}'")
-                    disk = subprocess.getoutput("df -h / | awk 'NR==2 {print $5}'").replace('%', '')
+                    mem_out = subprocess.getoutput("free -m").splitlines()
+                    mem_total, mem_used = 0, 0
+                    if len(mem_out) > 1:
+                        parts = mem_out[1].split()
+                        mem_total = int(parts[1])
+                        mem_used = int(parts[2])
+                    mem_pct = (mem_used / mem_total * 100) if mem_total > 0 else 0
+
+                    disk_out = subprocess.getoutput("df -h /").splitlines()
+                    disk_pct, disk_total, disk_used = 0, "0B", "0B"
+                    if len(disk_out) > 1:
+                        parts = disk_out[1].split()
+                        disk_pct = int(parts[4].replace('%',''))
+                        disk_total = parts[1]
+                        disk_used = parts[2]
+                        
                     uptime = subprocess.getoutput("uptime -p").replace('up ', '')
-                    data = {"temp": temp_c, "memory": float(mem) if mem else 0, "disk": int(disk) if disk.isdigit() else 0, "uptime": uptime}
+                    load_avg = subprocess.getoutput("uptime | awk -F'load average: ' '{print $2}'")
+                    ip_addr = subprocess.getoutput("hostname -I").split()[0]
+                    hostname = subprocess.getoutput("hostname")
+                    
+                    os_info = {}
+                    if os.path.exists('/etc/os-release'):
+                        with open('/etc/os-release') as f:
+                            for line in f:
+                                if '=' in line:
+                                    key, val = line.strip().split('=', 1)
+                                    os_info[key] = val.strip('"')
+                    
+                    cpu_info = ""
+                    if os.path.exists('/proc/cpuinfo'):
+                         with open('/proc/cpuinfo') as f:
+                            for line in f:
+                                if "Model" in line or "model name" in line:
+                                    cpu_info = line.split(':')[1].strip()
+                                    break
+                    
+                    data = {
+                        "temp_c": temp_c, 
+                        "temp_f": round(temp_c * 9/5 + 32, 1),
+                        "memory_pct": round(mem_pct, 1),
+                        "memory_total_mb": mem_total,
+                        "memory_used_mb": mem_used,
+                        "disk_pct": disk_pct,
+                        "disk_total": disk_total,
+                        "disk_used": disk_used,
+                        "uptime": uptime,
+                        "load_avg": load_avg,
+                        "ip_address": ip_addr,
+                        "hostname": hostname,
+                        "os_name": os_info.get('PRETTY_NAME', 'Linux'),
+                        "cpu_model": cpu_info
+                    }
+
                     self.send_response(200)
                     self.send_header('Content-type', 'application/json')
                     self.end_headers()
