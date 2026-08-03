@@ -1,4 +1,5 @@
-const API_BASE = 'http://' + (window.location.hostname || 'localhost') + ':9999';
+
+        const API_BASE = 'http://' + (window.location.hostname || 'localhost') + ':9999';
         let dbData = [];
         let configData = {};
         let activeChart = null;
@@ -12,7 +13,7 @@ const API_BASE = 'http://' + (window.location.hostname || 'localhost') + ':9999'
 
         function escapeAttr(str) {
             if (!str) return '';
-            return str.replace(/'/g, "'").replace(/"/g, '&quot;');
+            return str.replace(/'/g, "\\'").replace(/"/g, '&quot;');
         }
 
         let audioCtx;
@@ -553,7 +554,7 @@ const API_BASE = 'http://' + (window.location.hostname || 'localhost') + ':9999'
                                 labels: niceLabels,
                                 datasets: [
                                     { type: 'bar', label: 'Detections', data: dets, backgroundColor: 'rgba(74, 222, 128, 0.8)', yAxisID: 'y', maxBarThickness: 24, categoryPercentage: 0.7, barPercentage: 0.8 },
-                                    { type: 'line', label: `Max Temp (${isMetric ? '°C' : '°F'})`, data: temps, borderColor: '#f87171', tension: 0.4, pointRadius: 2, yAxisID: 'yT' },
+                                    { type: 'line', label: `Max Temp (${isMetric ? '┬░C' : '┬░F'})`, data: temps, borderColor: '#f87171', tension: 0.4, pointRadius: 2, yAxisID: 'yT' },
                                     { type: 'line', label: `Max Wind (${isMetric ? 'km/h' : 'mph'})`, data: winds, borderColor: '#9ca3af', borderDash: [4, 4], tension: 0.3, pointRadius: 0, yAxisID: 'yT' },
                                     { type: 'bar', label: `Rain (${isMetric ? 'mm' : 'in'})`, data: rains, backgroundColor: 'rgba(96, 165, 250, 0.6)', yAxisID: 'yR', maxBarThickness: 24, categoryPercentage: 0.7, barPercentage: 0.8 }
                                 ]
@@ -1234,11 +1235,11 @@ const API_BASE = 'http://' + (window.location.hostname || 'localhost') + ':9999'
                 const data = await res.json();
                 
                 const tempC = data.temp;
-                document.getElementById('sys-temp').innerText = `${tempC.toFixed(1)}°C`;
+                document.getElementById('sys-temp').innerText = `${tempC.toFixed(1)}┬░C`;
                 
                 const tempBar = document.getElementById('sys-temp-bar');
                 if (tempBar) {
-                    // The bar's percentage is based on a 0-85°C range, which is a sensible default for system heat.
+                    // The bar's percentage is based on a 0-85┬░C range, which is a sensible default for system heat.
                     const tempPct = Math.max(0, Math.min(100, ((tempC - 0) / 85) * 100));
                     tempBar.style.width = `${tempPct}%`;
                 }
@@ -1509,6 +1510,30 @@ const API_BASE = 'http://' + (window.location.hostname || 'localhost') + ':9999'
             }
         }
 
+        async function systemControl(action) {
+            const upperAction = action.charAt(0).toUpperCase() + action.slice(1);
+            if (!confirm(`Are you sure you want to ${upperAction} the system? This action is irreversible.`)) return;
+
+            try {
+                const res = await fetch(`${API_BASE}/api/system_control`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action })
+                });
+                if (res.ok) {
+                    const result = await res.json();
+                    alert(`Success: ${result.message}`);
+                    // Optionally, you could disable the UI here or show an overlay
+                } else {
+                    const error = await res.json();
+                    throw new Error(error.detail || 'An unknown error occurred.');
+                }
+            } catch (error) {
+                console.error(`Error during ${action}:`, error);
+                alert(`Error: Could not perform ${action}. See console for details.`);
+            }
+        }
+
         async function loadServiceStatus() {
             const tbody = document.getElementById('services-table-body');
             try {
@@ -1561,9 +1586,7 @@ const API_BASE = 'http://' + (window.location.hostname || 'localhost') + ':9999'
                 const text = await res.text();
                 const out = document.getElementById('log-output');
 
-                const formattedText = text.replace(/
-/g, '
-');
+                const formattedText = text.replace(/\\n/g, '\n');
 
                 if(out.textContent !== formattedText) {
                     out.textContent = formattedText;
@@ -1665,7 +1688,6 @@ const API_BASE = 'http://' + (window.location.hostname || 'localhost') + ':9999'
         }
 
         init();
-        
     (function() {
         const SKETCH_VERSION = 'v1';
         const collageTab = document.getElementById('tab-collage');

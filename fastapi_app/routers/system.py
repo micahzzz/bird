@@ -114,6 +114,39 @@ async def update_config(payload: dict = Body(...)):
         f.writelines(new_lines)
     return {"status": "success", "message": "Configuration updated successfully"}
 
+@router.post("/config/test_notification")
+async def test_notification(payload: dict = Body(...)):
+    apprise_services = payload.get('apprise_services')
+    title = payload.get('title', 'Test Notification')
+    body = payload.get('body', 'This is a test notification from BirdNET-Pi.')
+
+    if not apprise_services:
+        raise HTTPException(status_code=400, detail="Apprise services URL(s) are required.")
+
+    # Replace placeholders
+    title = title.replace('$comname', 'Test Species').replace('$sciname', 'Species testus').replace('$confidence', '99.9%')
+    body = body.replace('$comname', 'Test Species').replace('$sciname', 'Species testus').replace('$confidence', '99.9%')
+
+    script_path = os.path.expanduser("~/BirdNET-Pi/scripts/send_test_notification.py")
+
+    if not os.path.exists(script_path):
+        # Fallback to legacy path if the primary one doesn't exist
+        script_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'legacy_php', 'scripts', 'send_test_notification.py')
+        if not os.path.exists(script_path):
+            raise HTTPException(status_code=404, detail=f"send_test_notification.py script not found at primary or fallback locations.")
+
+    cmd = ['python3', script_path, apprise_services, title, body]
+
+    try:
+        result = subprocess.run(cmd, check=True, capture_output=True, text=True, timeout=15)
+        return {"success": True, "message": "Test notification sent successfully."}
+    except subprocess.CalledProcessError as e:
+        raise HTTPException(status_code=500, detail=f"Script failed: {e.stderr}")
+    except subprocess.TimeoutExpired:
+        raise HTTPException(status_code=504, detail="Script timed out after 15 seconds.")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.get("/log")
 async def get_system_log():
     try:
@@ -154,6 +187,24 @@ async def control_service(payload: dict = Body(...)):
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
     raise HTTPException(status_code=400, detail="Invalid action or service")
+
+@router.post("/system_control")
+async def control_system(payload: dict = Body(...)):
+    action = payload.get("action")
+    if action == "reboot":
+        command = ["sudo", "/sbin/reboot"]
+    elif action == "shutdown":
+        command = ["sudo", "/sbin/shutdown", "now"]
+    else:
+        raise HTTPException(status_code=400, detail="Invalid system action")
+
+    try:
+        # We don't use check=True because the machine will likely shut down
+        # before it has a chance to return a success code.
+        subprocess.Popen(command)
+        return {"status": "success", "message": f"System is now performing: {action}"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/species_list")
 async def get_species_list(list: str = "confirmed"):

@@ -711,19 +711,31 @@
             </div>
 
             <!-- Service Control -->
-            <div id="tools-services" class="hidden bird-card overflow-hidden">
-                <table class="w-full text-left text-sm whitespace-nowrap">
-                    <thead class="bg-[var(--bn-panel)] text-white">
-                        <tr>
-                            <th class="p-4 font-semibold">Service</th>
-                            <th class="p-4 font-semibold">Status</th>
-                            <th class="p-4 font-semibold text-right">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="services-table-body" class="divide-y divide-[var(--bn-border)]">
-                        <tr><td colspan="3" class="p-4 text-center text-slate-400">Loading service statuses...</td></tr>
-                    </tbody>
-                </table>
+            <div id="tools-services" class="hidden">
+                <div class="bird-card overflow-hidden mb-6">
+                    <table class="w-full text-left text-sm whitespace-nowrap">
+                        <thead class="bg-[var(--bn-panel)] text-white">
+                            <tr>
+                                <th class="p-4 font-semibold">Service</th>
+                                <th class="p-4 font-semibold">Status</th>
+                                <th class="p-4 font-semibold text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="services-table-body" class="divide-y divide-[var(--bn-border)]">
+                            <tr><td colspan="3" class="p-4 text-center text-slate-400">Loading service statuses...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- System Actions Card -->
+                <div class="bird-card p-6">
+                    <h3 class="text-lg font-bold text-white mb-4">System Actions</h3>
+                    <p class="text-sm text-slate-400 mb-4">These actions will affect the entire machine. Use with caution.</p>
+                    <div class="flex gap-4">
+                        <button onclick="systemControl('reboot')" class="bg-yellow-600 hover:bg-yellow-500 text-white font-bold py-2 px-4 rounded-lg transition-colors">Reboot</button>
+                        <button onclick="systemControl('shutdown')" class="bg-red-700 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg transition-colors">Shutdown</button>
+                    </div>
+                </div>
             </div>
 
             <!-- Species Lists Placeholder -->
