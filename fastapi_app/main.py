@@ -53,13 +53,19 @@ if os.path.exists(static_dir):
     app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 # --- Root HTML Monolith Serving ---
-@app.get("/", tags=["Root"])
+@app.get("/", include_in_schema=False)
 async def read_root():
     """Serves the main index.html monolith from the project root."""
     index_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "index.html")
     if os.path.exists(index_path):
         return FileResponse(index_path)
     raise HTTPException(status_code=404, detail="index.html not found in project root directory.")
+
+@app.get("/index.html", include_in_schema=False)
+async def read_index_html():
+    """Explicitly serves index.html to handle direct requests."""
+    return await read_root()
+
 
 # --- Catch-All Media Fallback serving ---
 @app.get("/{path:path}", tags=["Media Fallback"])
