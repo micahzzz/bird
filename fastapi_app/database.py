@@ -10,8 +10,13 @@ def get_db_path() -> str | None:
     Finds the path to the birds.db file in common locations.
     Returns the path as a string or None if not found.
     """
+    # A relative path for the local dev environment
+    local_dev_path = os.path.realpath(os.path.join(
+        os.path.dirname(__file__), '..', 'legacy_php', 'scripts', 'birds.db'
+    ))
     # List of potential paths for the database
     paths = [
+        local_dev_path,
         os.path.expanduser('~/BirdNET-Pi/scripts/birds.db'),
         os.path.expanduser('~/BirdNET-Pi/birds.db'),
         os.path.expanduser('~/BirdSongs/birds.db'),

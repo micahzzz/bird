@@ -52,42 +52,31 @@ static_dir = os.path.join(os.path.dirname(__file__), "static")
 if os.path.exists(static_dir):
     app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
-# --- Root HTML Monolith Serving ---
-@app.get("/", include_in_schema=False)
-async def read_root():
-    """Serves the main index.html monolith from the project root."""
-    index_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "index.html")
-    if os.path.exists(index_path):
-        return FileResponse(index_path)
-    raise HTTPException(status_code=404, detail="index.html not found in project root directory.")
-
-@app.get("/index.html", include_in_schema=False)
-async def read_index_html():
-    """Explicitly serves index.html to handle direct requests."""
-    return await read_root()
-
-
-# --- Catch-All Media Fallback serving ---
-@app.get("/{path:path}", tags=["Media Fallback"])
-async def serve_media(path: str):
+# --- Root/Media Fallback Serving ---
+@app.get("/{path:path}", include_in_schema=False)
+async def serve_root_or_media(path: str):
     """
-    Serves .mp3, .wav, and spectrogram .png files directly from the local BirdSongs filesystem.
-    Includes robust alternate-extension checks and directory traversal defense.
+    Catch-all to serve the root index.html, or media files from the BirdSongs directory.
+    This is the fallback for any path not matching an API route or a file in /static.
     """
-    # Only serve recognized media/image assets
-    if any(path.lower().endswith(ext) for ext in ['.mp3', '.wav', '.flac', '.m4a', '.png', '.jpg', '.jpeg']):
+    sanitized_path = urllib.parse.unquote(path)
+    # Requests for the root should serve index.html
+    if sanitized_path in ("", "index.html", "/"):
+        index_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "index.html")
+        if os.path.exists(index_path):
+            return FileResponse(index_path)
+        raise HTTPException(status_code=404, detail="index.html not found in project root directory.")
+
+    # Otherwise, try to serve it as a media file
+    if any(sanitized_path.lower().endswith(ext) for ext in ['.mp3', '.wav', '.flac', '.m4a', '.png', '.jpg', '.jpeg']):
         home_dir = os.path.expanduser('~')
-        
-        # Sanitize and decode path to prevent directory traversal
-        clean_path = os.path.normpath(urllib.parse.unquote(path).lstrip('/'))
-        target_path = os.path.join(home_dir, 'BirdSongs', clean_path)
-
-        # Enforce that path resolves within the BirdSongs root folder
         songs_dir = os.path.realpath(os.path.join(home_dir, 'BirdSongs'))
-        if not os.path.realpath(target_path).startswith(songs_dir):
-            raise HTTPException(status_code=403, detail="Access denied")
+        
+        # Sanitize and create the full path
+        clean_path = os.path.normpath(sanitized_path).lstrip('/\\')
+        target_path = os.path.join(songs_dir, clean_path)
 
-        # Handle alternate spectrogram extensions (e.g., .mp3.png or .wav.png)
+        # Handle alternate spectrogram extensions BEFORE checking for existence/traversal
         if not os.path.exists(target_path) and target_path.lower().endswith('.png'):
             for alt_ext in ['.mp3.png', '.wav.png']:
                 alt_path = target_path[:-4] + alt_ext
@@ -95,9 +84,14 @@ async def serve_media(path: str):
                     target_path = alt_path
                     break
 
-        if os.path.exists(target_path) and os.path.isfile(target_path):
-            return FileResponse(target_path)
+        # Security: Ensure the final path is still within the BirdSongs directory
+        if os.path.exists(target_path) and os.path.realpath(target_path).startswith(songs_dir):
+            if os.path.isfile(target_path):
+                return FileResponse(target_path)
+        else:
+            # If the file doesn't exist OR it's a directory traversal attempt, 404/403
+            # We return 404 to avoid leaking information about path structure.
+            raise HTTPException(status_code=404, detail="Media file not found")
             
-        raise HTTPException(status_code=404, detail="Media file not found")
-        
+    # If it's not the root and not a recognized media file, it's a 404
     raise HTTPException(status_code=404, detail="Not found")
