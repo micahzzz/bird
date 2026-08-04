@@ -276,6 +276,46 @@ async def get_stats(
         raise HTTPException(status_code=500, detail=f"Database query failed: {e}")
 
 
+
+@router.get("/stats/hourly", summary="Get Hourly Detection Stats for the Last 24 Hours")
+async def get_hourly_stats():
+    """
+    Provides the number of detections for each of the last 24 hours.
+    The keys of the returned dictionary are hours from 0 to 23.
+    """
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Query for detections in the last 24 hours
+        query = """
+            SELECT
+                strftime('%H', Time) as hour,
+                COUNT(*) as count
+            FROM
+                detections
+            WHERE
+                (julianday('now', 'localtime') - julianday(Date || ' ' || Time)) * 24 <= 24
+            GROUP BY
+                hour
+        """
+        cursor.execute(query)
+        rows = cursor.fetchall()
+        conn.close()
+
+        # Initialize a dictionary for all 24 hours to ensure the chart is complete
+        hourly_counts = {f"{h:02d}": 0 for h in range(24)}
+        for row in rows:
+            hourly_counts[row['hour']] = row['count']
+
+        return hourly_counts
+
+    except ConnectionError as e:
+        raise HTTPException(status_code=503, detail=str(e))
+    except sqlite3.Error as e:
+        raise HTTPException(status_code=500, detail=f"Database query failed: {e}")
+
+
 @router.get("/collage-stats", response_model=CollageResponse, summary="Get species stats for collage view")
 async def get_collage_stats(
     days: str | None = Query("7", description="Timeframe to filter stats (e.g., '7', '30', 'today', 'all').")

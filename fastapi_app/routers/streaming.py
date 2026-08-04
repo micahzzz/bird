@@ -3,9 +3,8 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 import httpx
 
-# Import the config parser from the system router.
-# For a larger app, this might live in a shared 'utils' module.
-from .system import parse_config, CONFIG_PATH
+# Import the robust config parser from the system router.
+from .system import get_config_full
 
 router = APIRouter()
 
@@ -14,7 +13,7 @@ async def stream_generator():
     A generator function that connects to the local Icecast stream and yields
     audio chunks as they are received.
     """
-    config = parse_config(CONFIG_PATH)
+    config = get_config_full()
     password = config.get('BIRDNETPI_PASSWORD', '')
     
     # Define potential hostnames to try for the Icecast server

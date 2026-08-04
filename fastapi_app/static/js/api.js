@@ -1,89 +1,235 @@
-// /static/js/api.js
+// api.js
+/**
+ * A centralized module for all backend API communications.
+ * This file has been updated to accurately reflect the FastAPI backend routes.
+ */
 
-import { API_BASE } from './state.js';
+const API_BASE_URL = window.location.origin;
 
 /**
- * A wrapper around fetch to handle common error scenarios.
- * @param {string} url - The URL to fetch.
- * @param {object} options - The options for the fetch call.
- * @returns {Promise<any>} - The JSON response.
+ * A generic fetch handler to reduce boilerplate.
+ * @param {string} endpoint - The API endpoint to call (e.g., /api/detections).
+ * @param {object} [options={}] - Optional fetch options (method, body, etc.).
+ * @param {string} [responseType='json'] - The expected response type ('json', 'text', 'blob').
+ * @returns {Promise<any>} - The parsed response data.
  */
-async function apiFetch(url, options = {}) {
+async function fetchAPI(endpoint, options = {}, responseType = 'json') {
+    const url = `${API_BASE_URL}${endpoint}`;
     try {
-        const res = await fetch(url, options);
-        if (!res.ok) {
-            const error = await res.json().catch(() => ({ detail: res.statusText }));
-            throw new Error(error.detail || 'An unknown API error occurred.');
+        const response = await fetch(url, options);
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`API Error on ${endpoint}: ${response.status} ${response.statusText}`, errorText);
+            throw new Error(`Network response was not ok: ${response.statusText}`);
         }
-        if (res.headers.get('Content-Type')?.includes('application/json')) {
-            return res.json();
-        }
-        return res.text();
-
+        if (responseType === 'json') return response.json();
+        if (responseType === 'text') return response.text();
+        if (responseType === 'blob') return response.blob();
+        return response;
     } catch (error) {
-        console.error(`API call to ${url} failed:`, error);
-        throw error; // Re-throw to be handled by the caller
+        console.error(`Failed to fetch from endpoint: ${endpoint}`, error);
+        throw error;
     }
 }
 
-export const fetchInitialData = () => apiFetch(`${API_BASE}/api/detections`);
-export const fetchConfig = () => apiFetch(`${API_BASE}/api/config`);
-export const fetchStats = (days = 'all') => apiFetch(`${API_BASE}/api/stats?days=${days}`);
-export const fetchSystemStats = () => apiFetch(`${API_BASE}/api/system`);
-export const fetchLog = () => apiFetch(`${API_BASE}/api/log`);
-export const fetchGallery = () => apiFetch(`${API_BASE}/api/gallery`);
-export const fetchSpeciesHistory = (species, days = '30') => apiFetch(`${API_BASE}/api/stats?days=${days}&species_of_interest=${encodeURIComponent(species)}`);
-export const fetchFiles = (path = '') => apiFetch(`${API_BASE}/api/files/list?path=${encodeURIComponent(path)}`);
-export const fetchSpeciesList = (listName) => apiFetch(`${API_BASE}/api/species_list?list=${listName}`);
-export const fetchServiceStatus = () => apiFetch(`${API_BASE}/api/services/status`);
-export const fetchPaginatedDetections = (params) => apiFetch(`${API_BASE}/api/detections?${params.toString()}`);
+// --- Detections & Stats ---
 
-export const fetchWeatherData = (lat, lon, startDate, endDate, tempUnit, windUnit, precipUnit) => {
-    const url = `https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=${startDate}&end_date=${endDate}&daily=temperature_2m_max,precipitation_sum,windspeed_10m_max&timezone=auto&temperature_unit=${tempUnit}&windspeed_unit=${windUnit}&precipitation_unit=${precipUnit}`;
-    return apiFetch(url);
+/**
+ * Fetches paginated and filtered detections.
+ * @param {object} params - Filter parameters.
+ * @param {number} [params.limit=50]
+ * @param {number} [params.offset=0]
+ * @param {string} [params.sp] - Common name for species.
+ * @param {string} [params.dStart] - Start date (YYYY-MM-DD).
+ * @param {string} [params.dEnd] - End date (YYYY-MM-DD).
+ * @param {string} [params.tStart] - Start time (HH:MM:SS).
+ * @param {string} [params.tEnd] - End time (HH:MM:SS).
+ * @param {number} [params.minConf=0] - Minimum confidence.
+ * @returns {Promise<{detections: object[], total_count: number}>}
+ */
+export const getDetections = (params) => {
+    const query = new URLSearchParams(params).toString();
+    return fetchAPI(`/api/detections?${query}`);
 };
 
-export const fetchBirdImage = (species) => {
-    const url = `https://en.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(species)}&prop=pageimages&format=json&pithumbsize=800&redirects=1&origin=*`;
-    return apiFetch(url);
+/**
+ * Fetches aggregate statistics.
+ * @param {object} params
+ * @param {string} [params.days] - Timeframe (e.g., '7', '30', 'today').
+ * @param {string} [params.species_of_interest] - Specific species to get daily counts for.
+ * @returns {Promise<object>}
+ */
+export const getStats = (params) => {
+    const query = new URLSearchParams(params).toString();
+    return fetchAPI(`/api/stats?${query}`);
 };
 
-export const saveConfig = (updates) => apiFetch(`${API_BASE}/api/config/update`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(updates)
-});
+/**
+ * Fetches species stats for the collage view.
+ * @param {string} [days='7'] - Timeframe.
+ * @returns {Promise<{species: object[]}>}
+ */
+export const getCollageStats = (days = '7') => {
+    return fetchAPI(`/api/collage-stats?days=${days}`);
+};
 
-export const testNotification = (apprise_services, title, body) => apiFetch(`${API_BASE}/api/config/test_notification`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ apprise_services, title, body })
-});
+/**
+ * Fetches detection counts for the last 24 hours, aggregated by hour.
+ * @returns {Promise<object>}
+ */
+export const getHourlyStats = () => fetchAPI('/api/stats/hourly');
 
-export const saveSpeciesList = (listName, content) => apiFetch(`${API_BASE}/api/species_list/update`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ list_name: listName, content: content })
-});
+// --- System & Configuration ---
 
-export const controlService = (service, action) => apiFetch(`${API_BASE}/api/service_control`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action: action, service: service })
-});
+/**
+ * Fetches system telemetry data.
+ * @returns {Promise<object>}
+ */
+export const getSystemInfo = () => fetchAPI('/api/system');
 
-export const systemControl = (action) => apiFetch(`${API_BASE}/api/system_control`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action })
-});
+/**
+ * Fetches the contents of the birdnet.conf file.
+ * @returns {Promise<object>} - A JSON representation of the config.
+ */
+export const getConfig = () => fetchAPI('/api/config');
 
-export const compileAudio = (payload) => apiFetch(`${API_BASE}/api/compile`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
-});
+/**
+ * Updates the birdnet.conf file.
+ * @param {object} configData - The configuration object to save.
+ * @returns {Promise<object>}
+ */
+export const updateConfig = (configData) => {
+    return fetchAPI('/api/config/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(configData),
+    });
+};
 
-export const deleteFile = (path) => apiFetch(`${API_BASE}/api/files/delete?path=${encodeURIComponent(path)}`, {
-    method: 'DELETE'
-});
+/**
+ * Sends a test notification.
+ * @param {object} notificationData
+ * @param {string} notificationData.apprise_services
+ * @param {string} notificationData.title
+ * @param {string} notificationData.body
+ * @returns {Promise<object>}
+ */
+export const sendTestNotification = (notificationData) => {
+    return fetchAPI('/api/config/test_notification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(notificationData),
+    });
+};
+
+// --- Services & System Control ---
+
+/**
+ * Fetches the statuses of systemd services.
+ * @returns {Promise<object>}
+ */
+export const getServiceStatus = () => fetchAPI('/api/services/status');
+
+/**
+ * Sends a command to a systemd service.
+ * @param {string} service - The name of the service.
+ * @param {string} action - 'start', 'stop', 'restart', 'enable', 'disable'.
+ * @returns {Promise<object>}
+ */
+export const controlService = (service, action) => {
+    return fetchAPI('/api/service_control', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ service, action }),
+    });
+};
+
+/**
+ * Sends a system-level command.
+ * @param {string} action - 'reboot' or 'shutdown'.
+ * @returns {Promise<object>}
+ */
+export const controlSystem = (action) => {
+    return fetchAPI('/api/system_control', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action }),
+    });
+};
+
+// --- Media, Gallery & Compiler ---
+
+/**
+ * Fetches gallery data (recent and best recordings).
+ * @returns {Promise<{recent: object[], best: object[]}>}
+ */
+export const getGalleryData = () => fetchAPI('/api/gallery');
+
+/**
+ * Requests an audio compilation.
+ * @param {object} payload
+ * @param {string} payload.species
+ * @param {number} payload.min_conf
+ * @param {number} payload.limit
+ * @param {string} [payload.start_date]
+ * @param {string} [payload.end_date]
+ * @returns {Promise<object>}
+ */
+export const compileAudio = (payload) => {
+    return fetchAPI('/api/compile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+    });
+};
+
+// --- Species Lists ---
+
+/**
+ * Fetches a specific species list.
+ * @param {string} listName - 'confirmed', 'whitelisted', or 'excluded'.
+ * @returns {Promise<{list: string, content: string}>}
+ */
+export const getSpeciesList = (listName) => {
+    return fetchAPI(`/api/species_list?list=${listName}`);
+};
+
+/**
+ * Updates a species list.
+ * @param {string} list_name - 'confirmed', 'whitelisted', or 'excluded'.
+ * @param {string} content - The list content.
+ * @returns {Promise<object>}
+ */
+export const updateSpeciesList = (list_name, content) => {
+    return fetchAPI('/api/species_list/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ list_name, content }),
+    });
+};
+
+// --- File Manager ---
+
+/**
+ * Lists files and directories.
+ * @param {string} path - The directory path to list relative to the BirdSongs root.
+ * @returns {Promise<{current_path: string, items: object[]}>}
+ */
+export const listDirectory = (path = '') => {
+    const params = new URLSearchParams({ path });
+    return fetchAPI(`/api/files/list?${params}`);
+};
+
+/**
+ * Deletes a file or directory.
+ * @param {string} path - The path to the item to delete.
+ * @returns {Promise<object>}
+ */
+export const deleteFile = (path) => {
+    const params = new URLSearchParams({ path });
+    return fetchAPI(`/api/files/delete?${params}`, { method: 'DELETE' });
+};
+
+// Note: File download is handled directly via an <a> tag's href,
+// so it does not need a dedicated JS API function.
+// e.g., <a href="/api/files/download?path=...">Download</a>

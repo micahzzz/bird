@@ -1,27 +1,103 @@
 import os
+import re
 import shutil
 import subprocess
+import tempfile
 from fastapi import APIRouter, HTTPException, Body, Query
 from fastapi.responses import FileResponse
 
 router = APIRouter(tags=["System & Config"])
 
 CONF_FILE = os.path.expanduser("~/BirdNET-Pi/birdnet.conf")
-CONFIG_PATH = CONF_FILE  # Restored for compatibility with streaming.py
+APPRISE_FILE = os.path.expanduser("~/BirdNET-Pi/apprise.txt")
+BODY_FILE = os.path.expanduser("~/BirdNET-Pi/body.txt")
 SPECIES_DIR = os.path.expanduser("~/BirdNET-Pi/")
 STORAGE_DIR = os.path.expanduser("~/BirdSongs/")
 
-def parse_config(path: str) -> dict:
-    """Parses a simple key-value .conf file."""
+def get_config_full():
+    """Parses birdnet.conf and related notification files."""
     config = {}
-    if not os.path.exists(path):
-        return {}
-    with open(path, 'r') as f:
-        for line in f:
-            if '=' in line and not line.strip().startswith('#'):
-                key, val = line.strip().split('=', 1)
-                config[key.strip()] = val.strip(' "\'')
+    if os.path.exists(CONF_FILE):
+        with open(CONF_FILE, 'r') as f:
+            for line in f:
+                if '=' in line and not line.strip().startswith('#'):
+                    key, val = line.strip().split('=', 1)
+                    config[key.strip()] = val.strip(' "\'')
+    
+    if os.path.exists(APPRISE_FILE):
+        with open(APPRISE_FILE, 'r', encoding='utf-8') as f:
+            config['APPRISE_SERVICES'] = f.read()
+    else:
+        config['APPRISE_SERVICES'] = ''
+
+    if os.path.exists(BODY_FILE):
+        with open(BODY_FILE, 'r', encoding='utf-8') as f:
+            config['APPRISE_NOTIFICATION_BODY'] = f.read()
+    else:
+        config['APPRISE_NOTIFICATION_BODY'] = ''
+        
     return config
+
+def update_config_full(updates: dict):
+    """
+    Safely updates birdnet.conf using regex to preserve comments and structure.
+    Also handles writing to apprise.txt and body.txt.
+    """
+    unquoted_keys = {
+        'LATITUDE', 'LONGITUDE', 'BIRDWEATHER_ID', 'APPRISE_NOTIFY_EACH_DETECTION',
+        'APPRISE_NOTIFY_NEW_SPECIES', 'APPRISE_NOTIFY_NEW_SPECIES_EACH_DAY', 'APPRISE_WEEKLY_REPORT',
+        'APPRISE_MINIMUM_SECONDS_BETWEEN_NOTIFICATIONS_PER_SPECIES', 'SF_THRESH', 'DATA_MODEL_VERSION',
+        'PRIVACY_THRESHOLD', 'PURGE_THRESHOLD', 'MAX_FILES_SPECIES', 'CHANNELS', 'RECORDING_LENGTH',
+        'EXTRACTION_LENGTH', 'HIGHPASS_FREQ', 'SILENCE_UPDATE_INDICATOR', 'AUTOMATIC_UPDATE',
+        'RAW_SPECTROGRAM', 'RARE_SPECIES_THRESHOLD', 'OVERLAP', 'CONFIDENCE', 'SENSITIVITY'
+    }
+
+    try:
+        # Separate Apprise services & notification body from standard config updates
+        apprise_services = updates.pop('APPRISE_SERVICES', None)
+        apprise_body = updates.pop('APPRISE_NOTIFICATION_BODY', None)
+
+        if apprise_services is not None:
+            with open(APPRISE_FILE, 'w', encoding='utf-8') as f:
+                f.write(apprise_services)
+
+        if apprise_body is not None:
+            with open(BODY_FILE, 'w', encoding='utf-8') as f:
+                f.write(apprise_body)
+
+        if updates:
+            if not os.path.exists(CONF_FILE):
+                # If the file doesn't exist, create it with the new content
+                with open(CONF_FILE, 'w') as f:
+                    for key, value in updates.items():
+                        formatted_value = str(value) if key in unquoted_keys else f'"{value}"'
+                        f.write(f"{key}={formatted_value}\n")
+            else:
+                with open(CONF_FILE, 'r') as f:
+                    content = f.read()
+
+                for key, value in updates.items():
+                    value_str = str(value)
+                    formatted_value = value_str if key in unquoted_keys else f'"{value_str}"'
+                    
+                    # Regex to find the key, optionally commented out, at the start of a line
+                    pattern = re.compile(f"^(#\\s*)?{re.escape(key)}=.*", re.MULTILINE)
+                    
+                    if pattern.search(content):
+                        # Key exists, so we replace it, ensuring it's uncommented
+                        content = pattern.sub(f"{key}={formatted_value}", content)
+                    else:
+                        # Key doesn't exist, append it to the end
+                        content += f"\n{key}={formatted_value}"
+                
+                with open(CONF_FILE, 'w') as f:
+                    f.write(content)
+            
+        return True, "Configuration updated successfully."
+        
+    except Exception as e:
+        return False, str(e)
+
 
 def get_cpu_temp():
     try:
@@ -78,46 +154,49 @@ async def get_system_telemetry():
 
 @router.get("/config")
 async def get_config():
-    config = {}
-    if os.path.exists(CONF_FILE):
-        with open(CONF_FILE, "r") as f:
-            for line in f:
-                line = line.strip()
-                if line and not line.startswith("#") and "=" in line:
-                    key, val = line.split("=", 1)
-                    config[key.strip()] = val.strip(' "')
-    return config
+    """
+    Returns the entire system configuration, including birdnet.conf
+    and notification settings from apprise.txt and body.txt.
+    """
+    return get_config_full()
 
 @router.post("/config/update")
 async def update_config(payload: dict = Body(...)):
-    if not os.path.exists(CONF_FILE):
-        raise HTTPException(status_code=404, detail="birdnet.conf not found")
-    lines = []
-    with open(CONF_FILE, "r") as f:
-        lines = f.readlines()
-    updated_keys = set()
-    new_lines = []
-    for line in lines:
-        stripped = line.strip()
-        if stripped and not stripped.startswith("#") and "=" in line:
-            key, _ = line.split("=", 1)
-            key = key.strip()
-            if key in payload:
-                new_lines.append(f'{key}="{payload[key]}"\n')
-                updated_keys.add(key)
-                continue
-        new_lines.append(line)
-    for k, v in payload.items():
-        if k not in updated_keys:
-            new_lines.append(f'{k}="{v}"\n')
-    with open(CONF_FILE, "w") as f:
-        f.writelines(new_lines)
-    return {"status": "success", "message": "Configuration updated successfully"}
+    """
+    Receives a JSON object with configuration key-value pairs and
+    safely updates the birdnet.conf file and related notification files.
+    """
+    # Define all keys the UI is allowed to edit to prevent malicious additions
+    editable_keys = {
+        'LATITUDE', 'LONGITUDE', 'CONFIDENCE', 'SENSITIVITY', 'OVERLAP', 
+        'PRIVACY_THRESHOLD', 'FULL_DISK', 'PURGE_THRESHOLD', 'MAX_FILES_SPECIES',
+        'REC_CARD', 'CHANNELS', 'RECORDING_LENGTH', 'EXTRACTION_LENGTH', 'HIGHPASS_FREQ', 'AUDIOFMT',
+        'MODEL', 'DATA_MODEL_VERSION', 'SF_THRESH', 'RARE_SPECIES_THRESHOLD', 
+        'SILENCE_UPDATE_INDICATOR', 'AUTOMATIC_UPDATE', 'RAW_SPECTROGRAM',
+        'APPRISE_SERVICES', 'APPRISE_NOTIFICATION_TITLE', 'APPRISE_NOTIFICATION_BODY', 
+        'APPRISE_NOTIFY_EACH_DETECTION', 'APPRISE_NOTIFY_NEW_SPECIES', 
+        'APPRISE_NOTIFY_NEW_SPECIES_EACH_DAY', 'APPRISE_WEEKLY_REPORT',
+        'APPRISE_MINIMUM_SECONDS_BETWEEN_NOTIFICATIONS_PER_SPECIES', 
+        'APPRISE_ONLY_NOTIFY_SPECIES_NAMES', 'APPRISE_ONLY_NOTIFY_SPECIES_NAMES_2', 
+        'SITE_NAME', 'BIRDWEATHER_ID', 'DATABASE_LANG', 'TIMEZONE'
+    }
+    
+    filtered_payload = {k: v for k, v in payload.items() if k in editable_keys}
+
+    if not filtered_payload:
+        raise HTTPException(status_code=400, detail="No valid or editable settings provided.")
+
+    success, message = update_config_full(filtered_payload)
+    
+    if success:
+        return {"status": "success", "message": message}
+    else:
+        raise HTTPException(status_code=500, detail=message)
 
 @router.post("/config/test_notification")
 async def test_notification(payload: dict = Body(...)):
-    apprise_services = payload.get('apprise_services')
-    title = payload.get('title', 'Test Notification')
+    apprise_services = payload.get('apprise_services', '')
+    title = payload.get('title', 'BirdNET-Pi Test')
     body = payload.get('body', 'This is a test notification from BirdNET-Pi.')
 
     if not apprise_services:
@@ -127,25 +206,44 @@ async def test_notification(payload: dict = Body(...)):
     title = title.replace('$comname', 'Test Species').replace('$sciname', 'Species testus').replace('$confidence', '99.9%')
     body = body.replace('$comname', 'Test Species').replace('$sciname', 'Species testus').replace('$confidence', '99.9%')
 
-    script_path = os.path.expanduser("~/BirdNET-Pi/scripts/send_test_notification.py")
-
-    if not os.path.exists(script_path):
-        # Fallback to legacy path if the primary one doesn't exist
-        script_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'legacy_php', 'scripts', 'send_test_notification.py')
-        if not os.path.exists(script_path):
-            raise HTTPException(status_code=404, detail=f"send_test_notification.py script not found at primary or fallback locations.")
-
-    cmd = ['python3', script_path, apprise_services, title, body]
+    home_dir = os.path.expanduser('~')
+    t_conf_fd, t_conf_path = tempfile.mkstemp()
+    t_body_fd, t_body_path = tempfile.mkstemp()
 
     try:
-        result = subprocess.run(cmd, check=True, capture_output=True, text=True, timeout=15)
-        return {"success": True, "message": "Test notification sent successfully."}
-    except subprocess.CalledProcessError as e:
-        raise HTTPException(status_code=500, detail=f"Script failed: {e.stderr}")
+        with os.fdopen(t_conf_fd, 'w', encoding='utf-8') as f:
+            f.write(apprise_services)
+        with os.fdopen(t_body_fd, 'w', encoding='utf-8') as f:
+            f.write(body)
+
+        python_bin = os.path.join(home_dir, 'BirdNET-Pi', 'birdnet', 'bin', 'python3')
+        if not os.path.exists(python_bin):
+            python_bin = 'python3'
+
+        script_path = os.path.join(home_dir, 'BirdNET-Pi', 'scripts', 'send_test_notification.py')
+        if not os.path.exists(script_path):
+            # Fallback path
+            script_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'legacy_php', 'scripts', 'send_test_notification.py')
+            if not os.path.exists(script_path):
+                raise HTTPException(status_code=404, detail="send_test_notification.py script not found.")
+
+        cmd = [python_bin, script_path, '--body', t_body_path, '--config', t_conf_path, '--title', title]
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
+
+        if result.returncode == 0:
+            return {"success": True, "message": "Test notification sent successfully."}
+        else:
+            raise HTTPException(status_code=500, detail=f"Script failed: {result.stdout}\n{result.stderr}")
+
     except subprocess.TimeoutExpired:
         raise HTTPException(status_code=504, detail="Script timed out after 15 seconds.")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if os.path.exists(t_conf_path):
+            os.remove(t_conf_path)
+        if os.path.exists(t_body_path):
+            os.remove(t_body_path)
 
 @router.get("/log")
 async def get_system_log():
@@ -160,7 +258,11 @@ async def get_system_log():
 
 @router.get("/services/status")
 async def get_services_status():
-    services = ["birdnet_analysis.service", "birdnet_recording.service", "caddy.service"]
+    services = [
+        'livestream.service', 'icecast2.service', 'web_terminal.service', 
+        'birdnet_log.service', 'birdnet_analysis.service', 'birdnet_stats.service', 
+        'birdnet_recording.service', 'chart_viewer.service', 'spectrogram_viewer.service'
+    ]
     status_dict = {}
     for s in services:
         try:
@@ -179,13 +281,29 @@ async def control_service(payload: dict = Body(...)):
     action = payload.get("action")
     service = payload.get("service")
     allowed_actions = ["start", "stop", "restart", "enable", "disable"]
-    allowed_services = ["birdnet_analysis.service", "birdnet_recording.service", "caddy.service"]
+    allowed_services = [
+        'livestream.service', 'icecast2.service', 'web_terminal.service', 
+        'birdnet_log.service', 'birdnet_analysis.service', 'birdnet_stats.service', 
+        'birdnet_recording.service', 'chart_viewer.service', 'spectrogram_viewer.service'
+    ]
+    
+    if action == "restart_all" or action == "stop_all":
+        home_dir = os.path.expanduser('~')
+        script = 'restart_services.sh' if action == 'restart_all' else 'stop_core_services.sh'
+        script_path = os.path.join(home_dir, 'BirdNET-Pi', 'scripts', script)
+        try:
+            subprocess.run(['sudo', script_path], check=True)
+            return {"status": "success", "message": f"Global {action} completed successfully."}
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
     if action in allowed_actions and service in allowed_services:
         try:
             subprocess.run(["sudo", "systemctl", action, service], check=True)
             return {"status": "success", "message": f"{action} executed on {service}"}
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
+            
     raise HTTPException(status_code=400, detail="Invalid action or service")
 
 @router.post("/system_control")
@@ -199,8 +317,6 @@ async def control_system(payload: dict = Body(...)):
         raise HTTPException(status_code=400, detail="Invalid system action")
 
     try:
-        # We don't use check=True because the machine will likely shut down
-        # before it has a chance to return a success code.
         subprocess.Popen(command)
         return {"status": "success", "message": f"System is now performing: {action}"}
     except Exception as e:
