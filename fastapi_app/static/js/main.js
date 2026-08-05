@@ -1,478 +1,1456 @@
-// main.js
-import * as api from './api.js';
 
-document.addEventListener('DOMContentLoaded', () => {
-    console.log("BirdNET-Pi UI Initializing...");
-    init();
-});
+        const API_BASE = 'http://' + (window.location.hostname || 'localhost') + ':9999';
+        let dbData = [];
+        let configData = {};
+        let activeChart = null;
+        let isMetric = false; 
+        let galleryCacheRecent = [];
+        let galleryCacheBest = [];
+        let currentBestSort = 'name';
+        window.currentDbExport = [];
+        
+        let modalChart = null;
 
-// Store for global state
-const state = {
-    currentTab: 'dashboard',
-    currentAnalyticsTab: 'accumulation',
-    logSource: null, // To hold the EventSource instance for the live log
-    detections: [],
-    config: {},
-    systemInfo: {},
-    gallery: {
-        recent: [],
-        today: [],
-        best: [],
-    },
-    charts: {}, // To hold chart instances
-};
-
-// Add helper to handle log stream cleanup
-function closeLogStream() {
-    if (state.logSource) {
-        state.logSource.close();
-        state.logSource = null;
-    }
-}
-
-// Global handler for HTML onclick events in the gallery tab
-window.switchGallery = function(galleryType) {
-    console.log("Switching gallery view to:", galleryType);
-    // Add gallery rendering logic when built
-};
-
-function init() {
-    setupEventListeners();
-    loadInitialData();
-    setInterval(updateSystemInfo, 5000); // Update telemetry every 5 seconds
-    setInterval(updateDashboardStats, 60000); // Update dashboard stats every minute
-}
-
-function setupEventListeners() {
-    // Main Navigation
-    document.querySelectorAll('.nav-item').forEach(item => {
-        item.addEventListener('click', () => switchTab(item.dataset.tab));
-    });
-
-    // Global Date Filter
-    document.getElementById('global-date-filter').addEventListener('change', (e) => {
-        console.log(`Global date filter changed to: ${e.target.value}`);
-        // Add logic to refresh data based on the new date range
-        refreshCurrentTabData();
-    });
-
-    // Database search button
-    document.querySelector('#tab-database button[onclick="filterDatabase()"]').addEventListener('click', () => {
-        filterDatabase();
-    });
-
-    // Database export button
-    document.querySelector('#tab-database button[onclick="exportDatabaseCSV()"]').addEventListener('click', () => {
-        exportDatabaseCSV();
-    });
-
-    // Analytics tabs
-    document.querySelectorAll('.analytics-nav-item').forEach(item => {
-        item.addEventListener('click', () => switchAnalyticsTab(item.dataset.chart));
-    });
-    
-    // Add other event listeners as features are built out
-    // e.g., modal buttons, gallery sort, etc.
-}
-
-function switchTab(tabId) {
-    if (state.currentTab === 'log' && tabId !== 'log') {
-        closeLogStream();
-    }
-
-    state.currentTab = tabId;
-    console.log(`Switching to tab: ${tabId}`);
-
-    // Update nav item active states
-    document.querySelectorAll('.nav-item').forEach(item => {
-        item.classList.toggle('active', item.dataset.tab === tabId);
-    });
-
-    // Show/hide tab content
-    document.querySelectorAll('.tab-content').forEach(content => {
-        content.style.display = content.id === `tab-${tabId}` ? 'block' : 'none';
-    });
-    
-    document.getElementById('current-tab-title').textContent = tabId;
-
-    // Hide date filter on tabs that don't need it
-    const dateFilterTabs = ['dashboard', 'analytics', 'database'];
-    document.getElementById('global-date-filter').style.display = dateFilterTabs.includes(tabId) ? 'block' : 'none';
-
-    // Load data for the new tab
-    refreshCurrentTabData();
-}
-
-async function loadInitialData() {
-    await updateSystemInfo();
-    await updateDashboardData();
-}
-
-async function refreshCurrentTabData() {
-    switch (state.currentTab) {
-        case 'dashboard':
-            await updateDashboardData();
-            break;
-        case 'database':
-            await loadDatabaseTab();
-            break;
-        case 'analytics':
-            await loadAnalyticsTab();
-            break;
-        case 'gallery':
-            // await loadGalleryTab();
-            break;
-        case 'compiler':
-            // await loadCompilerTab();
-            break;
-        case 'log':
-            // await setupLogStream();
-            break;
-        case 'tools':
-            // await loadToolsTab();
-            break;
-        default:
-            console.log(`No data refresh logic for tab: ${state.currentTab}`);
-    }
-}
-
-async function updateSystemInfo() {
-    try {
-        state.systemInfo = await api.getSystemInfo();
-        updateTelemetryUI(state.systemInfo);
-    } catch (error) {
-        console.error("Failed to update system info:", error);
-    }
-}
-
-async function updateDashboardData() {
-    try {
-        const days = document.getElementById('global-date-filter').value;
-        const [stats, recentDetections, hourlyStats] = await Promise.all([
-            api.getStats({ days }),
-            api.getDetections({ limit: 20, offset: 0 }), // For the "Recent Detections" feed
-            api.getHourlyStats()
-        ]);
-
-        state.detections = recentDetections.detections;
-
-        updateStatsUI(stats);
-        updateRecentDetectionsUI(state.detections);
-        renderHourlyChart(hourlyStats);
-
-    } catch (error) {
-        console.error("Failed to update dashboard data:", error);
-        // Optionally, display an error message in the UI
-    }
-}
-
-function updateStatsUI(stats) {
-    // Update dashboard cards
-    document.getElementById('dash-total').textContent = stats.total_detections;
-    document.getElementById('dash-today').textContent = stats.today_detections;
-    document.getElementById('dash-hour').textContent = stats.hour_detections;
-    document.getElementById('dash-species-total').textContent = stats.total_species;
-
-    // Update sidebar stats
-    document.getElementById('sb-total').textContent = stats.total_detections;
-    document.getElementById('sb-today').textContent = stats.today_detections;
-    document.getElementById('sb-hour').textContent = stats.hour_detections;
-    document.getElementById('sb-species-today').textContent = stats.today_species;
-    document.getElementById('sb-species-total').textContent = stats.total_species;
-}
-
-function updateRecentDetectionsUI(detections) {
-    const feed = document.getElementById('dash-feed');
-    feed.innerHTML = ''; // Clear existing entries
-
-    if (detections.length === 0) {
-        feed.innerHTML = '<p class="text-slate-400 text-sm">No recent detections.</p>';
-        return;
-    }
-
-    detections.forEach(det => {
-        const div = document.createElement('div');
-        div.className = 'p-3 bg-[var(--bn-bg)] rounded-lg flex items-center justify-between cursor-pointer hover:bg-[var(--bn-card)]';
-        div.onclick = () => showDetectionModal(det); 
-
-        div.innerHTML = `
-            <div>
-                <p class="font-bold text-white">${det.Com_Name}</p>
-                <p class="text-xs text-slate-400">${det.Date} at ${det.Time}</p>
-            </div>
-            <div class="text-right">
-                <p class="font-mono text-xs text-[var(--bn-highlight)]">${(det.Confidence * 100).toFixed(1)}%</p>
-            </div>
-        `;
-        feed.appendChild(div);
-    });
-}
-
-function showDetectionModal(detection) {
-    console.log("Showing modal for:", detection);
-    // Implementation to follow
-}
-
-function renderHourlyChart(hourlyStats) {
-    const ctx = document.getElementById('dash-hourly-chart').getContext('2d');
-    
-    const labels = Object.keys(hourlyStats).sort();
-    const data = labels.map(label => hourlyStats[label]);
-
-    if (state.charts.hourly) {
-        state.charts.hourly.destroy();
-    }
-
-    state.charts.hourly = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: 'Detections per Hour',
-                data: data,
-                backgroundColor: 'rgba(52, 211, 153, 0.5)',
-                borderColor: 'rgba(52, 211, 153, 1)',
-                borderWidth: 1
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: { color: '#94a3b8' },
-                    grid: { color: 'rgba(255, 255, 255, 0.1)' }
-                },
-                x: {
-                    ticks: { color: '#94a3b8' },
-                    grid: { color: 'rgba(255, 255, 255, 0.1)' }
-                }
-            },
-            plugins: {
-                legend: {
-                    display: false
-                }
-            }
-        }
-    });
-}
-
-async function updateDashboardStats() {
-    await updateDashboardData();
-}
-
-function updateTelemetryUI(data) {
-    if (!data) return;
-
-    // Temperature
-    const tempF = data.temp;
-    document.getElementById('sys-temp').textContent = `${tempF.toFixed(1)}°F`;
-    const tempPercent = Math.min(100, Math.max(0, ((tempF - 32) / 150) * 100)); // Simple scale for F
-    document.getElementById('sys-temp-bar').style.width = `${tempPercent}%`;
-
-    // Memory
-    document.getElementById('sys-mem').textContent = `${data.memory}%`;
-    document.getElementById('sys-mem-bar').style.width = `${data.memory}%`;
-
-    // Disk
-    document.getElementById('sys-disk').textContent = `${data.disk}%`;
-    document.getElementById('sys-disk-bar').style.width = `${data.disk}%`;
-
-    // Uptime
-    document.getElementById('sys-uptime').textContent = data.uptime;
-}
-
-// Placeholder for tab-specific loading functions
-async function loadDatabaseTab(offset = 0, limit = 50) {
-    const filters = getDatabaseFilters();
-    try {
-        const data = await api.getDetections({ ...filters, offset, limit });
-        renderDatabaseTable(data.detections, data.total_count);
-    } catch (error) {
-        console.error("Failed to load database tab:", error);
-    }
-}
-
-function getDatabaseFilters() {
-    const sp = document.getElementById('db-filter-species').value;
-    const dStart = document.getElementById('db-filter-date-start').value;
-    const dEnd = document.getElementById('db-filter-date-end').value;
-    const tStart = document.getElementById('db-filter-time-start').value;
-    const tEnd = document.getElementById('db-filter-time-end').value;
-    const minConf = document.getElementById('db-filter-conf').value;
-
-    return { sp, dStart, dEnd, tStart, tEnd, minConf };
-}
-
-function renderDatabaseTable(detections, total_count) {
-    const tableBody = document.getElementById('db-table-body');
-    const resultsCount = document.getElementById('db-results-count');
-
-    tableBody.innerHTML = '';
-    resultsCount.textContent = `${total_count} Results`;
-
-    if (detections.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-slate-400">No detections match the current filters.</td></tr>';
-        return;
-    }
-
-    detections.forEach(det => {
-        const row = tableBody.insertRow();
-        row.innerHTML = `
-            <td class="p-3">${det.Date}</td>
-            <td class="p-3">${det.Time}</td>
-            <td class="p-3 font-semibold text-white">${det.Com_Name}</td>
-            <td class="p-3 italic">${det.Sci_Name}</td>
-            <td class="p-3 font-mono text-[var(--bn-highlight)]">${(det.Confidence * 100).toFixed(1)}%</td>
-            <td class="p-3 text-right">
-                <button class="text-white hover:text-[var(--bn-highlight)]" onclick="showDetectionModal(${JSON.stringify(det).replace(/"/g, '&quot;')})">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
-                </button>
-            </td>
-        `;
-    });
-}
-
-function filterDatabase() {
-    loadDatabaseTab();
-}
-
-async function exportDatabaseCSV() {
-    const filters = getDatabaseFilters();
-    try {
-        const data = await api.getDetections({ ...filters, limit: 100000, offset: 0 }); // A high limit to get all data
-        const detections = data.detections;
-
-        if (detections.length === 0) {
-            alert("No data to export.");
-            return;
+        function escapeAttr(str) {
+            if (!str) return '';
+            return str.replace(/'/g, "'").replace(/"/g, '&quot;');
         }
 
-        const headers = Object.keys(detections[0]);
-        const csvRows = [headers.join(',')];
+        let audioCtx;
+        let trackNode;
+        let gainNode;
+        let highpassNode;
+        let lowpassNode;
+        let isAudioSetup = false;
+        let animationFrameId;
 
-        for (const row of detections) {
-            const values = headers.map(header => {
-                const escaped = ('' + row[header]).replace(/"/g, '\\"');
-                return `"${escaped}"`;
+        Chart.defaults.font.family = "'Inter', sans-serif";
+        Chart.defaults.color = '#cbd5e1';
+        Chart.defaults.scale.grid.color = 'rgba(255, 255, 255, 0.1)';
+        Chart.defaults.scale.ticks.color = '#cbd5e1';
+
+        document.querySelectorAll('.nav-item').forEach(el => {
+            el.addEventListener('click', async (e) => {
+                document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+                
+                const target = e.currentTarget;
+                target.classList.add('active');
+                const tabId = target.getAttribute('data-tab');
+                document.getElementById(`tab-${tabId}`).classList.add('active');
+                document.getElementById('current-tab-title').innerText = target.innerText.trim();
+                
+                const filter = document.getElementById('global-date-filter');
+                if (['dashboard', 'analytics'].includes(tabId)) filter.classList.remove('hidden');
+                else filter.classList.add('hidden');
+
+                if (tabId === 'analytics') switchAnalytics('acc', document.querySelector('#tab-analytics .toggle-btn'));
+                
+                if (tabId === 'gallery' && galleryCacheRecent.length === 0) {
+                    await fetchGallery();
+                } else if (tabId === 'gallery') {
+                    if (!document.querySelector('#tab-gallery .toggle-btn.active')) {
+                        switchGallery('recent', document.querySelector("#tab-gallery .toggle-btn[onclick*='recent']"));
+                    }
+                }
+                if (tabId === 'tools') populateConfigForm();
             });
-            csvRows.push(values.join(','));
+        });
+
+        function switchTools(view) {
+            document.querySelectorAll('#tab-tools > div > .toggle-btn').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            ['config', 'services', 'species', 'files'].forEach(v => document.getElementById(`tools-${v}`).classList.add('hidden'));
+            document.getElementById(`tools-${view}`).classList.remove('hidden');
+            
+            if(view === 'services') loadServiceStatus();
+            if(view === 'files') loadFileManager();
         }
 
-        const csvString = csvRows.join('\n');
-        const blob = new Blob([csvString], { type: 'text/csv' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.setAttribute('hidden', '');
-        a.setAttribute('href', url);
-        a.setAttribute('download', 'detections.csv');
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+        function getTodayStr() { 
+            const d = new Date();
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; 
+        }
 
-    } catch (error) {
-        console.error("Failed to export CSV:", error);
-    }
-}
+        async function init() {
+            const loader = document.getElementById('loading-indicator');
+            loader.classList.remove('hidden');
+            try {
+                // Initial data fetch for detections feed and other components
+                const res = await fetch(API_BASE + '/api/detections');
+                const payload = await res.json();
+                dbData = payload.detections || [];
+                window.currentDbExport = dbData;
+                
+                const confRes = await fetch(API_BASE + '/api/config');
+                configData = await confRes.json();
+                
+                // Perform initial updates
+                applyGlobalFilter(); // This now handles the initial stat and dashboard render
+                updateSystemStats();
+                updateCompilerSuggestions();
+                populateDatabaseFilter();
+                filterDatabase();
 
-async function loadAnalyticsTab() {
-    switchAnalyticsTab(state.currentAnalyticsTab);
-}
+                // Set up polling
+                setInterval(() => {
+                    const currentFilter = document.getElementById('global-date-filter').value;
+                    updateLiveStats(currentFilter);
+                }, 30000); // Refresh stats every 30s
+                setInterval(updateSystemStats, 10000);
+                setInterval(pollLog, 3000);
 
-function switchAnalyticsTab(chartId) {
-    state.currentAnalyticsTab = chartId;
-    console.log(`Switching to analytics chart: ${chartId}`);
-
-    // Update nav item active states
-    document.querySelectorAll('.analytics-nav-item').forEach(item => {
-        item.classList.toggle('active', item.dataset.chart === chartId);
-    });
-
-    // Show/hide tab content
-    document.querySelectorAll('.analytics-chart-content').forEach(content => {
-        content.style.display = content.id === `chart-${chartId}` ? 'block' : 'none';
-    });
-
-    loadChartData();
-}
-
-async function loadChartData() {
-    const days = document.getElementById('global-date-filter').value;
-    const stats = await api.getStats({ days });
-
-    switch (state.currentAnalyticsTab) {
-        case 'accumulation':
-            renderAccumulationChart(stats.species_by_date);
-            break;
-        case 'weather':
-            // renderWeatherChart(stats);
-            break;
-        case 'time':
-            // renderTimeMatrix(stats);
-            break;
-        case 'system':
-            // renderSystemHealthChart(stats);
-            break;
-    }
-}
-
-function renderAccumulationChart(speciesByDate) {
-    const canvas = document.getElementById('analytics-accumulation-chart');
-    if (!canvas) return; // Guard against missing DOM element
-
-    const ctx = canvas.getContext('2d');
-
-    const dates = Object.keys(speciesByDate).sort();
-    let cumulativeSpecies = new Set();
-    const cumulativeCounts = [];
-
-    for (const date of dates) {
-        speciesByDate[date].forEach(species => cumulativeSpecies.add(species));
-        cumulativeCounts.push(cumulativeSpecies.size);
-    }
-
-    if (state.charts.accumulation) {
-        state.charts.accumulation.destroy();
-    }
-
-    state.charts.accumulation = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: dates,
-            datasets: [{
-                label: 'Cumulative Unique Species',
-                data: cumulativeCounts,
-                borderColor: 'rgba(52, 211, 153, 1)',
-                backgroundColor: 'rgba(52, 211, 153, 0.2)',
-                fill: true,
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    title: { display: true, text: 'Unique Species Count', color: '#94a3b8' },
-                    ticks: { color: '#94a3b8' },
-                    grid: { color: 'rgba(255, 255, 255, 0.1)' }
-                },
-                x: {
-                    title: { display: true, text: 'Date', color: '#94a3b8' },
-                    ticks: { color: '#94a3b8' },
-                    grid: { color: 'rgba(255, 255, 255, 0.1)' }
-                }
-            },
-            plugins: {
-                legend: {
-                    display: false
-                }
+            } catch (e) { 
+                document.getElementById('dash-feed').innerHTML = `<p class="text-red-400 font-bold p-4">Failed to load data. Is backend running?</p>`;
+                console.error(e);
+            } finally {
+                loader.classList.add('hidden');
             }
         }
-    });
-}
-// async function loadGalleryTab() { console.log("Loading Gallery Tab..."); }
-// async function loadCompilerTab() { console.log("Loading Compiler Tab..."); }
-// async function setupLogStream() { console.log("Setting up Log Stream..."); }
-// async function loadToolsTab() { console.log("Loading Tools Tab..."); }
+
+        async function updateLiveStats(days = 'all') {
+            try {
+                const res = await fetch(API_BASE + `/api/detections/stats?days=${days}`);
+                const stats = await res.json();
+
+                // Update dashboard cards - these ARE reactive to the filter
+                document.getElementById('dash-total').innerText = (stats.total_detections || 0).toLocaleString();
+                document.getElementById('dash-species-total').innerText = (stats.total_species || 0).toLocaleString();
+                
+                // These cards are NOT reactive and always show today/hour
+                document.getElementById('dash-today').innerText = (stats.today_detections || 0).toLocaleString();
+                document.getElementById('dash-hour').innerText = (stats.hour_detections || 0).toLocaleString();
+
+                // Update sidebar stats - these ARE also reactive to the filter
+                document.getElementById('sb-total').innerText = (stats.total_detections || 0).toLocaleString();
+                document.getElementById('sb-species-total').innerText = (stats.total_species || 0).toLocaleString();
+
+                // These sidebar stats are NOT reactive
+                document.getElementById('sb-today').innerText = (stats.today_detections || 0).toLocaleString();
+                document.getElementById('sb-hour').innerText = (stats.hour_detections || 0).toLocaleString();
+                document.getElementById('sb-species-today').innerText = (stats.today_species || 0).toLocaleString();
+                
+            } catch(e) {
+                console.error("Failed to update live stats", e);
+            }
+        }
+
+        document.getElementById('global-date-filter').addEventListener('change', applyGlobalFilter);
+        
+        function filterDataByDays(sourceData, daysStr) {
+            if (daysStr === 'all' || sourceData.length === 0) return [...sourceData];
+            if (daysStr === 'today') return sourceData.filter(d => d.Date === getTodayStr());
+            
+            if (daysStr === 'custom') {
+                const start = document.getElementById('comp-date-start').value;
+                const end = document.getElementById('comp-date-end').value;
+                if(!start || !end) return [...sourceData];
+                return sourceData.filter(d => d.Date >= start && d.Date <= end);
+            }
+
+            const latestDate = new Date(sourceData[0].Date + 'T00:00:00');
+            const cutoff = new Date(latestDate);
+            cutoff.setDate(cutoff.getDate() - parseInt(daysStr));
+            return sourceData.filter(d => new Date(d.Date + 'T00:00:00') >= cutoff);
+        }
+
+        function applyGlobalFilter() {
+            if (dbData.length === 0) return;
+            const days = document.getElementById('global-date-filter').value;
+            
+            // Update stats and dashboard to reflect the new filter
+            updateLiveStats(days);
+            const filtered = filterDataByDays(dbData, days);
+            renderDashboard(filtered);
+
+            if(document.getElementById('tab-analytics').classList.contains('active')) {
+                // Find the active button to pass to switchAnalytics if needed, then call it
+                const activeBtn = document.querySelector(`#tab-analytics .toggle-btn.active`);
+                switchAnalytics(currentAnalyticsMode, activeBtn);
+            }
+        }
+
+        let dashChart = null;
+        function renderDashboard(data) {
+            // Stats are now handled by updateLiveStats()
+
+            const hourCounts = Array(24).fill(0);
+            data.forEach(d => {
+                if (d.Time) {
+                    const hr = parseInt(d.Time.split(':')[0], 10);
+                    if (!isNaN(hr)) hourCounts[hr]++;
+                }
+            });
+
+            const ctx = document.getElementById('dash-hourly-chart').getContext('2d');
+            if (dashChart) dashChart.destroy();
+            dashChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: Array.from({length: 24}, (_, i) => i),
+                    datasets: [{ 
+                        label: 'Detections', 
+                        data: hourCounts, 
+                        backgroundColor: '#4ade80', 
+                        borderRadius: 2,
+                        maxBarThickness: 36,
+                        categoryPercentage: 0.6,
+                        barPercentage: 0.8
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false, 
+                    plugins: { legend: { display: false } },
+                    scales: { 
+                        y: { ticks: { color: '#cbd5e1' } }, 
+                        x: { grid: { display: false }, ticks: { callback: v => `${v}:00`, color: '#cbd5e1' } } 
+                    }
+                }
+            });
+
+            // The feed should always show the most recent detections from the initial load, not the filtered data
+            const feed = document.getElementById('dash-feed');
+            feed.innerHTML = '';
+            dbData.slice(0, 30).forEach(d => {
+                const pct = (parseFloat(d.Confidence)*100).toFixed(0);
+                let insightBadge = '';
+                if (d.insight && d.insight.status !== 'Normal') {
+                    const badgeClass = d.insight.status === 'New' ? 'insight-new' : 'insight-rare';
+                    insightBadge = `<span class="insight-badge ${badgeClass}" title="${d.insight.detail}">${d.insight.status}</span>`;
+                }
+
+                feed.innerHTML += `
+                    <div onclick="searchAndPlay('${escapeAttr(d.Com_Name)}', '${escapeAttr(d.Sci_Name)}', '${d.Date}', '${d.Time}', '${pct}')" class="flex justify-between items-center bg-[var(--bn-panel)] p-3 rounded-lg border border-[var(--bn-border)] cursor-pointer hover:bg-[var(--bn-bg)] transition-colors group">
+                        <div class="flex items-center gap-3 overflow-hidden">
+                            <div class="w-8 h-8 rounded-full bg-[var(--bn-card)] text-[var(--bn-highlight)] flex items-center justify-center border border-[var(--bn-border)] group-hover:bg-[var(--bn-highlight)] group-hover:text-[#122617] transition-colors shrink-0">
+                                <svg class="w-4 h-4 ml-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path></svg>
+                            </div>
+                            <div class="truncate">
+                                <h4 class="text-white text-sm font-bold truncate">${d.Com_Name}${insightBadge}</h4>
+                                <span class="text-xs text-slate-300">${d.Date} ${d.Time}</span>
+                            </div>
+                        </div>
+                        <span class="text-xs font-mono font-bold ${pct < 70 ? 'text-yellow-400' : 'text-[var(--bn-highlight)]'}">${pct}%</span>
+                    </div>
+                `;
+            });
+        }
+
+        // --- DATABASE EXPLORER V2 (PAGINATED) ---
+        let dbCurrentPage = 0;
+        const dbPageSize = 50;
+        let dbIsLoading = false;
+        let dbHasMore = true;
+        let currentDbQuery = {};
+
+        document.getElementById('tab-database').addEventListener('scroll', (e) => {
+            const el = e.target;
+            if (!dbIsLoading && dbHasMore && el.scrollTop + el.clientHeight >= el.scrollHeight - 300) {
+                fetchPaginatedDetections(false);
+            }
+        });
+        
+        // The onclick handler for the main search button is now `searchDatabase()`
+        function searchDatabase() {
+            currentDbQuery = {
+                sp: document.getElementById('db-filter-species').value,
+                dStart: document.getElementById('db-filter-date-start').value,
+                dEnd: document.getElementById('db-filter-date-end').value,
+                tStart: document.getElementById('db-filter-time-start').value,
+                tEnd: document.getElementById('db-filter-time-end').value,
+                minConf: parseFloat(document.getElementById('db-filter-conf').value)
+            };
+            fetchPaginatedDetections(true); // true for new search
+        }
+        
+        async function fetchPaginatedDetections(isNewSearch = false) {
+            if (dbIsLoading) return;
+            if (isNewSearch) {
+                dbCurrentPage = 0;
+                dbHasMore = true;
+                document.getElementById('db-table-body').innerHTML = '';
+            }
+            if (!dbHasMore) return;
+
+            dbIsLoading = true;
+            document.getElementById('db-results-count').innerText = 'Loading...';
+
+            const offset = dbCurrentPage * dbPageSize;
+            const { sp, dStart, dEnd, tStart, tEnd, minConf } = currentDbQuery;
+
+            const params = new URLSearchParams({
+                limit: dbPageSize,
+                offset: offset
+            });
+
+            if (sp && sp !== 'all') params.append('sp', sp);
+            if (dStart) params.append('dStart', dStart);
+            if (dEnd) params.append('dEnd', dEnd);
+            if (tStart) params.append('tStart', tStart);
+            if (tEnd) params.append('tEnd', tEnd);
+            if (minConf) params.append('minConf', minConf);
+            
+            try {
+                const res = await fetch(API_BASE + `/api/detections?${params.toString()}`);
+                const payload = await res.json();
+                const data = payload.detections;
+                const totalCount = payload.total_count;
+
+                if (data.length < dbPageSize) {
+                    dbHasMore = false;
+                }
+
+                appendDbRows(data);
+                dbCurrentPage++;
+                
+                const totalShowing = document.getElementById('db-table-body').rows.length;
+                document.getElementById('db-results-count').innerText = `Showing ${totalShowing} of ${totalCount.toLocaleString()} results ${!dbHasMore ? '(End of List)' : ''}`;
+
+            } catch (e) {
+                console.error("Failed to load paginated detections", e);
+                document.getElementById('db-results-count').innerText = 'Error loading data.';
+            } finally {
+                dbIsLoading = false;
+            }
+        }
+
+        function appendDbRows(data) {
+            const tbody = document.getElementById('db-table-body');
+            if(data.length === 0 && dbCurrentPage === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400">No detections found matching these filters.</td></tr>`;
+                return;
+            }
+
+            const rowsHtml = data.map(d => {
+                const pct = (d.Confidence * 100).toFixed(0);
+                let insightBadge = '';
+                if (d.insight && d.insight.status !== 'Normal') {
+                    const badgeClass = d.insight.status === 'New' ? 'insight-new' : 'insight-rare';
+                    insightBadge = `<span class="insight-badge ${badgeClass}" title="${d.insight.detail}">${d.insight.status}</span>`;
+                }
+
+                return `<tr class="hover:bg-[var(--bn-bg)] transition-colors border-b border-[var(--bn-border)]">
+                    <td class="p-3 text-slate-300">${d.Date}</td>
+                    <td class="p-3 text-slate-300">${d.Time}</td>
+                    <td class="p-3 font-bold text-white">${d.Com_Name}${insightBadge}</td>
+                    <td class="p-3 text-slate-400 italic">${d.Sci_Name}</td>
+                    <td class="p-3 text-[var(--bn-highlight)] font-mono">${pct}%</td>
+                    <td class="p-3 text-right">
+                        <button onclick="searchAndPlay('${escapeAttr(d.Com_Name)}', '${escapeAttr(d.Sci_Name)}', '${d.Date}', '${d.Time}', '${pct}')" class="text-[var(--bn-highlight)] hover:text-white transition-colors" title="Play Audio">
+                            <svg class="w-6 h-6 inline" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path></svg>
+                        </button>
+                    </td>
+                </tr>`;
+            }).join('');
+
+            tbody.innerHTML += rowsHtml;
+        }
+
+        function populateDatabaseFilter() {
+            const speciesSet = new Set(dbData.map(d => d.Com_Name).filter(Boolean));
+            const dataList = document.getElementById('species-list-options');
+            
+            const inputEl = document.getElementById('db-filter-species');
+            inputEl.placeholder = `Search among ${speciesSet.size} species...`;
+            
+            dataList.innerHTML = Array.from(speciesSet).sort().map(s => `<option value="${s.replace(/"/g, '&quot;')}"></option>`).join('');
+        }
+
+        // Old function now just calls the new search function.
+        function filterDatabase() {
+            searchDatabase();
+        }
+
+        // This function is now effectively obsolete for the database tab, but might be used elsewhere.
+        // For the database tab, appendDbRows is used.
+        function renderDatabaseTable(data) {
+            console.warn("renderDatabaseTable is deprecated for paginated view.");
+        }
+        
+        // Update the search button's onclick handler
+        document.querySelector('#tab-database button[onclick="filterDatabase()"]').setAttribute('onclick', 'searchDatabase()');
+
+        function exportDatabaseCSV() {
+            const data = window.currentDbExport || dbData;
+            if(data.length === 0) return alert("No data to export.");
+            
+            const headers = ["Date", "Time", "Sci_Name", "Com_Name", "Confidence"];
+            const csvRows = [headers.join(',')];
+            
+            data.forEach(d => {
+                csvRows.push(`${d.Date},${d.Time},"${d.Sci_Name}","${d.Com_Name}",${d.Confidence}`);
+            });
+            
+            const blob = new Blob([csvRows.join('
+')], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.setAttribute('href', url);
+            a.setAttribute('download', `BirdNET_Export_${getTodayStr()}.csv`);
+            a.click();
+        }
+
+        let currentAnalyticsMode = 'acc';
+        function switchAnalytics(mode, buttonEl) {
+            currentAnalyticsMode = mode;
+            document.querySelectorAll('#tab-analytics .toggle-btn').forEach(b => b.classList.remove('active'));
+            if (buttonEl) buttonEl.classList.add('active');
+            
+            const uToggle = document.getElementById('weather-unit-toggle');
+            const hContainer = document.getElementById('analytics-health-container');
+            const cContainer = document.getElementById('analytics-chart-container');
+
+            if (mode === 'weather') uToggle.classList.remove('hidden');
+            else uToggle.classList.add('hidden');
+            
+            if (mode === 'health') {
+                cContainer.classList.add('hidden');
+                hContainer.classList.remove('hidden');
+                const days = document.getElementById('global-date-filter').value;
+                const filtered = filterDataByDays(dbData, days);
+                renderDiagnostics(filtered);
+            } else {
+                hContainer.classList.add('hidden');
+                cContainer.classList.remove('hidden');
+                renderAnalytics();
+            }
+        }
+
+        document.getElementById('unit-metric').addEventListener('click', (e) => { 
+            isMetric = true; 
+            e.target.className="px-2 py-1 rounded text-xs font-bold bg-[var(--bn-highlight)] text-[#122617] transition-colors"; 
+            document.getElementById('unit-imperial').className="px-2 py-1 rounded text-xs font-bold text-slate-300 hover:text-white transition-colors"; 
+            switchAnalytics('weather', e.target.closest('.toggle-btn')); 
+        });
+        document.getElementById('unit-imperial').addEventListener('click', (e) => { 
+            isMetric = false; 
+            e.target.className="px-2 py-1 rounded text-xs font-bold bg-[var(--bn-highlight)] text-[#122617] transition-colors"; 
+            document.getElementById('unit-metric').className="px-2 py-1 rounded text-xs font-bold text-slate-300 hover:text-white transition-colors"; 
+            switchAnalytics('weather', e.target.closest('.toggle-btn')); 
+        });
+
+        async function renderAnalytics() {
+            try {
+                const days = document.getElementById('global-date-filter').value;
+                if (activeChart) { activeChart.destroy(); activeChart = null; }
+                const ctx = document.getElementById('analytics-chart').getContext('2d');
+                
+                const darkThemeScales = {
+                    x: { ticks: { color: '#cbd5e1' }, grid: { color: 'rgba(255, 255, 255, 0.1)' } },
+                    y: { ticks: { color: '#cbd5e1' }, grid: { color: 'rgba(255, 255, 255, 0.1)' } }
+                };
+
+                if (currentAnalyticsMode === 'matrix') {
+                    const filtered = filterDataByDays(dbData, days);
+                    const spCounts = {};
+                    filtered.forEach(d => spCounts[d.Com_Name] = (spCounts[d.Com_Name] || 0) + 1);
+                    const topSp = Object.entries(spCounts).sort((a, b) => b[1] - a[1]).slice(0, 25).map(x => x[0]);
+
+                    const bData = []; let gMax = 0; const wMap = {};
+                    filtered.forEach(d => {
+                        if (topSp.includes(d.Com_Name) && d.Time) {
+                            const h = parseInt(d.Time.split(':')[0], 10);
+                            const k = `${d.Com_Name}-${h}`;
+                            wMap[k] = (wMap[k] || 0) + 1;
+                            if (wMap[k] > gMax) gMax = wMap[k];
+                        }
+                    });
+
+                    topSp.forEach((sp, yIdx) => {
+                        for (let h = 0; h < 24; h++) {
+                            const v = wMap[`${sp}-${h}`];
+                            if (v) bData.push({ x: h, y: yIdx, r: Math.max(3, (v / gMax) * 15), _v: v });
+                        }
+                    });
+
+                    activeChart = new Chart(ctx, {
+                        type: 'bubble',
+                        data: { datasets: [{ data: bData, backgroundColor: 'rgba(74, 222, 128, 0.7)', borderColor: '#4ade80', borderWidth: 1 }] },
+                        options: {
+                            responsive: true, maintainAspectRatio: false,
+                            plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => `${topSp[c.raw.y]} at ${c.raw.x}:00 = ${c.raw._v} hits` } } },
+                            scales: {
+                                y: { ...darkThemeScales.y, ticks: { callback: v => topSp[v], color: '#cbd5e1' }, reverse: true, min: -0.5, max: topSp.length - 0.5 },
+                                x: { ...darkThemeScales.x, min: -1, max: 24 }
+                            }
+                        }
+                    });
+                    return;
+                }
+
+                const statsRes = await fetch(API_BASE + `/api/detections/stats?days=${days}`);
+                const statsData = await statsRes.json();
+                if (!statsData || typeof statsData !== 'object') { throw new Error("Invalid stats payload"); }
+                
+                const dailyData = statsData.detections_by_date || {};
+
+                if (currentAnalyticsMode === 'acc') {
+                    const uniqueSpeciesByDate = statsData.species_by_date || {};
+                    let sortedDates = Object.keys(uniqueSpeciesByDate).sort();
+                    
+                    const labels = [];
+                    const counts = [];
+                    const seen = new Set();
+                    
+                    if (sortedDates.length === 1) {
+                        const singleDate = new Date(sortedDates[0]);
+                        const prevDate = new Date(singleDate);
+                        prevDate.setDate(singleDate.getDate() - 1);
+                        labels.push(`${prevDate.toLocaleString('default', { month: 'short' })} ${prevDate.getDate()}`);
+                        counts.push(0);
+                    }
+
+                    sortedDates.forEach(date => {
+                        const d = new Date(date + 'T00:00:00');
+                        labels.push(`${d.toLocaleString('default',{month:'short'})} ${d.getDate()}`);
+                        (uniqueSpeciesByDate[date] || []).forEach(species => seen.add(species));
+                        counts.push(seen.size);
+                    });
+
+                    activeChart = new Chart(ctx, {
+                        type: 'line',
+                        data: { labels: labels, datasets: [{ label: 'Total Unique Species', data: counts, borderColor: '#4ade80', backgroundColor: 'rgba(74, 222, 128, 0.15)', fill: true, tension: 0.4, pointRadius: 2 }] },
+                        options: { 
+                            responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, 
+                            scales: {
+                                x: darkThemeScales.x,
+                                y: { ...darkThemeScales.y, beginAtZero: true, suggestedMax: Math.max(...counts) + 2 }
+                            }
+                        }
+                    });
+                }
+                else if (currentAnalyticsMode === 'weather') {
+                    const sortedDates = Object.keys(dailyData).sort();
+                    const dets = sortedDates.map(dt => dailyData[dt] || 0);
+                    const niceLabels = sortedDates.map(l => { const d = new Date(l + 'T00:00:00'); return `${d.toLocaleString('default', { month: 'short' })} ${d.getDate()}`; });
+
+                    try {
+                        if (sortedDates.length === 0) throw new Error("No dates for weather fetch");
+
+                        const lat = configData.LATITUDE || '41.9'; const lon = configData.LONGITUDE || '-73.1';
+                        const s = sortedDates[0]; const e = sortedDates[sortedDates.length - 1];
+                        const unitT = isMetric ? 'celsius' : 'fahrenheit';
+                        const unitR = isMetric ? 'mm' : 'inch';
+                        const unitW = isMetric ? 'kmh' : 'mph';
+
+                        const weatherRes = await fetch(`https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=${s}&end_date=${e}&daily=temperature_2m_max,precipitation_sum,windspeed_10m_max&timezone=auto&temperature_unit=${unitT}&windspeed_unit=${unitW}&precipitation_unit=${unitR}`);
+                        const wData = await weatherRes.json();
+
+                        const rains = [];
+                        const temps = sortedDates.map(dt => {
+                            const idx = wData.daily.time.indexOf(dt);
+                            rains.push(idx > -1 ? wData.daily.precipitation_sum[idx] : null);
+                            return idx > -1 ? wData.daily.temperature_2m_max[idx] : null;
+                        });
+                        const winds = sortedDates.map(dt => {
+                            const idx = wData.daily.time.indexOf(dt);
+                            return idx > -1 ? wData.daily.windspeed_10m_max[idx] : null;
+                        });
+                        const maxRain = Math.max(...rains.filter(r => r !== null));
+                        
+                        activeChart = new Chart(ctx, {
+                            type: 'bar',
+                            data: {
+                                labels: niceLabels,
+                                datasets: [
+                                    { type: 'bar', label: 'Detections', data: dets, backgroundColor: 'rgba(74, 222, 128, 0.8)', yAxisID: 'y', maxBarThickness: 24, categoryPercentage: 0.7, barPercentage: 0.8 },
+                                    { type: 'line', label: `Max Temp (${isMetric ? '°C' : '°F'})`, data: temps, borderColor: '#f87171', tension: 0.4, pointRadius: 2, yAxisID: 'yT' },
+                                    { type: 'line', label: `Max Wind (${isMetric ? 'km/h' : 'mph'})`, data: winds, borderColor: '#9ca3af', borderDash: [4, 4], tension: 0.3, pointRadius: 0, yAxisID: 'yT' },
+                                    { type: 'bar', label: `Rain (${isMetric ? 'mm' : 'in'})`, data: rains, backgroundColor: 'rgba(96, 165, 250, 0.6)', yAxisID: 'yR', maxBarThickness: 24, categoryPercentage: 0.7, barPercentage: 0.8 }
+                                ]
+                            },
+                            options: {
+                                responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
+                                plugins: { legend: { labels: { color: '#cbd5e1' } } },
+                                scales: {
+                                    x: { ...darkThemeScales.x, stacked: true },
+                                    y: { ...darkThemeScales.y, stacked: true, position: 'left', beginAtZero: true },
+                                    yT: { position: 'right', grid: { display: false }, ticks: { color: '#cbd5e1' } },
+                                    yR: { display: false, beginAtZero: true, max: Math.max(1, maxRain * 1.5) }
+                                }
+                            }
+                        });
+
+                    } catch (e) {
+                        console.error("Weather API failed, rendering fallback chart:", e);
+                        activeChart = new Chart(ctx, {
+                            type: 'bar',
+                            data: {
+                                labels: niceLabels,
+                                datasets: [{ label: 'Detections', data: dets, backgroundColor: 'rgba(74, 222, 128, 0.8)', maxBarThickness: 36 }]
+                            },
+                            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: darkThemeScales }
+                        });
+                    }
+                }
+            } catch (e) {
+                console.error('Analytics render error:', e);
+            }
+        }
+
+        function renderDiagnostics(data) {
+            const container = document.getElementById('health-stats');
+            container.innerHTML = '';
+            if(!data || data.length === 0) return;
+
+            const total = data.length;
+            const days = new Set(data.map(d => d.Date)).size || 1;
+            const avgDaily = (total / days).toFixed(1);
+            
+            const hourCounts = Array(24).fill(0);
+            data.forEach(d => {
+                if (d.Time) {
+                    const hr = parseInt(d.Time.split(':')[0], 10);
+                    if (!isNaN(hr)) hourCounts[hr]++;
+                }
+            });
+            const peakHour = hourCounts.indexOf(Math.max(...hourCounts));
+            const ampm = peakHour >= 12 ? 'PM' : 'AM';
+            const displayHour = peakHour % 12 || 12;
+
+            container.innerHTML = `
+                <div class="bg-[var(--bn-bg)] p-4 rounded border border-[var(--bn-border)]">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="font-bold text-slate-300">Average Daily Volume</span>
+                        <span class="font-mono font-bold text-[var(--bn-highlight)]">${avgDaily} / day</span>
+                    </div>
+                    <p class="text-xs text-slate-400">Average detections based on the selected timeframe.</p>
+                </div>
+                <div class="bg-[var(--bn-bg)] p-4 rounded border border-[var(--bn-border)]">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="font-bold text-slate-300">Peak Activity Hour</span>
+                        <span class="font-mono font-bold text-[var(--bn-highlight)]">${displayHour}:00 ${ampm}</span>
+                    </div>
+                    <p class="text-xs text-slate-400">The most active time of day for detections.</p>
+                </div>
+            `;
+        }
+
+        async function fetchGallery() {
+            try {
+                const res = await fetch(API_BASE + '/api/gallery');
+                const data = await res.json();
+                galleryCacheRecent = data.recent || [];
+                galleryCacheBest = data.best || [];
+                switchGallery('recent', document.querySelector('#tab-gallery .toggle-btn'));
+            } catch(e) {}
+        }
+
+        function switchGallery(mode, buttonEl) {
+            document.querySelectorAll('#tab-gallery > div > .toggle-btn:not(.sort-btn)').forEach(b => b.classList.remove('active'));
+            if(buttonEl) buttonEl.classList.add('active');
+            
+            ['recent', 'today', 'best'].forEach(t => document.getElementById(`gallery-${t}`).classList.add('hidden'));
+            document.getElementById(`gallery-${mode}`).classList.remove('hidden');
+
+            if (mode === 'recent') renderGalleryGrid(galleryCacheRecent, 'gallery-recent');
+            if (mode === 'today') renderGalleryToday();
+            if (mode === 'best') renderBestRecordings();
+        }
+
+        function renderGalleryGrid(files, containerId) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+            if (!files || files.length === 0) {
+                container.innerHTML = '<p class="text-slate-400 text-sm p-4">No recordings found for this view.</p>';
+                return;
+            }
+            files.slice(0, 100).forEach(f => {
+                const pct = (f.confidence * 100).toFixed(0);
+                const dbMatch = dbData.find(d => d.Com_Name === f.species);
+                const sciName = dbMatch ? dbMatch.Sci_Name : '';
+                
+                container.innerHTML += `
+                    <div class="bird-card p-4 hover:bg-[var(--bn-bg)] transition-colors cursor-pointer flex flex-col group" onclick="openDetectionModal('${escapeAttr(f.filepath)}', '${escapeAttr(f.species)}', '${escapeAttr(sciName)}', '${pct}', '${escapeAttr(f.filename)}')">
+                        <div class="flex justify-between items-start mb-4">
+                            <h4 class="text-white font-bold text-sm leading-tight group-hover:text-[var(--bn-highlight)] transition-colors">${f.species}</h4>
+                            <span class="text-xs font-mono px-2 py-1 bg-[var(--bn-panel)] border border-[var(--bn-border)] rounded text-[var(--bn-highlight)]">${pct}%</span>
+                        </div>
+                        <div class="mt-auto flex justify-between items-center border-t border-[var(--bn-border)] pt-3">
+                            <span class="text-[10px] text-slate-300">${f.date_str}</span>
+                            <div class="flex items-center gap-1 text-[var(--bn-highlight)] text-xs font-bold uppercase"><svg class="w-4 h-4 ml-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path></svg> PLAY</div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function renderGalleryToday() {
+            const tbody = document.getElementById('gallery-today-body');
+            tbody.innerHTML = '';
+            const todayStr = getTodayStr();
+            const tData = dbData.filter(d => d.Date === todayStr);
+            const stats = {};
+            tData.forEach(d => {
+                if(!stats[d.Com_Name]) stats[d.Com_Name] = { c: 0, last: d.Time, sci: d.Sci_Name };
+                stats[d.Com_Name].c++;
+                if(d.Time > stats[d.Com_Name].last) stats[d.Com_Name].last = d.Time;
+            });
+            Object.entries(stats).sort((a,b)=>b[1].c - a[1].c).forEach(([sp, d]) => {
+                tbody.innerHTML += `<tr class="hover:bg-[var(--bn-bg)] transition-colors cursor-pointer border-b border-[var(--bn-border)]" onclick="searchAndPlay('${escapeAttr(sp)}', '${escapeAttr(d.sci)}', '${todayStr}', '${d.last}', '')"><td class="p-4 font-bold text-white">${sp}</td><td class="p-4 text-slate-300">${d.c}</td><td class="p-4 text-slate-300">${d.last}</td></tr>`;
+            });
+        }
+
+        document.querySelectorAll('.sort-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                currentBestSort = e.target.getAttribute('data-sort');
+                renderBestRecordings();
+            });
+        });
+
+        function renderBestRecordings() {
+            let bestArr = [...galleryCacheBest];
+            if (currentBestSort === 'name') bestArr.sort((a, b) => a.species.localeCompare(b.species));
+            else if (currentBestSort === 'hits') {
+                const hitCounts = {}; dbData.forEach(d => hitCounts[d.Com_Name] = (hitCounts[d.Com_Name] || 0) + 1);
+                bestArr.sort((a, b) => (hitCounts[b.species] || 0) - (hitCounts[a.species] || 0));
+            } 
+            else if (currentBestSort === 'conf') bestArr.sort((a, b) => b.confidence - a.confidence);
+            else if (currentBestSort === 'date') bestArr.sort((a, b) => b.mtime - a.mtime);
+            renderGalleryGrid(bestArr, 'gallery-best-grid');
+        }
+
+        function updateCompilerSuggestions() {
+            const tf = document.getElementById('compiler-timeframe').value;
+            let filtered = [];
+            
+            if (tf === 'custom') {
+                const start = document.getElementById('comp-date-start').value;
+                const end = document.getElementById('comp-date-end').value;
+                if (start && end) {
+                    filtered = dbData.filter(d => d.Date >= start && d.Date <= end);
+                } else {
+                    return; 
+                }
+            } else {
+                filtered = filterDataByDays(dbData, tf);
+            }
+            
+            const counts = {};
+            filtered.forEach(d => { counts[d.Com_Name] = (counts[d.Com_Name] || 0) + 1; });
+            
+            const topSpecies = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 3);
+            const container = document.getElementById('compiler-suggestions');
+            container.innerHTML = '';
+            
+            topSpecies.forEach(([species, count]) => {
+                container.innerHTML += `
+                    <div class="bird-card p-6 bg-[var(--bn-panel)] hover:bg-[var(--bn-bg)] cursor-pointer transition-colors border border-[var(--bn-border)] group" onclick="triggerCompile('${species}')">
+                        <h4 class="text-white font-bold text-lg mb-1 group-hover:text-[var(--bn-highlight)] transition-colors">${species}</h4>
+                        <p class="text-slate-400 text-sm mb-4">${count} Detections</p>
+                        <button class="text-xs font-bold bg-[var(--bn-highlight)] text-[#111a14] px-3 py-1.5 rounded flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            Generate Mix
+                        </button>
+                    </div>
+                `;
+            });
+            
+            const select = document.getElementById('compile-species');
+            const allSpecies = Object.keys(counts).sort();
+            select.innerHTML = '<option value="">Select a species...</option>' + allSpecies.map(sp => `<option value="${sp}">${sp}</option>`).join('');
+        }
+
+        document.getElementById('compiler-timeframe').addEventListener('change', (e) => {
+            const customWrapper = document.getElementById('compiler-custom-dates');
+            if (e.target.value === 'custom') {
+                customWrapper.classList.remove('hidden');
+                customWrapper.classList.add('flex');
+            } else {
+                customWrapper.classList.add('hidden');
+                customWrapper.classList.remove('flex');
+                updateCompilerSuggestions();
+            }
+        });
+
+        document.getElementById('comp-date-start').addEventListener('change', updateCompilerSuggestions);
+        document.getElementById('comp-date-end').addEventListener('change', updateCompilerSuggestions);
+
+        function triggerCompile(species) {
+            document.getElementById('compile-species').value = species;
+            document.getElementById('compile-btn').click();
+        }
+
+        document.getElementById('compile-btn').addEventListener('click', async () => {
+            const species = document.getElementById('compile-species').value;
+            const conf = parseFloat(document.getElementById('compile-conf').value);
+            if(!species) return alert('Select a species first');
+            
+            const btn = document.getElementById('compile-btn');
+            const status = document.getElementById('compile-status');
+            
+            btn.disabled = true;
+            btn.innerText = 'Compiling...';
+            status.classList.remove('hidden', 'text-green-400', 'text-red-400');
+            status.classList.add('text-yellow-400');
+            status.innerText = 'Stitching audio files via FFmpeg...';
+            
+            let start_date = "";
+            let end_date = "";
+            const tf = document.getElementById('compiler-timeframe').value;
+            
+            if (tf === 'custom') {
+                start_date = document.getElementById('comp-date-start').value;
+                end_date = document.getElementById('comp-date-end').value;
+            } else if (tf !== 'all') {
+                const d = new Date();
+                end_date = d.toISOString().split('T')[0];
+                d.setDate(d.getDate() - parseInt(tf));
+                start_date = d.toISOString().split('T')[0];
+            }
+
+            try {
+                const res = await fetch(API_BASE + '/api/compile', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        species: species, 
+                        min_conf: conf, 
+                        limit: 25, 
+                        start_date: start_date, 
+                        end_date: end_date
+                    })
+                });
+                const data = await res.json();
+                
+                if(data.success) {
+                    status.classList.replace('text-yellow-400', 'text-green-400');
+                    status.innerHTML = `Successfully mixed ${data.count} recordings! <a href="/${data.file}" download class="text-[var(--bn-highlight)] underline ml-2">Download Mix</a>`;
+                } else {
+                    status.classList.replace('text-yellow-400', 'text-red-400');
+                    status.innerText = data.error || 'Compilation failed.';
+                }
+            } catch(e) {
+                status.classList.replace('text-yellow-400', 'text-red-400');
+                status.innerText = 'Server error during compilation.';
+            } finally {
+                btn.disabled = false;
+                btn.innerText = 'Compile Audio';
+            }
+        });
+
+        const modalAudioEl = document.getElementById('modal-audio');
+
+        function initWebAudioAPI() {
+            if (isAudioSetup) return;
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            audioCtx = new AudioContext();
+            
+            trackNode = audioCtx.createMediaElementSource(modalAudioEl);
+            
+            highpassNode = audioCtx.createBiquadFilter();
+            highpassNode.type = 'highpass';
+            highpassNode.frequency.value = 0;
+            
+            lowpassNode = audioCtx.createBiquadFilter();
+            lowpassNode.type = 'lowpass';
+            lowpassNode.frequency.value = 24000;
+            
+            gainNode = audioCtx.createGain();
+            
+            trackNode.connect(highpassNode);
+            highpassNode.connect(lowpassNode);
+            highpassNode.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            
+            isAudioSetup = true;
+        }
+
+        let liveAudioCtx, liveAnalyser, liveSource, liveDataArray;
+        let isLiveAudioSetup = false;
+        let liveAnimId;
+        const liveCanvas = document.getElementById('live-spectro-canvas');
+        const liveCtx = liveCanvas.getContext('2d');
+
+        function initLiveSpectrogram() {
+            if (isLiveAudioSetup) return;
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            liveAudioCtx = new AudioContext();
+            liveAnalyser = liveAudioCtx.createAnalyser();
+            liveAnalyser.fftSize = 512; 
+            const sbAudio = document.getElementById('sidebar-audio');
+            
+            liveSource = liveAudioCtx.createMediaElementSource(sbAudio);
+            liveSource.connect(liveAnalyser);
+            liveAnalyser.connect(liveAudioCtx.destination);
+            
+            liveDataArray = new Uint8Array(liveAnalyser.frequencyBinCount);
+            isLiveAudioSetup = true;
+            
+            liveCanvas.width = liveCanvas.offsetWidth;
+            liveCanvas.height = liveCanvas.offsetHeight;
+        }
+
+        function drawLiveSpectrogram() {
+            if (!document.getElementById('sidebar-audio').paused) {
+                liveAnimId = requestAnimationFrame(drawLiveSpectrogram);
+                liveAnalyser.getByteFrequencyData(liveDataArray);
+                
+                const w = liveCanvas.width;
+                const h = liveCanvas.height;
+                
+                const imgData = liveCtx.getImageData(1, 0, w - 1, h);
+                liveCtx.putImageData(imgData, 0, 0);
+                
+                const validBins = Math.floor(liveDataArray.length * 0.75);
+                const binHeight = h / validBins;
+                
+                for (let i = 0; i < validBins; i++) {
+                    const val = liveDataArray[i];
+                    const r = val > 128 ? 255 : val * 2;
+                    const g = val > 192 ? 255 : (val > 128 ? (val - 128) * 2 : 0);
+                    const b = val > 200 ? 255 : (val < 128 ? val : 0);
+                    
+                    liveCtx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+                    liveCtx.fillRect(w - 1, h - (i * binHeight), 1, binHeight);
+                }
+            } else {
+                cancelAnimationFrame(liveAnimId);
+            }
+        }
+
+        async function fetchBirdImage(species) {
+            try {
+                const url = `https://en.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(species)}&prop=pageimages&format=json&pithumbsize=800&redirects=1&origin=*`;
+                const res = await fetch(url);
+                const data = await res.json();
+                const pages = data.query.pages;
+                const pageId = Object.keys(pages)[0];
+                if (pageId !== "-1" && pages[pageId].thumbnail) return pages[pageId].thumbnail.source;
+            } catch (e) {}
+            return null;
+        }
+
+        function openLightbox() {
+            const imgSrc = document.getElementById('modal-bird-img').src;
+            if (imgSrc && !imgSrc.endsWith('.html')) {
+                document.getElementById('lightbox-img').src = imgSrc;
+                document.getElementById('lightbox').classList.remove('hidden');
+            }
+        }
+
+        function toggleModalAudioPlayback() {
+            document.getElementById('modal-play-btn').click();
+        }
+
+        async function openDetectionModal(url, species, sciName, conf, fname) {
+            document.getElementById('detection-modal').classList.remove('hidden');
+            
+            document.getElementById('modal-title').innerText = species;
+            document.getElementById('modal-sciname').innerText = sciName || '';
+            document.getElementById('modal-conf').innerText = `${conf}%`;
+            document.getElementById('modal-filename').innerText = fname;
+            
+            const wikiUrl = `https://en.wikipedia.org/wiki/${encodeURIComponent(sciName || species)}`;
+            const aabUrl = `https://www.allaboutbirds.org/guide/${species.replace(/ /g, '_')}`;
+            document.getElementById('modal-wiki-link').href = wikiUrl;
+            document.getElementById('modal-aab-link').href = aabUrl;
+            
+            const imgEl = document.getElementById('modal-bird-img');
+            const placeholder = document.getElementById('modal-img-placeholder');
+            imgEl.classList.add('hidden');
+            placeholder.classList.remove('hidden');
+            fetchBirdImage(sciName || species).then(imgUrl => {
+                if(imgUrl) { imgEl.src = imgUrl; imgEl.classList.remove('hidden'); placeholder.classList.add('hidden'); }
+                else {
+                    fetchBirdImage(species).then(imgUrl2 => {
+                        if(imgUrl2) { imgEl.src = imgUrl2; imgEl.classList.remove('hidden'); placeholder.classList.add('hidden'); }
+                    });
+                }
+            });
+            
+            const cleanUrl = url.startsWith('/') ? url : '/' + url;
+            modalAudioEl.src = cleanUrl;
+            document.getElementById('modal-download').href = cleanUrl;
+            
+            document.getElementById('modal-icon-play').classList.remove('hidden');
+            document.getElementById('modal-icon-pause').classList.add('hidden');
+            
+            document.querySelectorAll('#gain-controls .filter-btn').forEach(b => b.classList.remove('active'));
+            document.querySelector('#gain-controls .filter-btn[data-val="1"]').classList.add('active');
+            
+            document.querySelectorAll('#hp-controls .filter-btn').forEach(b => b.classList.remove('active'));
+            document.querySelector('#hp-controls .filter-btn[data-val="0"]').classList.add('active');
+
+            document.querySelectorAll('#lp-controls .filter-btn').forEach(b => b.classList.remove('active'));
+            document.querySelector('#lp-controls .filter-btn[data-val="24000"]').classList.add('active');
+            
+            if (isAudioSetup) {
+                gainNode.gain.value = 1;
+                highpassNode.frequency.value = 0;
+                lowpassNode.frequency.value = 24000;
+            }
+
+            const imgPath = cleanUrl.substring(0, cleanUrl.lastIndexOf('.')) + '.png';
+            const specImg = document.getElementById('modal-spectro-img');
+            const specErr = document.getElementById('modal-spectro-error');
+            specImg.dataset.retried = 'false';
+            specImg.src = imgPath;
+            
+            specImg.onload = () => { 
+                specImg.classList.remove('hidden'); 
+                specErr.classList.add('hidden'); 
+            };
+            
+            specImg.onerror = () => { 
+                if (specImg.dataset.retried === 'false') {
+                    specImg.dataset.retried = 'true';
+                    specImg.src = cleanUrl + '.png'; 
+                } else {
+                    specImg.classList.add('hidden'); 
+                    specErr.classList.remove('hidden'); 
+                }
+            };
+
+            document.getElementById('modal-spectro-img').parentElement.onclick = toggleModalAudioPlayback;
+
+            document.getElementById('history-popover').classList.add('hidden');
+            drawModalHistoryChart(species, document.getElementById('history-timeframe').value);
+
+            document.getElementById('modal-progress').style.width = '0%';
+            document.getElementById('modal-playhead').style.left = '0%';
+            document.getElementById('modal-time').innerText = '0:00';
+            cancelAnimationFrame(animationFrameId);
+        }
+
+        async function drawModalHistoryChart(species, days = '30') {
+            const ctx = document.getElementById('modal-history-chart').getContext('2d');
+            if (modalChart) modalChart.destroy();
+            
+            const statsRes = await fetch(API_BASE + `/api/detections/stats?days=${days}&species_of_interest=${encodeURIComponent(species)}`);
+            const statsData = await statsRes.json();
+            const daily = statsData.species_by_date ? (statsData.species_by_date[species] || {}) : {};
+
+            const labels = []; 
+            const data = [];
+            const daysToParse = (days === 'all') ? 365 : parseInt(days); // Limit 'all' to a year for performance
+
+            let curr = new Date();
+            curr.setDate(curr.getDate() - daysToParse);
+
+            while (curr <= new Date()) {
+                const dStr = curr.toISOString().split('T')[0];
+                labels.push(`${curr.toLocaleString('default',{month:'short'})} ${curr.getDate()}`);
+                data.push(daily[dStr] || 0);
+                curr.setDate(curr.getDate() + 1);
+            }
+            
+            modalChart = new Chart(ctx, {
+                type: 'bar', 
+                data: { 
+                    labels: labels, 
+                    datasets: [{ 
+                        data: data, 
+                        backgroundColor: 'rgba(239, 68, 68, 0.8)',
+                        maxBarThickness: 16,
+                        categoryPercentage: 0.8,
+                        barPercentage: 0.9
+                    }] 
+                },
+                options: { 
+                    responsive: true, maintainAspectRatio: false, 
+                    plugins: { legend: { display: false }, tooltip: { enabled: true } }, 
+                    scales: { 
+                        x: { 
+                            ticks: { 
+                                color: '#cbd5e1',
+                                // Auto-skip ticks to prevent overlap on small charts
+                                autoSkip: true,
+                                maxTicksLimit: 6
+                            } 
+                        }, 
+                        y: { display: false, min: 0 } 
+                    } 
+                }
+            });
+        }
+
+        async function searchAndPlay(species, sciName, date, time, pct) {
+            if(galleryCacheRecent.length === 0) await fetchGallery();
+            const timeStr = time.replace(/:/g,'');
+            const found = galleryCacheRecent.find(f => f.species === species && f.filename.includes(date) && f.filename.replace(/:/g,'').includes(timeStr.substring(0,4)));
+            if(found) openDetectionModal(found.filepath, found.species, sciName, (found.confidence*100).toFixed(0), found.filename);
+        }
+
+        function closeModal() {
+            document.getElementById('detection-modal').classList.add('hidden');
+            document.getElementById('history-popover').classList.add('hidden');
+            modalAudioEl.pause();
+            cancelAnimationFrame(animationFrameId);
+        }
+
+        function updatePlayhead() {
+            if (!modalAudioEl.paused && modalAudioEl.duration) {
+                const pct = (modalAudioEl.currentTime / modalAudioEl.duration) * 100;
+                document.getElementById('modal-progress').style.width = `${pct}%`;
+                document.getElementById('modal-playhead').style.left = `${pct}%`;
+                document.getElementById('modal-time').innerText = `${Math.floor(modalAudioEl.currentTime)}:${String(Math.floor((modalAudioEl.currentTime%1)*60)).padStart(2,'0')}`;
+                animationFrameId = requestAnimationFrame(updatePlayhead);
+            }
+        }
+
+        document.getElementById('modal-play-btn').addEventListener('click', () => {
+            initWebAudioAPI(); 
+            if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+            
+            if(modalAudioEl.paused) {
+                modalAudioEl.play();
+                document.getElementById('modal-icon-play').classList.add('hidden');
+                document.getElementById('modal-icon-pause').classList.remove('hidden');
+                animationFrameId = requestAnimationFrame(updatePlayhead);
+            } else {
+                modalAudioEl.pause();
+                document.getElementById('modal-icon-play').classList.remove('hidden');
+                document.getElementById('modal-icon-pause').classList.add('hidden');
+                cancelAnimationFrame(animationFrameId);
+            }
+        });
+
+        document.getElementById('modal-progress-container').addEventListener('click', (e) => {
+            if(modalAudioEl.duration) {
+                const rect = e.target.getBoundingClientRect();
+                modalAudioEl.currentTime = ((e.clientX - rect.left) / rect.width) * modalAudioEl.duration;
+                const pct = (modalAudioEl.currentTime / modalAudioEl.duration) * 100;
+                document.getElementById('modal-progress').style.width = `${pct}%`;
+                document.getElementById('modal-playhead').style.left = `${pct}%`;
+            }
+        });
+        
+        modalAudioEl.addEventListener('ended', () => {
+            document.getElementById('modal-icon-play').classList.remove('hidden');
+            document.getElementById('modal-icon-pause').classList.add('hidden');
+            document.getElementById('modal-playhead').style.left = '0%';
+            document.getElementById('modal-progress').style.width = '0%';
+            cancelAnimationFrame(animationFrameId);
+        });
+
+        document.querySelectorAll('#gain-controls .filter-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('#gain-controls .filter-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                if (isAudioSetup) gainNode.gain.value = parseFloat(e.target.dataset.val);
+            });
+        });
+
+        document.querySelectorAll('#hp-controls .filter-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('#hp-controls .filter-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                if (isAudioSetup) highpassNode.frequency.value = parseFloat(e.target.dataset.val);
+            });
+        });
+
+        document.querySelectorAll('#lp-controls .filter-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('#lp-controls .filter-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                if (isAudioSetup) lowpassNode.frequency.value = parseFloat(e.target.dataset.val);
+            });
+        });
+
+        document.getElementById('modal-stats-btn').addEventListener('click', () => {
+            const popover = document.getElementById('history-popover');
+            if (popover.classList.contains('hidden')) {
+                popover.classList.remove('hidden');
+                if (modalChart) modalChart.resize();
+            } else {
+                popover.classList.add('hidden');
+            }
+        });
+
+        document.getElementById('history-timeframe').addEventListener('change', (e) => {
+            drawModalHistoryChart(document.getElementById('modal-title').innerText, e.target.value);
+        });
+
+        let audioInactivityTimer;
+        const audioPanel = document.getElementById('audio-panel-container');
+        const controlBar = document.getElementById('audio-control-bar');
+        const settingsPopup = document.getElementById('modal-settings-popup');
+
+        audioPanel.addEventListener('mousemove', () => {
+            controlBar.classList.remove('opacity-0');
+            clearTimeout(audioInactivityTimer);
+            if(settingsPopup.classList.contains('hidden')) {
+                audioInactivityTimer = setTimeout(() => {
+                    controlBar.classList.add('opacity-0');
+                }, 2500);
+            }
+        });
+
+        audioPanel.addEventListener('mouseleave', () => {
+            if(settingsPopup.classList.contains('hidden')) {
+                controlBar.classList.add('opacity-0');
+            }
+            clearTimeout(audioInactivityTimer);
+        });
+
+        document.getElementById('modal-settings-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            settingsPopup.classList.toggle('hidden');
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!settingsPopup.classList.contains('hidden') && !e.target.closest('#modal-settings-popup') && !e.target.closest('#modal-settings-btn')) {
+                settingsPopup.classList.add('hidden');
+                audioInactivityTimer = setTimeout(() => {
+                    controlBar.classList.add('opacity-0');
+                }, 2500);
+            }
+        });
+
+        document.getElementById('sidebar-audio-btn').addEventListener('click', () => {
+            const audio = document.getElementById('sidebar-audio');
+            const btn = document.getElementById('sidebar-audio-btn');
+            const dot = document.getElementById('stream-status-dot');
+            
+            if (audio.paused || !audio.src) {
+                audio.src = API_BASE + '/api/stream';
+                audio.play().then(() => {
+                    btn.innerHTML = 'Disconnect';
+                    btn.classList.add('bg-red-600', 'text-white');
+                    dot.classList.replace('bg-slate-500', 'bg-[#4ade80]');
+                    dot.classList.add('animate-pulse');
+                    initLiveSpectrogram();
+                    drawLiveSpectrogram();
+                }).catch(e => {
+                    btn.innerText = 'Stream Error';
+                    dot.classList.replace('bg-slate-500', 'bg-red-500');
+                    console.error("Stream failed:", e);
+                });
+            } else {
+                audio.pause();
+                audio.src = '';
+                btn.innerHTML = `Connect Audio`;
+                btn.classList.remove('bg-red-600', 'text-white');
+                dot.classList.replace('bg-[#4ade80]', 'bg-slate-500');
+                dot.classList.remove('animate-pulse');
+                cancelAnimationFrame(liveAnimId);
+                liveCtx.clearRect(0,0,liveCanvas.width, liveCanvas.height);
+            }
+        });
+
+        async function updateSystemStats() {
+            try {
+                const res = await fetch(API_BASE + '/api/system');
+                const data = await res.json();
+                document.getElementById('sys-temp').innerHTML = `${isMetric ? data.temp_c.toFixed(1) : data.temp_f.toFixed(1)}&deg;${isMetric ? 'C' : 'F'}`;
+                document.getElementById('sys-temp-bar').style.width = `${data.temp_percent}%`;
+                document.getElementById('sys-mem').innerText = `${data.memory}%`;
+                document.getElementById('sys-mem-bar').style.width = `${data.memory}%`;
+                document.getElementById('sys-disk').innerText = `${data.disk}%`;
+                document.getElementById('sys-disk-bar').style.width = `${data.disk}%`;
+                document.getElementById('sys-uptime').innerText = data.uptime;
+            } catch(e) {}
+        }
+        
+        async function loadServiceStatus() {
+            const tbody = document.getElementById('services-table-body');
+            tbody.innerHTML = `<tr><td colspan="3" class="p-4 text-center text-slate-400">Loading...</td></tr>`;
+            try {
+                const res = await fetch(API_BASE + '/api/services/status');
+                const statuses = await res.json();
+                tbody.innerHTML = '';
+                statuses.forEach(s => {
+                    const statusBadge = s.is_active 
+                        ? `<span class="px-2 py-1 text-xs font-bold bg-green-600 text-white rounded-full">Active</span>`
+                        : `<span class="px-2 py-1 text-xs font-bold bg-red-600 text-white rounded-full">Inactive</span>`;
+                    tbody.innerHTML += `
+                        <tr class="border-b border-[var(--bn-border)]">
+                            <td class="p-4 font-bold text-white">${s.name}</td>
+                            <td class="p-4">${statusBadge}</td>
+                            <td class="p-4 text-right">
+                                <button onclick="serviceControl('restart', '${s.name}')" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold py-1 px-3 rounded">Restart</button>
+                                <button onclick="serviceControl('start', '${s.name}')" class="bg-green-600 hover:bg-green-500 text-white text-xs font-bold py-1 px-3 rounded">Start</button>
+                                <button onclick="serviceControl('stop', '${s.name}')" class="bg-red-600 hover:bg-red-500 text-white text-xs font-bold py-1 px-3 rounded">Stop</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            } catch (e) {
+                tbody.innerHTML = `<tr><td colspan="3" class="p-4 text-center text-red-400">Failed to load service statuses.</td></tr>`;
+            }
+        }
+        
+        async function serviceControl(action, service) {
+            if (confirm(`Are you sure you want to ${action} the ${service} service?`)) {
+                await fetch(`${API_BASE}/api/services/${action}?service=${service}`, { method: 'POST' });
+                setTimeout(loadServiceStatus, 1000);
+            }
+        }
+
+        let currentLog = "";
+        async function pollLog() {
+            const activeTab = document.querySelector('.tab-content.active').id;
+            if (activeTab !== 'tab-log') return;
+
+            try {
+                const res = await fetch(API_BASE + '/api/log');
+                const newLog = await res.text();
+                if (newLog !== currentLog) {
+                    const el = document.getElementById('log-output');
+                    el.textContent = newLog;
+                    currentLog = newLog;
+                    el.scrollTop = el.scrollHeight;
+                }
+            } catch(e) {}
+        }
+        
+        let currentSpeciesList = 'confirmed';
+        async function loadSpeciesList(listName) {
+            currentSpeciesList = listName;
+            document.querySelectorAll('.species-list-btn').forEach(b => {
+                b.classList.remove('border-[var(--bn-highlight)]', 'text-[var(--bn-highlight)]');
+                b.classList.add('border-[var(--bn-border)]', 'text-white');
+            });
+            document.getElementById(`btn-list-${listName}`).classList.add('border-[var(--bn-highlight)]', 'text-[var(--bn-highlight)]');
+            
+            const textarea = document.getElementById('species-list-textarea');
+            textarea.value = 'Loading...';
+            const res = await fetch(API_BASE + `/api/species_list?list=${listName}`);
+            const data = await res.text();
+            textarea.value = data;
+        }
+
+        document.getElementById('btn-save-species-list').addEventListener('click', async () => {
+            const content = document.getElementById('species-list-textarea').value;
+            const statusEl = document.getElementById('species-list-status');
+            statusEl.innerText = 'Saving...';
+            statusEl.className = 'mt-2 text-sm text-yellow-400';
+            
+            try {
+                await fetch(API_BASE + `/api/species_list?list=${currentSpeciesList}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: content
+                });
+                statusEl.innerText = 'Save successful!';
+                statusEl.className = 'mt-2 text-sm text-green-400';
+            } catch (e) {
+                statusEl.innerText = 'Save failed.';
+                statusEl.className = 'mt-2 text-sm text-red-400';
+            }
+        });
+
+        async function populateConfigForm() {
+            if (Object.keys(configData).length === 0) return;
+            
+            const container = document.getElementById('config-form-container');
+            container.innerHTML = '';
+            
+            Object.entries(configData).forEach(([key, value]) => {
+                if (['LATITUDE', 'LONGITUDE', 'SITE_NAME', 'TIMEZONE', 'BIRDWEATHER_ID', 'DATABASE_LANG', 'FULL_DISK', 'PURGE_THRESHOLD', 'MAX_FILES_SPECIES', 'APPRISE_SERVICES', 'APPRISE_NOTIFICATION_TITLE', 'APPRISE_NOTIFICATION_BODY', 'APPRISE_MINIMUM_SECONDS_BETWEEN_NOTIFICATIONS_PER_SPECIES', 'APPRISE_NOTIFY_EACH_DETECTION', 'APPRISE_NOTIFY_NEW_SPECIES', 'APPRISE_NOTIFY_NEW_SPECIES_EACH_DAY', 'APPRISE_WEEKLY_REPORT', 'APPRISE_ONLY_NOTIFY_SPECIES_NAMES_2', 'APPRISE_ONLY_NOTIFY_SPECIES_NAMES'].includes(key)) {
+                    const el = document.getElementById(`config-${key}`);
+                    if(el) {
+                        if(el.type === 'checkbox') el.checked = (value === 'true');
+                        else if(el.type === 'radio') {
+                             document.querySelectorAll(`input[name=${key}]`).forEach(r => {
+                                 if (r.value === value) r.checked = true;
+                             });
+                        }
+                        else el.value = value;
+                    }
+                } else {
+                    const type = !isNaN(parseFloat(value)) && isFinite(value) ? 'number' : 'text';
+                     container.innerHTML += `
+                        <div class="mb-3">
+                            <label for="config-${key}" class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">${key.replace(/_/g, ' ')}</label>
+                            <input type="${type}" id="config-${key}" data-key="${key}" value="${value}" class="w-full bg-[var(--bn-bg)] text-white border border-[var(--bn-border)] rounded px-3 py-2 font-mono text-sm">
+                        </div>
+                    `;
+                }
+            });
+        }
+        
+        document.getElementById('btn-save-config').addEventListener('click', async () => {
+            const status = document.getElementById('config-save-status');
+            status.className = 'mt-2 text-sm text-yellow-400';
+            status.innerText = 'Saving configuration...';
+            
+            const newConfig = {};
+            document.querySelectorAll('#tools-config input, #tools-config textarea, #tools-config select').forEach(el => {
+                if(el.id.startsWith('config-')) {
+                    const key = el.id.substring(7);
+                    if(el.type === 'checkbox') newConfig[key] = el.checked.toString();
+                    else if (el.type === 'radio') {
+                        if (el.checked) newConfig[key] = el.value;
+                    }
+                    else if (el.dataset.key) newConfig[el.dataset.key] = el.value;
+                    else newConfig[key] = el.value;
+                }
+            });
+            
+            try {
+                await fetch(API_BASE + '/api/config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(newConfig)
+                });
+                status.className = 'mt-2 text-sm text-green-400';
+                status.innerText = 'Save successful! Some changes may require a service restart.';
+                configData = newConfig; // Update local cache
+            } catch (e) {
+                status.className = 'mt-2 text-sm text-red-400';
+                status.innerText = 'Save failed.';
+            }
+        });
+        
+        let fmCurrentPath = '/';
+        async function loadFileManager(path = '/') {
+            const tbody = document.getElementById('file-manager-body');
+            tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-slate-400 text-center">Loading files...</td></tr>`;
+            document.getElementById('file-manager-breadcrumbs').innerText = `Current Path: ${path}`;
+            fmCurrentPath = path;
+
+            try {
+                const res = await fetch(API_BASE + `/api/files?path=${encodeURIComponent(path)}`);
+                const files = await res.json();
+                tbody.innerHTML = '';
+                
+                if (path !== '/') {
+                     tbody.innerHTML += `<tr class="border-b border-[var(--bn-border)]"><td colspan="4" class="p-3"><button class="text-[var(--bn-highlight)]" onclick="loadFileManager('${path.substring(0, path.lastIndexOf('/')) || '/'}')">.. Parent Directory</button></td></tr>`;
+                }
+
+                files.forEach(f => {
+                    tbody.innerHTML += `
+                        <tr class="border-b border-[var(--bn-border)]">
+                            <td class="p-3 font-bold text-white flex items-center gap-2">
+                                ${f.is_dir ? '<svg class="w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20"><path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"></path></svg>' : '<svg class="w-5 h-5 text-slate-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"></path></svg>'}
+                                ${f.is_dir ? `<button class="text-white hover:underline" onclick="loadFileManager('${f.path}')">${f.name}</button>` : f.name}
+                            </td>
+                            <td class="p-3 text-slate-400">${f.size_str}</td>
+                            <td class="p-3 text-slate-400">${f.mod_time}</td>
+                            <td class="p-3 text-right">
+                                ${!f.is_dir ? `<a href="/${f.path}" download class="text-[var(--bn-highlight)] hover:underline text-xs mr-3">Download</a>` : ''}
+                                <button onclick="deleteFile('${f.path}', ${f.is_dir})" class="text-red-500 hover:underline text-xs">Delete</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            } catch (e) {
+                tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-red-400 text-center">Failed to load files.</td></tr>`;
+            }
+        }
+        
+        async function deleteFile(path, isDir) {
+            if (confirm(`Are you sure you want to delete ${isDir ? 'directory' : 'file'}: ${path}? This cannot be undone.`)) {
+                await fetch(API_BASE + `/api/files?path=${encodeURIComponent(path)}`, { method: 'DELETE' });
+                loadFileManager(fmCurrentPath);
+            }
+        }
+        
+        document.getElementById('btn-test-notification').addEventListener('click', async () => {
+             const status = document.getElementById('test-notification-status');
+             status.className = 'text-xs font-bold text-yellow-400';
+             status.innerText = 'Sending...';
+             await fetch(API_BASE + '/api/test_notification', { method: 'POST' });
+             status.className = 'text-xs font-bold text-green-400';
+             status.innerText = 'Test sent!';
+             setTimeout(() => status.innerText = '', 3000);
+        });
+
+        // Init on DOM ready
+        document.addEventListener('DOMContentLoaded', init);
+    
