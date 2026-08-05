@@ -59,7 +59,6 @@ document.querySelectorAll('.nav-item').forEach(el => {
 function switchTools(view) {
     document.querySelectorAll('#tab-tools > div > .toggle-btn').forEach(b => b.classList.remove('active'));
     
-    // Safely highlight the active button without relying on global event object
     const activeBtn = document.querySelector(`#tab-tools .toggle-btn[onclick*="${view}"]`);
     if (activeBtn) activeBtn.classList.add('active');
     
@@ -81,7 +80,6 @@ async function init() {
     const loader = document.getElementById('loading-indicator');
     loader.classList.remove('hidden');
     try {
-        // Initial data fetch for detections feed and other components
         const res = await fetch(API_BASE + '/api/detections');
         const payload = await res.json();
         dbData = payload.detections || [];
@@ -90,18 +88,16 @@ async function init() {
         const confRes = await fetch(API_BASE + '/api/config');
         configData = await confRes.json();
         
-        // Perform initial updates
-        applyGlobalFilter(); // This now handles the initial stat and dashboard render
+        applyGlobalFilter(); 
         updateSystemStats();
         updateCompilerSuggestions();
         populateDatabaseFilter();
         filterDatabase();
 
-        // Set up polling
         setInterval(() => {
             const currentFilter = document.getElementById('global-date-filter').value;
             updateLiveStats(currentFilter);
-        }, 30000); // Refresh stats every 30s
+        }, 30000); 
         setInterval(updateSystemStats, 10000);
         setInterval(pollLog, 3000);
 
@@ -118,19 +114,15 @@ async function updateLiveStats(days = 'all') {
         const res = await fetch(API_BASE + `/api/detections/stats?days=${days}`);
         const stats = await res.json();
 
-        // Update dashboard cards - these ARE reactive to the filter
         document.getElementById('dash-total').innerText = (stats.total_detections || 0).toLocaleString();
         document.getElementById('dash-species-total').innerText = (stats.total_species || 0).toLocaleString();
         
-        // These cards are NOT reactive and always show today/hour
         document.getElementById('dash-today').innerText = (stats.today_detections || 0).toLocaleString();
         document.getElementById('dash-hour').innerText = (stats.hour_detections || 0).toLocaleString();
 
-        // Update sidebar stats - these ARE also reactive to the filter
         document.getElementById('sb-total').innerText = (stats.total_detections || 0).toLocaleString();
         document.getElementById('sb-species-total').innerText = (stats.total_species || 0).toLocaleString();
 
-        // These sidebar stats are NOT reactive
         document.getElementById('sb-today').innerText = (stats.today_detections || 0).toLocaleString();
         document.getElementById('sb-hour').innerText = (stats.hour_detections || 0).toLocaleString();
         document.getElementById('sb-species-today').innerText = (stats.today_species || 0).toLocaleString();
@@ -163,13 +155,11 @@ function applyGlobalFilter() {
     if (dbData.length === 0) return;
     const days = document.getElementById('global-date-filter').value;
     
-    // Update stats and dashboard to reflect the new filter
     updateLiveStats(days);
     const filtered = filterDataByDays(dbData, days);
     renderDashboard(filtered);
 
     if(document.getElementById('tab-analytics').classList.contains('active')) {
-        // Find the active button to pass to switchAnalytics if needed, then call it
         const activeBtn = document.querySelector(`#tab-analytics .toggle-btn.active`);
         switchAnalytics(currentAnalyticsMode, activeBtn);
     }
@@ -177,8 +167,6 @@ function applyGlobalFilter() {
 
 let dashChart = null;
 function renderDashboard(data) {
-    // Stats are now handled by updateLiveStats()
-
     const hourCounts = Array(24).fill(0);
     data.forEach(d => {
         if (d.Time) {
@@ -213,7 +201,6 @@ function renderDashboard(data) {
         }
     });
 
-    // The feed should always show the most recent detections from the initial load, not the filtered data
     const feed = document.getElementById('dash-feed');
     feed.innerHTML = '';
     dbData.slice(0, 30).forEach(d => {
@@ -255,7 +242,6 @@ document.getElementById('tab-database').addEventListener('scroll', (e) => {
     }
 });
 
-// The onclick handler for the main search button is now `searchDatabase()`
 function searchDatabase() {
     currentDbQuery = {
         sp: document.getElementById('db-filter-species').value,
@@ -265,7 +251,7 @@ function searchDatabase() {
         tEnd: document.getElementById('db-filter-time-end').value,
         minConf: parseFloat(document.getElementById('db-filter-conf').value)
     };
-    fetchPaginatedDetections(true); // true for new search
+    fetchPaginatedDetections(true); 
 }
 
 async function fetchPaginatedDetections(isNewSearch = false) {
@@ -361,18 +347,14 @@ function populateDatabaseFilter() {
     dataList.innerHTML = Array.from(speciesSet).sort().map(s => `<option value="${s.replace(/"/g, '&quot;')}"></option>`).join('');
 }
 
-// Old function now just calls the new search function.
 function filterDatabase() {
     searchDatabase();
 }
 
-// This function is now effectively obsolete for the database tab, but might be used elsewhere.
-// For the database tab, appendDbRows is used.
 function renderDatabaseTable(data) {
     console.warn("renderDatabaseTable is deprecated for paginated view.");
 }
 
-// Update the search button's onclick handler
 document.querySelector('#tab-database button[onclick="filterDatabase()"]').setAttribute('onclick', 'searchDatabase()');
 
 function exportDatabaseCSV() {
@@ -386,7 +368,6 @@ function exportDatabaseCSV() {
         csvRows.push(`${d.Date},${d.Time},"${d.Sci_Name}","${d.Com_Name}",${d.Confidence}`);
     });
     
-    // FIX 1: Fix Fatal Syntax Error
     const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -1070,26 +1051,34 @@ async function drawModalHistoryChart(species, days = '30') {
                     } 
                 }, 
                 y: { display: false, min: 0 } 
-                    } 
-                }
-            });
+            } 
         }
+    });
+}
 
+// BULLETPROOF SEARCH AND PLAY FALLBACK
 async function searchAndPlay(species, sciName, date, time, pct) {
-    if (galleryCacheRecent.length === 0) await fetchGallery();
-    const timeStr = time.replace(/:/g, '');
+    try {
+        if (galleryCacheRecent.length === 0) {
+            await fetchGallery().catch(() => {}); // Non-blocking gallery fetch
+        }
+    } catch (e) {
+        console.warn("Gallery cache lookup skipped:", e);
+    }
+
+    const timeStr = time ? time.replace(/:/g, '') : '';
     const found = galleryCacheRecent.find(f => 
         f.species === species && 
-        f.filename.includes(date) && 
+        f.filename && f.filename.includes(date) && 
         f.filename.replace(/:/g, '').includes(timeStr.substring(0, 4))
     );
     
     if (found) {
         openDetectionModal(found.filepath, found.species, sciName, (found.confidence * 100).toFixed(0), found.filename);
     } else {
-        // Fallback: construct expected audio path directly from date and species if match isn't cached
+        // Immediate fallback: construct the expected audio path directly so the modal always opens
         const sanitizedSpecies = species.replace(/\s+/g, '_');
-        const fallbackFilename = `${sanitizedSpecies}-${pct}-${date}-${time.replace(/:/g, '-')}.mp3`;
+        const fallbackFilename = `${sanitizedSpecies}-${pct}-${date}-${time ? time.replace(/:/g, '-') : ''}.mp3`;
         const fallbackPath = `${date}/${fallbackFilename}`;
         openDetectionModal(fallbackPath, species, sciName, pct, fallbackFilename);
     }
@@ -1250,17 +1239,14 @@ document.getElementById('sidebar-audio-btn').addEventListener('click', () => {
     }
 });
 
-// FIX 3: Restore Telemetry Compatibility
 async function updateSystemStats() {
     try {
         const res = await fetch(API_BASE + '/api/system');
         const data = await res.json();
         
-        // Convert Celsius from system endpoint to Fahrenheit if isMetric is false
         const displayTemp = isMetric ? data.temp : (data.temp * 9/5) + 32;
         document.getElementById('sys-temp').innerHTML = `${displayTemp.toFixed(1)}&deg;${isMetric ? 'C' : 'F'}`;
         
-        // Scale temperature bar (assuming 0-85C range for hardware)
         const tempPercent = Math.max(0, Math.min(100, (data.temp / 85) * 100));
         document.getElementById('sys-temp-bar').style.width = `${tempPercent}%`;
         
@@ -1295,7 +1281,6 @@ function populateConfigForm() {
     });
     container.innerHTML = html;
 
-    // Populate General Site Settings
     const generalFields = ['SITE_NAME', 'LATITUDE', 'LONGITUDE', 'TIMEZONE', 'BIRDWEATHER_ID', 'DATABASE_LANG', 'CADDY_PWD', 'BIRDNETPI_URL'];
     generalFields.forEach(key => {
         const el = document.getElementById(`config-${key}`);
@@ -1304,7 +1289,6 @@ function populateConfigForm() {
         }
     });
 
-    // Populate Disk Management settings
     if (configData.FULL_DISK) {
         const radio = document.getElementById(`config-FULL_DISK-${configData.FULL_DISK}`);
         if (radio) radio.checked = true;
@@ -1315,18 +1299,6 @@ function populateConfigForm() {
     const maxFiles = document.getElementById('config-MAX_FILES_SPECIES');
     if (maxFiles && configData.MAX_FILES_SPECIES) maxFiles.value = configData.MAX_FILES_SPECIES;
 
-    // Populate Disk Management settings
-    if (configData.FULL_DISK) {
-        const radio = document.getElementById(`config-FULL_DISK-${configData.FULL_DISK}`);
-        if (radio) radio.checked = true;
-    }
-    const purgeThresholdDisk = document.getElementById('config-PURGE_THRESHOLD');
-    if (purgeThresholdDisk && configData.PURGE_THRESHOLD) purgeThresholdDisk.value = configData.PURGE_THRESHOLD;
-    
-    const maxFilesSpecies = document.getElementById('config-MAX_FILES_SPECIES');
-    if (maxFilesSpecies && configData.MAX_FILES_SPECIES) maxFilesSpecies.value = configData.MAX_FILES_SPECIES;
-
-    // Populate Audio Settings
     const audioFields = ['REC_CARD', 'CHANNELS', 'RECORDING_LENGTH', 'EXTRACTION_LENGTH', 'HIGHPASS_FREQ', 'AUDIOFMT'];
     audioFields.forEach(key => {
         const el = document.getElementById(`config-${key}`);
@@ -1335,7 +1307,6 @@ function populateConfigForm() {
         }
     });
 
-    // Populate Analysis & Model Settings
     const analysisFields = ['MODEL', 'SF_THRESH', 'RARE_SPECIES_THRESHOLD', 'RAW_SPECTROGRAM'];
     analysisFields.forEach(key => {
         const el = document.getElementById(`config-${key}`);
@@ -1344,7 +1315,6 @@ function populateConfigForm() {
         }
     });
 
-    // Populate Notification Settings
     const notificationFields = [
         'APPRISE_SERVICES', 'APPRISE_NOTIFICATION_TITLE', 'APPRISE_NOTIFICATION_BODY', 'APPRISE_MINIMUM_SECONDS_BETWEEN_NOTIFICATIONS_PER_SPECIES',
         'APPRISE_ONLY_NOTIFY_SPECIES_NAMES', 'APPRISE_ONLY_NOTIFY_SPECIES_NAMES_2'
@@ -1706,7 +1676,6 @@ document.addEventListener('DOMContentLoaded', init);
     if (navItem) {
         navItem.addEventListener('click', () => {
             if (!collageInitialized) {
-                // Defer initCollage to allow the tab display block style to apply and reflow before clientWidth is calculated
                 setTimeout(() => {
                     initCollage();
                     collageInitialized = true;
@@ -1736,12 +1705,12 @@ document.addEventListener('DOMContentLoaded', init);
         }
 
         const days = document.getElementById('global-date-filter').value;
+        const cacheBuster = Date.now();
         
         try {
             const [dims, masks, data] = await Promise.all([
-                fetchJson(`${API_BASE}/static/dims.json`),
-                fetchJson(`${API_BASE}/static/masks.json`),
-                // FIX 2: Correctly routed detections endpoint
+                fetchJson(`${API_BASE}/static/dims.json?v=${cacheBuster}`),
+                fetchJson(`${API_BASE}/static/masks.json?v=${cacheBuster}`),
                 fetchJson(`${API_BASE}/api/detections/collage-stats?days=${days}`)
             ]);
             
@@ -1832,7 +1801,6 @@ document.addEventListener('DOMContentLoaded', init);
 
         var items = (data.species || [])
             .map(function(d) {
-                // Robustly handle different key casings
                 return {
                     sci: d.sci || d.Sci_Name,
                     com: d.com || d.Com_Name,
@@ -1852,7 +1820,6 @@ document.addEventListener('DOMContentLoaded', init);
         const aspect = targetWidth / targetHeight;
         console.log(`[Collage] Using dimensions: ${targetWidth}x${targetHeight}. Aspect: ${aspect}.`);
         
-        // Restore HiDPI scaling
         var dpr = window.devicePixelRatio || 1;
         canvas.width = targetWidth * dpr;
         canvas.height = targetHeight * dpr;
@@ -1906,7 +1873,6 @@ document.addEventListener('DOMContentLoaded', init);
                             console.error('Draw failed for', d.sci, e);
                         }
                     } else {
-                        // Keep this fallback for cases where an image truly fails to load.
                         ctx.fillStyle = 'rgba(255, 0, 0, 0.4)';
                         ctx.fillRect(x, y, w, h);
                     }
@@ -1945,7 +1911,6 @@ document.addEventListener('DOMContentLoaded', init);
                 var maskName = maskKeys[i % maskKeys.length]; 
                 var maskData = masks[maskName];
                 
-                // Safely grab dimensions from dims.images, with a fallback
                 var dimData = (dims && dims.images && dims.images[maskName]) ? dims.images[maskName] : { w: 500, h: 500 };
 
                 if (!maskData) {
