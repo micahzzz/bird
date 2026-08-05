@@ -252,18 +252,18 @@ function updateTelemetryUI(data) {
     if (!data) return;
 
     // Temperature
-    const tempF = data.temperature_f;
+    const tempF = data.temp;
     document.getElementById('sys-temp').textContent = `${tempF.toFixed(1)}°F`;
     const tempPercent = Math.min(100, Math.max(0, ((tempF - 32) / 150) * 100)); // Simple scale for F
     document.getElementById('sys-temp-bar').style.width = `${tempPercent}%`;
 
     // Memory
-    document.getElementById('sys-mem').textContent = `${data.memory_percent}%`;
-    document.getElementById('sys-mem-bar').style.width = `${data.memory_percent}%`;
+    document.getElementById('sys-mem').textContent = `${data.memory}%`;
+    document.getElementById('sys-mem-bar').style.width = `${data.memory}%`;
 
     // Disk
-    document.getElementById('sys-disk').textContent = `${data.disk_percent}%`;
-    document.getElementById('sys-disk-bar').style.width = `${data.disk_percent}%`;
+    document.getElementById('sys-disk').textContent = `${data.disk}%`;
+    document.getElementById('sys-disk-bar').style.width = `${data.disk}%`;
 
     // Uptime
     document.getElementById('sys-uptime').textContent = data.uptime;
