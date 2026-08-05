@@ -12,7 +12,7 @@ let modalChart = null;
 
 function escapeAttr(str) {
     if (!str) return '';
-    return str.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    return str.replace(/'/g, "'").replace(/"/g, '&quot;');
 }
 
 let audioCtx;
@@ -382,7 +382,8 @@ function exportDatabaseCSV() {
     });
     
     // FIX 1: Fix Fatal Syntax Error
-    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
+    const blob = new Blob([csvRows.join('
+')], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.setAttribute('href', url);
@@ -633,7 +634,9 @@ async function fetchGallery() {
         galleryCacheRecent = data.recent || [];
         galleryCacheBest = data.best || [];
         switchGallery('recent', document.querySelector('#tab-gallery .toggle-btn'));
-    } catch(e) {}
+    } catch(e) {
+        console.error("Failed to fetch gallery:", e);
+    }
 }
 
 function switchGallery(mode, buttonEl) {
@@ -813,18 +816,18 @@ document.getElementById('compile-btn').addEventListener('click', async () => {
                 end_date: end_date
             })
         });
-        const data = await res.json();
         
-        if(data.success) {
+        if (res.status === 202) {
+            const data = await res.json();
             status.classList.replace('text-yellow-400', 'text-green-400');
-            status.innerHTML = `Successfully mixed ${data.count} recordings! <a href="/${data.file}" download class="text-[var(--bn-highlight)] underline ml-2">Download Mix</a>`;
+            status.innerText = data.message || "Compilation started. Mixes will appear in the 'mixes' folder.";
         } else {
-            status.classList.replace('text-yellow-400', 'text-red-400');
-            status.innerText = data.error || 'Compilation failed.';
+            const errorData = await res.json().catch(() => ({ detail: 'Unknown error structure' }));
+            throw new Error(errorData.detail || 'Compilation request failed.');
         }
     } catch(e) {
         status.classList.replace('text-yellow-400', 'text-red-400');
-        status.innerText = 'Server error during compilation.';
+        status.innerText = e.message || 'Server error during compilation.';
     } finally {
         btn.disabled = false;
         btn.innerText = 'Compile Audio';
@@ -1559,7 +1562,9 @@ async function pollLog() {
         const text = await res.text();
         const out = document.getElementById('log-output');
 
-        const formattedText = text.replace(/\\n/g, '\n');
+        const formattedText = text.replace(/
+/g, '
+');
 
         if(out.textContent !== formattedText) {
             out.textContent = formattedText;
@@ -1661,24 +1666,6 @@ async function deleteFile(path, name) {
 }
 
 init();
-
-// --- EXPOSE HANDLERS TO GLOBAL SCOPE ---
-// Required because main.js is loaded as an ES module, hiding these from HTML onclick attributes
-window.switchAnalytics = switchAnalytics;
-window.switchGallery = switchGallery;
-window.switchTools = switchTools;
-window.searchAndPlay = searchAndPlay;
-window.openDetectionModal = openDetectionModal;
-window.closeModal = closeModal;
-window.openLightbox = openLightbox;
-window.searchDatabase = searchDatabase;
-window.filterDatabase = filterDatabase;
-window.exportDatabaseCSV = exportDatabaseCSV;
-window.triggerCompile = triggerCompile;
-window.loadSpeciesList = loadSpeciesList;
-window.serviceControl = serviceControl;
-window.loadFileManager = loadFileManager;
-window.deleteFile = deleteFile;
 
 // -------------------------------------------------------------
 // SECOND SCRIPT BLOCK - COLLAGE LOGIC
@@ -1966,3 +1953,20 @@ window.deleteFile = deleteFile;
         return layout;
     }
 })();
+
+// --- EXPOSE HANDLERS TO GLOBAL SCOPE ---
+window.switchAnalytics = switchAnalytics;
+window.switchGallery = switchGallery;
+window.switchTools = switchTools;
+window.searchAndPlay = searchAndPlay;
+window.openDetectionModal = openDetectionModal;
+window.closeModal = closeModal;
+window.openLightbox = openLightbox;
+window.searchDatabase = searchDatabase;
+window.filterDatabase = filterDatabase;
+window.exportDatabaseCSV = exportDatabaseCSV;
+window.triggerCompile = triggerCompile;
+window.loadSpeciesList = loadSpeciesList;
+window.serviceControl = serviceControl;
+window.loadFileManager = loadFileManager;
+window.deleteFile = deleteFile;
