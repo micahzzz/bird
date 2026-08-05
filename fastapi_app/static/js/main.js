@@ -1692,7 +1692,7 @@ async function deleteFile(path, name) {
     }
 }
 
-init();
+document.addEventListener('DOMContentLoaded', init);
 
 // -------------------------------------------------------------
 // SECOND SCRIPT BLOCK - COLLAGE LOGIC

@@ -48,9 +48,7 @@ app.include_router(compiler.router, prefix="/api", tags=["Audio Compiler"])
 app.include_router(streaming.router, prefix="/api", tags=["Live Streaming"])
 
 # --- Static Frontend Assets ---
-static_dir = os.path.join(os.path.dirname(__file__), "static")
-if os.path.exists(static_dir):
-    app.mount("/static", StaticFiles(directory=static_dir), name="static")
+app.mount("/static", StaticFiles(directory="fastapi_app/static"), name="static")
 
 # --- Root/Media Fallback Serving ---
 @app.get("/{path:path}", include_in_schema=False)
