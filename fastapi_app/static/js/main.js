@@ -12,7 +12,7 @@ let modalChart = null;
 
 function escapeAttr(str) {
     if (!str) return '';
-    return str.replace(/'/g, "'").replace(/"/g, '&quot;');
+    return str.replace(/'/g, "\\'").replace(/"/g, '&quot;');
 }
 
 let audioCtx;
@@ -58,13 +58,18 @@ document.querySelectorAll('.nav-item').forEach(el => {
 
 function switchTools(view) {
     document.querySelectorAll('#tab-tools > div > .toggle-btn').forEach(b => b.classList.remove('active'));
-    event.target.classList.add('active');
     
-    ['config', 'services', 'species', 'files'].forEach(v => document.getElementById(`tools-${v}`).classList.add('hidden'));
-    document.getElementById(`tools-${view}`).classList.remove('hidden');
+    // Safely highlight the active button without relying on global event object
+    const activeBtn = document.querySelector(`#tab-tools .toggle-btn[onclick*="${view}"]`);
+    if (activeBtn) activeBtn.classList.add('active');
     
-    if(view === 'services') loadServiceStatus();
-    if(view === 'files') loadFileManager();
+    ['config', 'services', 'species', 'files'].forEach(v => {
+        const el = document.getElementById(`tools-${v}`);
+        if (el) el.classList.toggle('hidden', v !== view);
+    });
+    
+    if (view === 'services') loadServiceStatus();
+    if (view === 'files') loadFileManager();
 }
 
 function getTodayStr() { 
@@ -382,8 +387,7 @@ function exportDatabaseCSV() {
     });
     
     // FIX 1: Fix Fatal Syntax Error
-    const blob = new Blob([csvRows.join('
-')], { type: 'text/csv' });
+    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.setAttribute('href', url);
@@ -395,24 +399,25 @@ let currentAnalyticsMode = 'acc';
 function switchAnalytics(mode, buttonEl) {
     currentAnalyticsMode = mode;
     document.querySelectorAll('#tab-analytics .toggle-btn').forEach(b => b.classList.remove('active'));
-    if (buttonEl) buttonEl.classList.add('active');
+    
+    const targetBtn = buttonEl || document.querySelector(`#tab-analytics .toggle-btn[onclick*="${mode}"]`);
+    if (targetBtn) targetBtn.classList.add('active');
     
     const uToggle = document.getElementById('weather-unit-toggle');
     const hContainer = document.getElementById('analytics-health-container');
     const cContainer = document.getElementById('analytics-chart-container');
 
-    if (mode === 'weather') uToggle.classList.remove('hidden');
-    else uToggle.classList.add('hidden');
+    if (uToggle) uToggle.classList.toggle('hidden', mode !== 'weather');
     
     if (mode === 'health') {
-        cContainer.classList.add('hidden');
-        hContainer.classList.remove('hidden');
+        if (cContainer) cContainer.classList.add('hidden');
+        if (hContainer) hContainer.classList.remove('hidden');
         const days = document.getElementById('global-date-filter').value;
         const filtered = filterDataByDays(dbData, days);
         renderDiagnostics(filtered);
     } else {
-        hContainer.classList.add('hidden');
-        cContainer.classList.remove('hidden');
+        if (hContainer) hContainer.classList.add('hidden');
+        if (cContainer) cContainer.classList.remove('hidden');
         renderAnalytics();
     }
 }
@@ -1071,10 +1076,23 @@ async function drawModalHistoryChart(species, days = '30') {
         }
 
 async function searchAndPlay(species, sciName, date, time, pct) {
-    if(galleryCacheRecent.length === 0) await fetchGallery();
-    const timeStr = time.replace(/:/g,'');
-    const found = galleryCacheRecent.find(f => f.species === species && f.filename.includes(date) && f.filename.replace(/:/g,'').includes(timeStr.substring(0,4)));
-    if(found) openDetectionModal(found.filepath, found.species, sciName, (found.confidence*100).toFixed(0), found.filename);
+    if (galleryCacheRecent.length === 0) await fetchGallery();
+    const timeStr = time.replace(/:/g, '');
+    const found = galleryCacheRecent.find(f => 
+        f.species === species && 
+        f.filename.includes(date) && 
+        f.filename.replace(/:/g, '').includes(timeStr.substring(0, 4))
+    );
+    
+    if (found) {
+        openDetectionModal(found.filepath, found.species, sciName, (found.confidence * 100).toFixed(0), found.filename);
+    } else {
+        // Fallback: construct expected audio path directly from date and species if match isn't cached
+        const sanitizedSpecies = species.replace(/\s+/g, '_');
+        const fallbackFilename = `${sanitizedSpecies}-${pct}-${date}-${time.replace(/:/g, '-')}.mp3`;
+        const fallbackPath = `${date}/${fallbackFilename}`;
+        openDetectionModal(fallbackPath, species, sciName, pct, fallbackFilename);
+    }
 }
 
 function closeModal() {
@@ -1296,6 +1314,17 @@ function populateConfigForm() {
     
     const maxFiles = document.getElementById('config-MAX_FILES_SPECIES');
     if (maxFiles && configData.MAX_FILES_SPECIES) maxFiles.value = configData.MAX_FILES_SPECIES;
+
+    // Populate Disk Management settings
+    if (configData.FULL_DISK) {
+        const radio = document.getElementById(`config-FULL_DISK-${configData.FULL_DISK}`);
+        if (radio) radio.checked = true;
+    }
+    const purgeThresholdDisk = document.getElementById('config-PURGE_THRESHOLD');
+    if (purgeThresholdDisk && configData.PURGE_THRESHOLD) purgeThresholdDisk.value = configData.PURGE_THRESHOLD;
+    
+    const maxFilesSpecies = document.getElementById('config-MAX_FILES_SPECIES');
+    if (maxFilesSpecies && configData.MAX_FILES_SPECIES) maxFilesSpecies.value = configData.MAX_FILES_SPECIES;
 
     // Populate Audio Settings
     const audioFields = ['REC_CARD', 'CHANNELS', 'RECORDING_LENGTH', 'EXTRACTION_LENGTH', 'HIGHPASS_FREQ', 'AUDIOFMT'];
@@ -1562,9 +1591,7 @@ async function pollLog() {
         const text = await res.text();
         const out = document.getElementById('log-output');
 
-        const formattedText = text.replace(/
-/g, '
-');
+        const formattedText = text.replace(/\\n/g, '\n');
 
         if(out.textContent !== formattedText) {
             out.textContent = formattedText;
@@ -1691,9 +1718,14 @@ init();
     async function fetchJson(url) {
         const res = await fetch(url);
         if (!res.ok) {
-            throw new Error(`HTTP error! status: ${res.status}`);
+            throw new Error(`HTTP ${res.status}: Failed to load ${url}`);
         }
-        return res.json();
+        const text = await res.text();
+        try {
+            return JSON.parse(text);
+        } catch (e) {
+            throw new Error(`Invalid JSON returned from ${url}`);
+        }
     }
 
     async function initCollage() {
