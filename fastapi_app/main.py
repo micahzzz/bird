@@ -41,11 +41,11 @@ app.add_middleware(
 
 # --- Routers ---
 # Include the routers from their respective files
-app.include_router(system.router, prefix="/api", tags=["System & Config"])
-app.include_router(detections.router, prefix="/api", tags=["Detections & Stats"])
-app.include_router(gallery.router, prefix="/api", tags=["Media Gallery"])
-app.include_router(compiler.router, prefix="/api", tags=["Audio Compiler"])
-app.include_router(streaming.router, prefix="/api", tags=["Live Streaming"])
+app.include_router(system.router, prefix="/api/v1", tags=["System & Config"])
+app.include_router(detections.router, prefix="/api/v1", tags=["Detections & Stats"])
+app.include_router(gallery.router, prefix="/api/v1", tags=["Media Gallery"])
+app.include_router(compiler.router, prefix="/api/v1", tags=["Audio Compiler"])
+app.include_router(streaming.router, prefix="/api/v1", tags=["Live Streaming"])
 
 # --- Static Frontend Assets ---
 static_dir = os.path.join(os.path.dirname(__file__), "static")

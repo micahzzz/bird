@@ -49,7 +49,7 @@ async function fetchAPI(endpoint, options = {}, responseType = 'json') {
  */
 export const getDetections = (params) => {
     const query = new URLSearchParams(params).toString();
-    return fetchAPI(`/api/v1/detections?${query}`);
+    return fetchAPI(`/api/detections?${query}`);
 };
 
 /**
@@ -61,7 +61,7 @@ export const getDetections = (params) => {
  */
 export const getStats = (params) => {
     const query = new URLSearchParams(params).toString();
-    return fetchAPI(`/api/v1/detections/stats?${query}`);
+    return fetchAPI(`/api/detections/stats?${query}`);
 };
 
 /**
@@ -70,14 +70,14 @@ export const getStats = (params) => {
  * @returns {Promise<{species: object[]}>}
  */
 export const getCollageStats = (days = '7') => {
-    return fetchAPI(`/api/v1/detections/collage-stats?days=${days}`);
+    return fetchAPI(`/api/detections/collage-stats?days=${days}`);
 };
 
 /**
  * Fetches detection counts for the last 24 hours, aggregated by hour.
  * @returns {Promise<object>}
  */
-export const getHourlyStats = () => fetchAPI('/api/v1/detections/stats/hourly');
+export const getHourlyStats = () => fetchAPI('/api/detections/stats/hourly');
 
 // --- System & Configuration ---
 
@@ -85,13 +85,13 @@ export const getHourlyStats = () => fetchAPI('/api/v1/detections/stats/hourly');
  * Fetches system telemetry data.
  * @returns {Promise<object>}
  */
-export const getSystemInfo = () => fetchAPI('/api/v1/system');
+export const getSystemInfo = () => fetchAPI('/api/system');
 
 /**
  * Fetches the contents of the birdnet.conf file.
  * @returns {Promise<object>} - A JSON representation of the config.
  */
-export const getConfig = () => fetchAPI('/api/v1/system/config');
+export const getConfig = () => fetchAPI('/api/system/config');
 
 /**
  * Updates the birdnet.conf file.
@@ -99,7 +99,7 @@ export const getConfig = () => fetchAPI('/api/v1/system/config');
  * @returns {Promise<object>}
  */
 export const updateConfig = (configData) => {
-    return fetchAPI('/api/v1/system/config/update', {
+    return fetchAPI('/api/system/config/update', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(configData),
@@ -115,7 +115,7 @@ export const updateConfig = (configData) => {
  * @returns {Promise<object>}
  */
 export const sendTestNotification = (notificationData) => {
-    return fetchAPI('/api/v1/system/config/test_notification', {
+    return fetchAPI('/api/system/config/test_notification', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(notificationData),
@@ -128,7 +128,7 @@ export const sendTestNotification = (notificationData) => {
  * Fetches the statuses of systemd services.
  * @returns {Promise<object>}
  */
-export const getServiceStatus = () => fetchAPI('/api/v1/system/services/status');
+export const getServiceStatus = () => fetchAPI('/api/system/services/status');
 
 /**
  * Sends a command to a systemd service.
@@ -137,7 +137,7 @@ export const getServiceStatus = () => fetchAPI('/api/v1/system/services/status')
  * @returns {Promise<object>}
  */
 export const controlService = (service, action) => {
-    return fetchAPI('/api/v1/system/service_control', {
+    return fetchAPI('/api/system/service_control', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ service, action }),
@@ -150,7 +150,7 @@ export const controlService = (service, action) => {
  * @returns {Promise<object>}
  */
 export const controlSystem = (action) => {
-    return fetchAPI('/api/v1/system/system_control', {
+    return fetchAPI('/api/system/system_control', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action }),
@@ -163,7 +163,7 @@ export const controlSystem = (action) => {
  * Fetches gallery data (recent and best recordings).
  * @returns {Promise<{recent: object[], best: object[]}>}
  */
-export const getGalleryData = () => fetchAPI('/api/v1/gallery');
+export const getGalleryData = () => fetchAPI('/api/gallery');
 
 /**
  * Requests an audio compilation.
@@ -176,7 +176,7 @@ export const getGalleryData = () => fetchAPI('/api/v1/gallery');
  * @returns {Promise<object>}
  */
 export const compileAudio = (payload) => {
-    return fetchAPI('/api/v1/compile', {
+    return fetchAPI('/api/compile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -191,7 +191,7 @@ export const compileAudio = (payload) => {
  * @returns {Promise<{list: string, content: string}>}
  */
 export const getSpeciesList = (listName) => {
-    return fetchAPI(`/api/v1/system/species_list?list=${listName}`);
+    return fetchAPI(`/api/system/species_list?list=${listName}`);
 };
 
 /**
@@ -201,7 +201,7 @@ export const getSpeciesList = (listName) => {
  * @returns {Promise<object>}
  */
 export const updateSpeciesList = (list_name, content) => {
-    return fetchAPI('/api/v1/system/species_list/update', {
+    return fetchAPI('/api/system/species_list/update', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ list_name, content }),
@@ -217,7 +217,7 @@ export const updateSpeciesList = (list_name, content) => {
  */
 export const listDirectory = (path = '') => {
     const params = new URLSearchParams({ path });
-    return fetchAPI(`/api/v1/system/files/list?${params}`);
+    return fetchAPI(`/api/system/files/list?${params}`);
 };
 
 /**
@@ -227,9 +227,9 @@ export const listDirectory = (path = '') => {
  */
 export const deleteFile = (path) => {
     const params = new URLSearchParams({ path });
-    return fetchAPI(`/api/v1/system/files/delete?${params}`, { method: 'DELETE' });
+    return fetchAPI(`/api/system/files/delete?${params}`, { method: 'DELETE' });
 };
 
 // Note: File download is handled directly via an <a> tag's href,
 // so it does not need a dedicated JS API function.
-// e.g., <a href="/api/v1/system/files/download?path=...">Download</a>
+// e.g., <a href="/api/system/files/download?path=...">Download</a>
