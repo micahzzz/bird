@@ -19,11 +19,11 @@ class Insight(BaseModel):
     days_since_last_seen: int | None = Field(None, description="Number of days since this species was last detected. Only present if status is 'Rare'.")
 
 class Detection(BaseModel):
-    date: str = Field(..., alias="Date")
-    time: str = Field(..., alias="Time")
-    sci_name: str = Field(..., alias="Sci_Name")
-    com_name: str = Field(..., alias="Com_Name")
-    confidence: float = Field(..., alias="Confidence")
+    date: str
+    time: str
+    sci_name: str
+    com_name: str
+    confidence: float
     insight: Insight
 
 class DetectionsResponse(BaseModel):
@@ -166,9 +166,17 @@ async def get_detections(
         rows = cursor.fetchall()
         conn.close()
 
-        # Add insights to each detection
+        # Add insights to each detection and map to lowercase keys
         detections_with_insights = [
-            dict(row, insight=get_insight(row['Com_Name'], row['Date'])) for row in rows
+            {
+                "date": row['Date'],
+                "time": row['Time'],
+                "sci_name": row['Sci_Name'],
+                "com_name": row['Com_Name'],
+                "confidence": row['Confidence'],
+                "insight": get_insight(row['Com_Name'], row['Date'])
+            }
+            for row in rows
         ]
         
         return {"detections": detections_with_insights, "total_count": total_count}
