@@ -22,6 +22,20 @@ const state = {
     charts: {}, // To hold chart instances
 };
 
+// Add helper to handle log stream cleanup
+function closeLogStream() {
+    if (state.logSource) {
+        state.logSource.close();
+        state.logSource = null;
+    }
+}
+
+// Global handler for HTML onclick events in the gallery tab
+window.switchGallery = function(galleryType) {
+    console.log("Switching gallery view to:", galleryType);
+    // Add gallery rendering logic when built
+};
+
 function init() {
     setupEventListeners();
     loadInitialData();
@@ -404,7 +418,10 @@ async function loadChartData() {
 }
 
 function renderAccumulationChart(speciesByDate) {
-    const ctx = document.getElementById('analytics-accumulation-chart').getContext('2d');
+    const canvas = document.getElementById('analytics-accumulation-chart');
+    if (!canvas) return; // Guard against missing DOM element
+
+    const ctx = canvas.getContext('2d');
 
     const dates = Object.keys(speciesByDate).sort();
     let cumulativeSpecies = new Set();

@@ -113,7 +113,7 @@ def get_insight(species_name: str, detection_date: str) -> dict:
 
 # --- API Endpoints ---
 
-@router.get("/", response_model=DetectionsResponse, summary="Get Paginated Detections")
+@router.get("", response_model=DetectionsResponse, summary="Get Paginated Detections")
 async def get_detections(
     limit: int = 50,
     offset: int = 0,
