@@ -1861,7 +1861,7 @@ init();
         console.log(`[Collage] Canvas created. Dimensions: ${canvas.width}x${canvas.height}. Aspect: ${aspect}.`);
 
         console.log("[Collage] Calculating layout with maskPack...");
-        var layout = maskPack(items, aspect, masks);
+        var layout = maskPack(items, aspect, masks, dims);
         console.log("[Collage] Layout calculated:", layout);
 
         if (!layout || layout.length === 0) {
@@ -1926,15 +1926,13 @@ init();
       return { s: 0.24, w: 1, c: 6, r: 6 };
     }
 
-    function maskPack(items, aspect, masks) {
+    function maskPack(items, aspect, masks, dims) {
         if (!items || !items.length) return [];
         var n = items.length;
         var t = tuning(n);
         var gridW = t.c || 1;
         var gridH = Math.ceil(n / gridW);
 
-        // FIX: This is the core of the rendering bug. The cell dimensions must
-        // be constrained by the overall canvas aspect ratio to prevent distortion.
         const cellH = Math.min(1 / (gridW * aspect), 1 / gridH);
         const cellW = cellH * aspect;
 
@@ -1946,13 +1944,16 @@ init();
                 var item = items[i];
                 var maskName = maskKeys[i % maskKeys.length]; 
                 var maskData = masks[maskName];
+                
+                // Safely grab dimensions from dims.images, with a fallback
+                var dimData = (dims && dims.images && dims.images[maskName]) ? dims.images[maskName] : { w: 500, h: 500 };
 
                 if (!maskData) {
                     console.warn(`[Collage] Mask '${maskName}' not found for item`, item);
                     continue;
                 }
 
-                var maskAspect = maskData.w / maskData.h;
+                var maskAspect = dimData.w / dimData.h;
                 var w, h, x, y, pose = 1;
 
                 if (maskAspect > cellW / cellH) {
@@ -1973,7 +1974,7 @@ init();
                 pose = poses[Math.floor(Math.random() * poses.length)];
 
                 layout.push({
-                    x: x * 100, y: y * 100, // Return as percentages
+                    x: x * 100, y: y * 100,
                     w: w * 100, h: h * 100,
                     sci: item.sci,
                     item: { ...item, mask: maskName, pose: pose }
@@ -1999,6 +2000,7 @@ window.filterDatabase = filterDatabase;
 window.exportDatabaseCSV = exportDatabaseCSV;
 window.triggerCompile = triggerCompile;
 window.loadSpeciesList = loadSpeciesList;
-window.serviceControl = serviceControl;
+window.controlService = controlService;
+window.serviceControl = controlService;
 window.loadFileManager = loadFileManager;
 window.deleteFile = deleteFile;
