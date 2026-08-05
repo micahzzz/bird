@@ -193,15 +193,15 @@ function updateRecentDetectionsUI(detections) {
     detections.forEach(det => {
         const div = document.createElement('div');
         div.className = 'p-3 bg-[var(--bn-bg)] rounded-lg flex items-center justify-between cursor-pointer hover:bg-[var(--bn-card)]';
-        div.onclick = () => showDetectionModal(det); // Assuming showDetectionModal exists
+        div.onclick = () => showDetectionModal(det); 
 
         div.innerHTML = `
             <div>
-                <p class="font-bold text-white">${det.com_name}</p>
-                <p class="text-xs text-slate-400">${det.date} at ${det.time}</p>
+                <p class="font-bold text-white">${det.Com_Name}</p>
+                <p class="text-xs text-slate-400">${det.Date} at ${det.Time}</p>
             </div>
             <div class="text-right">
-                <p class="font-mono text-xs text-[var(--bn-highlight)]">${(det.confidence * 100).toFixed(1)}%</p>
+                <p class="font-mono text-xs text-[var(--bn-highlight)]">${(det.Confidence * 100).toFixed(1)}%</p>
             </div>
         `;
         feed.appendChild(div);
@@ -320,11 +320,11 @@ function renderDatabaseTable(detections, total_count) {
     detections.forEach(det => {
         const row = tableBody.insertRow();
         row.innerHTML = `
-            <td class="p-3">${det.date}</td>
-            <td class="p-3">${det.time}</td>
-            <td class="p-3 font-semibold text-white">${det.com_name}</td>
-            <td class="p-3 italic">${det.sci_name}</td>
-            <td class="p-3 font-mono text-[var(--bn-highlight)]">${(det.confidence * 100).toFixed(1)}%</td>
+            <td class="p-3">${det.Date}</td>
+            <td class="p-3">${det.Time}</td>
+            <td class="p-3 font-semibold text-white">${det.Com_Name}</td>
+            <td class="p-3 italic">${det.Sci_Name}</td>
+            <td class="p-3 font-mono text-[var(--bn-highlight)]">${(det.Confidence * 100).toFixed(1)}%</td>
             <td class="p-3 text-right">
                 <button class="text-white hover:text-[var(--bn-highlight)]" onclick="showDetectionModal(${JSON.stringify(det).replace(/"/g, '&quot;')})">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
