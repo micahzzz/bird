@@ -1662,6 +1662,24 @@ async function deleteFile(path, name) {
 
 init();
 
+// --- EXPOSE HANDLERS TO GLOBAL SCOPE ---
+// Required because main.js is loaded as an ES module, hiding these from HTML onclick attributes
+window.switchAnalytics = switchAnalytics;
+window.switchGallery = switchGallery;
+window.switchTools = switchTools;
+window.searchAndPlay = searchAndPlay;
+window.openDetectionModal = openDetectionModal;
+window.closeModal = closeModal;
+window.openLightbox = openLightbox;
+window.searchDatabase = searchDatabase;
+window.filterDatabase = filterDatabase;
+window.exportDatabaseCSV = exportDatabaseCSV;
+window.triggerCompile = triggerCompile;
+window.loadSpeciesList = loadSpeciesList;
+window.serviceControl = serviceControl;
+window.loadFileManager = loadFileManager;
+window.deleteFile = deleteFile;
+
 // -------------------------------------------------------------
 // SECOND SCRIPT BLOCK - COLLAGE LOGIC
 // -------------------------------------------------------------
