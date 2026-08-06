@@ -1,3 +1,10 @@
+window.addEventListener('error', function(e) {
+    console.error('[CRITICAL GLOBAL ERROR]', e.message, 'at', e.filename, 'line', e.lineno);
+});
+window.addEventListener('unhandledrejection', function(e) {
+    console.error('[CRITICAL UNHANDLED PROMISE]', e.reason);
+});
+
 // --- EXPOSE HANDLERS TO GLOBAL SCOPE ---
 // Hoisted to the top to ensure handlers are attached to the window object before any part of the script
 // can fail on a DOM query. Function declarations are hoisted, making this safe.
@@ -810,12 +817,19 @@ function toggleModalAudioPlayback() {
 }
 
 async function openDetectionModal(url, species, sciName, conf, fname) {
-    document.getElementById('detection-modal').classList.remove('hidden');
+    console.log("[DEBUG] openDetectionModal STARTED. Url:", url);
     
-    document.getElementById('modal-title').innerText = species;
-    document.getElementById('modal-sciname').innerText = sciName || '';
-    document.getElementById('modal-conf').innerText = `${conf}%`;
-    document.getElementById('modal-filename').innerText = fname;
+    try {
+        document.getElementById('detection-modal').classList.remove('hidden');
+        document.getElementById('modal-title').innerText = species;
+        document.getElementById('modal-sciname').innerText = sciName || '';
+        document.getElementById('modal-conf').innerText = `${conf}%`;
+        document.getElementById('modal-filename').innerText = fname;
+        console.log("[DEBUG] Successfully updated basic modal text elements in the DOM.");
+    } catch (domError) {
+        console.error("[DEBUG] FAILED to update modal DOM elements. Is the HTML missing an ID?", domError);
+        return; // Halt execution if the DOM is broken
+    }
     
     const wikiUrl = `https://en.wikipedia.org/wiki/${encodeURIComponent(sciName || species)}`;
     const aabUrl = `https://www.allaboutbirds.org/guide/${species.replace(/ /g, '_')}`;
@@ -941,12 +955,19 @@ async function drawModalHistoryChart(species, days = '30') {
 }
 
 async function searchAndPlay(species, sciName, date, time, pct) {
+    console.log(`[DEBUG] 1. searchAndPlay TRIGGERED! Inputs:`, {species, sciName, date, time, pct});
+
     try {
         if (galleryCacheRecent.length === 0) {
-            await fetchGallery().catch(() => {});
+            console.log("[DEBUG] 2. galleryCacheRecent is empty. Fetching from /api/gallery...");
+            await fetchGallery().catch((err) => {
+                console.warn("[DEBUG] fetchGallery failed, but continuing:", err);
+            });
+        } else {
+            console.log(`[DEBUG] 2. galleryCacheRecent already has ${galleryCacheRecent.length} items.`);
         }
     } catch (e) {
-        console.warn("Gallery cache lookup skipped:", e);
+        console.error("[DEBUG] Error during gallery check:", e);
     }
 
     const timeStr = time ? time.replace(/:/g, '') : '';
@@ -955,15 +976,22 @@ async function searchAndPlay(species, sciName, date, time, pct) {
         f.filename && f.filename.includes(date) && 
         f.filename.replace(/:/g, '').includes(timeStr.substring(0, 4))
     );
-    
-    if (found) {
-        openDetectionModal(found.filepath, found.species, sciName, (found.confidence * 100).toFixed(0), found.filename);
-    } else {
-        // Construct the exact true path: Extracted/By_Date/YYYY-MM-DD/Species_Name/Species_Name-XX-YYYY-MM-DD-birdnet-HH:MM:SS.mp3
-        const sanitizedSpecies = species.replace(/\s+/g, '_');
-        const fallbackFilename = `${sanitizedSpecies}-${pct}-${date}-birdnet-${time}.mp3`;
-        const fallbackPath = `Extracted/By_Date/${date}/${sanitizedSpecies}/${fallbackFilename}`;
-        openDetectionModal(fallbackPath, species, sciName, pct, fallbackFilename);
+
+    console.log("[DEBUG] 3. Gallery search result:", found ? `Match found: ${found.filename}` : "No match found.");
+
+    try {
+        if (found) {
+            console.log(`[DEBUG] 4a. Opening modal with CACHED path: ${found.filepath}`);
+            await openDetectionModal(found.filepath, found.species, sciName, (found.confidence * 100).toFixed(0), found.filename);
+        } else {
+            const sanitizedSpecies = species.replace(/\s+/g, '_');
+            const fallbackFilename = `${sanitizedSpecies}-${pct}-${date}-birdnet-${time}.mp3`;
+            const fallbackPath = `Extracted/By_Date/${date}/${sanitizedSpecies}/${fallbackFilename}`;
+            console.log(`[DEBUG] 4b. Opening modal with FALLBACK path: ${fallbackPath}`);
+            await openDetectionModal(fallbackPath, species, sciName, pct, fallbackFilename);
+        }
+    } catch (error) {
+        console.error("[DEBUG] 5. ERROR thrown while trying to open the modal:", error);
     }
 }
 
