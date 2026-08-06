@@ -3,7 +3,10 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 import os
 import re
+from pathlib import Path
 from typing import List
+
+from config import EXTRACTED_AUDIO_DIR
 
 router = APIRouter()
 
@@ -39,12 +42,12 @@ def get_gallery():
         recent = []
         best_map = {}
         valid_exts = {'.wav', '.mp3', '.flac', '.m4a'}
-        base_dir = os.path.expanduser('~/BirdSongs')
+        base_dir = EXTRACTED_AUDIO_DIR if EXTRACTED_AUDIO_DIR.exists() else Path(os.path.expanduser('~/BirdSongs'))
 
-        if not os.path.isdir(base_dir):
+        if not base_dir.is_dir():
             raise HTTPException(status_code=404, detail=f"Base directory '{base_dir}' not found.")
 
-        for root, _, files in os.walk(base_dir):
+        for root, _, files in os.walk(str(base_dir)):
             # Skip directories that are unlikely to contain valid recordings
             if "streamdata" in root.lower() or "mixes" in root.lower() or root == base_dir:
                 continue
@@ -60,7 +63,12 @@ def get_gallery():
                         conf = float(match.group(2)) / 100.0 if match else 0.5
                         
                         # Make the web path relative to the base directory
-                        web_path = os.path.relpath(filepath, base_dir)
+                        rel_path = os.path.relpath(filepath, base_dir)
+                        if base_dir == EXTRACTED_AUDIO_DIR:
+                            rel_path = rel_path.replace(os.sep, '/')
+                            web_path = f"/By_Date/{rel_path}"
+                        else:
+                            web_path = rel_path
                         
                         file_obj = {
                             "filepath": web_path,

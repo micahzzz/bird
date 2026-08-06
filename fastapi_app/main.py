@@ -5,6 +5,8 @@ from fastapi.responses import FileResponse
 import os
 import urllib.parse
 
+from config import EXTRACTED_AUDIO_DIR
+
 # Import your routers here
 from routers import system, detections, gallery, compiler, streaming
 
@@ -47,6 +49,9 @@ app.include_router(streaming.router, prefix="/api", tags=["Live Streaming"])
 # Using absolute path resolution so FastAPI always finds the directory
 static_dir = os.path.join(os.path.dirname(__file__), "static")
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
+
+if EXTRACTED_AUDIO_DIR.exists():
+    app.mount("/By_Date", StaticFiles(directory=str(EXTRACTED_AUDIO_DIR)), name="by_date")
 
 # --- Root/Media Fallback Serving ---
 @app.get("/{path:path}", include_in_schema=False)

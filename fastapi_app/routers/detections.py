@@ -3,8 +3,10 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 from typing import List, Dict, Literal, Any
 from datetime import datetime, timedelta
+import re
 import sqlite3
 
+from config import EXTRACTED_AUDIO_DIR
 # Import the centralized database connection function
 from database import get_db_connection
 
@@ -24,6 +26,7 @@ class Detection(BaseModel):
     sci_name: str = Field(..., alias="Sci_Name")
     com_name: str = Field(..., alias="Com_Name")
     confidence: float = Field(..., alias="Confidence")
+    media_url: str | None = None
     insight: Insight
 
 class DetectionsResponse(BaseModel):
@@ -161,15 +164,25 @@ async def get_detections(
         total_count = cursor.fetchone()[0]
         
         # Get the paginated data
-        query = f"SELECT Date, Time, Sci_Name, Com_Name, Confidence FROM detections {where_sql} ORDER BY Date DESC, Time DESC LIMIT ? OFFSET ?"
+        query = f"SELECT Date, Time, Sci_Name, Com_Name, Confidence, File_Name FROM detections {where_sql} ORDER BY Date DESC, Time DESC LIMIT ? OFFSET ?"
         cursor.execute(query, params + [limit, offset])
         rows = cursor.fetchall()
         conn.close()
 
-        # Add insights to each detection
-        detections_with_insights = [
-            dict(row, insight=get_insight(row['Com_Name'], row['Date'])) for row in rows
-        ]
+        # Add insights and media URLs to each detection
+        detections_with_insights = []
+        for row in rows:
+            file_name = row['File_Name'] if 'File_Name' in row.keys() else None
+            com_name = row['Com_Name']
+            if file_name and row['Date'] and com_name:
+                safe_species = re.sub(r'\s+', '_', com_name.strip())
+                safe_species = re.sub(r'[^\w\-]', '_', safe_species)
+                media_url = f"/By_Date/{row['Date']}/{safe_species}/{file_name}"
+            else:
+                media_url = None
+
+            detection = dict(row, insight=get_insight(row['Com_Name'], row['Date']), media_url=media_url)
+            detections_with_insights.append(detection)
         
         return {"detections": detections_with_insights, "total_count": total_count}
 
