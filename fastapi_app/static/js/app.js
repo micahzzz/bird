@@ -552,6 +552,7 @@ async function renderAnalytics() {
     } catch (e) {
         console.error('Analytics render error:', e);
     }
+}
 
     function renderDiagnostics(data) {
         const container = document.getElementById('health-stats');
@@ -1263,7 +1264,7 @@ async function renderAnalytics() {
             const text = await res.text();
             const out = document.getElementById('log-output');
 
-            const formattedText = text.replace(/\n/g, '\n');
+            const formattedText = text.replace(/\\n/g, '\n');
 
             if(out && out.textContent !== formattedText) {
                 out.textContent = formattedText;
@@ -1628,4 +1629,3 @@ async function renderAnalytics() {
 
     // Expose for lazy loading
     window.lazyInitCollage = lazyInitCollage;
-});
