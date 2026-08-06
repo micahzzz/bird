@@ -7,7 +7,87 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/static/style.css">
+    
+    <style>
+        :root {
+            --bn-bg: #2b6a43;       
+            --bn-panel: #1b452b;    
+            --bn-card: #153822;     
+            --bn-border: #0f2b19;   
+            --bn-text: #ffffff;
+            --bn-subtext: #cbd5e1;
+            --bn-link: #60a5fa;
+            --bn-red: #ef4444;
+            --bn-highlight: #4ade80;
+        }
+
+        body { background-color: var(--bn-bg); color: var(--bn-text); font-family: 'Inter', sans-serif; overflow: hidden; }
+        .sidebar { background-color: var(--bn-panel); border-right: 1px solid var(--bn-border); }
+        .nav-item { padding: 0.75rem 1.25rem; margin: 0.25rem 1rem; border-radius: 0.5rem; cursor: pointer; transition: all 0.2s; color: var(--bn-subtext); display: flex; align-items: center; gap: 0.75rem; font-weight: 500; }
+        .nav-item:hover { background-color: var(--bn-card); color: white; }
+        .nav-item.active { background-color: var(--bn-card); color: var(--bn-highlight); border-left: 3px solid var(--bn-highlight); }
+        
+        .bird-card { background: var(--bn-card); border: 1px solid var(--bn-border); border-radius: 0.75rem; }
+        .tab-content { display: none; height: 100%; overflow-y: auto; padding: 2rem; }
+        .tab-content.active { display: block; animation: fadeIn 0.2s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: var(--bn-border); border-radius: 4px; }
+        
+        .toggle-btn { background: var(--bn-panel); color: var(--bn-subtext); padding: 0.35rem 0.85rem; border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.2s; border: 1px solid var(--bn-border); }
+        .toggle-btn.active { background: var(--bn-highlight); color: #111a14; border-color: var(--bn-highlight); }
+        
+        .filter-btn.active { border-color: var(--bn-highlight); color: white; }
+
+        .live-log-font { font-family: monospace; font-size: 0.8rem; line-height: 1.4; color: #cbd5e1; }
+        .text-link { color: var(--bn-link); cursor: pointer; text-decoration: none; font-weight: 600; }
+        .text-link:hover { text-decoration: underline; }
+
+        .insight-badge { font-size: 0.6rem; font-weight: 700; padding: 0.1rem 0.4rem; border-radius: 0.25rem; margin-left: 0.5rem; vertical-align: middle; text-transform: uppercase; }
+        .insight-new { background-color: #3b82f6; color: white; }
+        .insight-rare { background-color: #f59e0b; color: white; }
+
+        .tooltip-container { position: relative; display: inline-flex; align-items: center; }
+        .tooltip-icon { color: #6b7280; cursor: pointer; }
+        .tooltip-icon:hover { color: #9ca3af; }
+        .tooltip { 
+            position: absolute; 
+            bottom: 100%; 
+            left: 50%; 
+            transform: translateX(-50%); 
+            margin-bottom: 8px;
+            background-color: #111827; 
+            color: #d1d5db; 
+            font-size: 0.75rem;
+            padding: 8px 12px; 
+            border-radius: 6px; 
+            width: 280px; 
+            text-align: left;
+            opacity: 0; 
+            visibility: hidden;
+            transition: opacity 0.2s, visibility 0.2s;
+            pointer-events: none;
+            z-index: 10;
+            border: 1px solid var(--bn-border);
+            line-height: 1.5;
+        }
+        .tooltip::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -5px;
+            border-width: 5px;
+            border-style: solid;
+            border-color: #111827 transparent transparent transparent;
+        }
+        .tooltip-container:hover .tooltip {
+            opacity: 1;
+            visibility: visible;
+        }
+    </style>
 </head>
 <body class="flex h-screen">
 
@@ -711,31 +791,19 @@
             </div>
 
             <!-- Service Control -->
-            <div id="tools-services" class="hidden">
-                <div class="bird-card overflow-hidden mb-6">
-                    <table class="w-full text-left text-sm whitespace-nowrap">
-                        <thead class="bg-[var(--bn-panel)] text-white">
-                            <tr>
-                                <th class="p-4 font-semibold">Service</th>
-                                <th class="p-4 font-semibold">Status</th>
-                                <th class="p-4 font-semibold text-right">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="services-table-body" class="divide-y divide-[var(--bn-border)]">
-                            <tr><td colspan="3" class="p-4 text-center text-slate-400">Loading service statuses...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-                
-                <!-- System Actions Card -->
-                <div class="bird-card p-6">
-                    <h3 class="text-lg font-bold text-white mb-4">System Actions</h3>
-                    <p class="text-sm text-slate-400 mb-4">These actions will affect the entire machine. Use with caution.</p>
-                    <div class="flex gap-4">
-                        <button onclick="systemControl('reboot')" class="bg-yellow-600 hover:bg-yellow-500 text-white font-bold py-2 px-4 rounded-lg transition-colors">Reboot</button>
-                        <button onclick="systemControl('shutdown')" class="bg-red-700 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg transition-colors">Shutdown</button>
-                    </div>
-                </div>
+            <div id="tools-services" class="hidden bird-card overflow-hidden">
+                <table class="w-full text-left text-sm whitespace-nowrap">
+                    <thead class="bg-[var(--bn-panel)] text-white">
+                        <tr>
+                            <th class="p-4 font-semibold">Service</th>
+                            <th class="p-4 font-semibold">Status</th>
+                            <th class="p-4 font-semibold text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="services-table-body" class="divide-y divide-[var(--bn-border)]">
+                        <tr><td colspan="3" class="p-4 text-center text-slate-400">Loading service statuses...</td></tr>
+                    </tbody>
+                </table>
             </div>
 
             <!-- Species Lists Placeholder -->
@@ -906,6 +974,6 @@
             <audio id="modal-audio" crossorigin="anonymous"></audio>
         </div>
     </div>
-    <script type="module" src="/static/js/main.js"></script>
+<script src="/static/js/app.js"></script>
 </body>
 </html>
