@@ -1,14 +1,15 @@
 # routers/detections.py
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
-from typing import List, Dict, Literal, Any
+from typing import List, Dict, Literal, Any, Optional
 from datetime import datetime, timedelta
+from pathlib import Path
 import re
 import sqlite3
 
-from config import EXTRACTED_AUDIO_DIR
+from fastapi_app.config import EXTRACTED_AUDIO_DIR
 # Import the centralized database connection function
-from database import get_db_connection
+from fastapi_app.database import get_db_connection
 
 router = APIRouter()
 
@@ -18,7 +19,7 @@ router = APIRouter()
 
 class Insight(BaseModel):
     status: Literal["Normal", "New", "Rare"]
-    days_since_last_seen: int | None = Field(None, description="Number of days since this species was last detected. Only present if status is 'Rare'.")
+    days_since_last_seen: Optional[int] = Field(None, description="Number of days since this species was last detected. Only present if status is 'Rare'.")
 
 class Detection(BaseModel):
     date: str = Field(..., alias="Date")
@@ -26,7 +27,7 @@ class Detection(BaseModel):
     sci_name: str = Field(..., alias="Sci_Name")
     com_name: str = Field(..., alias="Com_Name")
     confidence: float = Field(..., alias="Confidence")
-    media_url: str | None = None
+    media_url: Optional[str] = None
     insight: Insight
 
 class DetectionsResponse(BaseModel):
@@ -114,17 +115,39 @@ def get_insight(species_name: str, detection_date: str) -> dict:
     return {"status": "Normal"}
 
 
+def resolve_detection_media_url(date: str, common_name: str, file_name: str) -> Optional[str]:
+    if not file_name or not date or not common_name:
+        return None
+
+    safe_species = re.sub(r'\s+', '_', common_name.strip())
+    safe_species = re.sub(r'[^\w\-]', '_', safe_species)
+
+    # Prefer the exact date/species layout used by the extractor
+    candidate_paths = [
+        EXTRACTED_AUDIO_DIR / date / safe_species / file_name,
+        EXTRACTED_AUDIO_DIR / date / file_name,
+    ]
+
+    for path in candidate_paths:
+        if path.is_file():
+            rel_path = path.relative_to(EXTRACTED_AUDIO_DIR).as_posix()
+            return f"/By_Date/{rel_path}"
+
+    # If the file isn't present yet, still return the expected external path.
+    return f"/By_Date/{date}/{safe_species}/{file_name}"
+
+
 # --- API Endpoints ---
 
 @router.get("", response_model=DetectionsResponse, summary="Get Paginated Detections")
 async def get_detections(
     limit: int = 50,
     offset: int = 0,
-    sp: str | None = Query(None, description="Filter by common name (e.g., 'American Robin')."),
-    dStart: str | None = Query(None, description="Start date in YYYY-MM-DD format."),
-    dEnd: str | None = Query(None, description="End date in YYYY-MM-DD format."),
-    tStart: str | None = Query(None, description="Start time in HH:MM:SS format."),
-    tEnd: str | None = Query(None, description="End time in HH:MM:SS format."),
+    sp: Optional[str] = Query(None, description="Filter by common name (e.g., 'American Robin')."),
+    dStart: Optional[str] = Query(None, description="Start date in YYYY-MM-DD format."),
+    dEnd: Optional[str] = Query(None, description="End date in YYYY-MM-DD format."),
+    tStart: Optional[str] = Query(None, description="Start time in HH:MM:SS format."),
+    tEnd: Optional[str] = Query(None, description="End time in HH:MM:SS format."),
     minConf: float = Query(0, ge=0, le=1, description="Minimum confidence level (0.0 to 1.0).")
 ):
     """
@@ -173,14 +196,7 @@ async def get_detections(
         detections_with_insights = []
         for row in rows:
             file_name = row['File_Name'] if 'File_Name' in row.keys() else None
-            com_name = row['Com_Name']
-            if file_name and row['Date'] and com_name:
-                safe_species = re.sub(r'\s+', '_', com_name.strip())
-                safe_species = re.sub(r'[^\w\-]', '_', safe_species)
-                media_url = f"/By_Date/{row['Date']}/{safe_species}/{file_name}"
-            else:
-                media_url = None
-
+            media_url = resolve_detection_media_url(row['Date'], row['Com_Name'], file_name)
             detection = dict(row, insight=get_insight(row['Com_Name'], row['Date']), media_url=media_url)
             detections_with_insights.append(detection)
         
@@ -194,8 +210,8 @@ async def get_detections(
 
 @router.get("/stats", response_model=Stats, summary="Get Aggregate Statistics")
 async def get_stats(
-    days: str | None = Query(None, description="Timeframe to filter stats (e.g., '7', '30', 'today', 'all')."),
-    species_of_interest: str | None = Query(None, description="Get daily counts for a specific species.")
+    days: Optional[str] = Query(None, description="Timeframe to filter stats (e.g., '7', '30', 'today', 'all')."),
+    species_of_interest: Optional[str] = Query(None, description="Get daily counts for a specific species.")
 ):
     """
     Provides aggregate statistics over a given timeframe.
@@ -331,7 +347,7 @@ async def get_hourly_stats():
 
 @router.get("/collage-stats", response_model=CollageResponse, summary="Get species stats for collage view")
 async def get_collage_stats(
-    days: str | None = Query("7", description="Timeframe to filter stats (e.g., '7', '30', 'today', 'all').")
+    days: Optional[str] = Query("7", description="Timeframe to filter stats (e.g., '7', '30', 'today', 'all').")
 ):
     """
     Provides aggregated species data tailored for the collage visualization.

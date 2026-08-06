@@ -23,28 +23,29 @@ async def stream_generator():
     last_error = None
     
     # Use an async client to make the streaming request
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=None) as client:
         for host in hosts_to_try:
             stream_url = stream_url_template.format(password=password, host=host)
             try:
                 print(f"Attempting to connect to stream at: {stream_url}")
-                async with client.stream("GET", stream_url, timeout=5) as response:
-                    # If we get a successful status code, start streaming
-                    if response.status_code == 200:
-                        print("Stream connection successful. Proxying audio...")
-                        async for chunk in response.aiter_bytes():
+                async with client.stream("GET", stream_url, timeout=10.0) as response:
+                    if response.status_code != 200:
+                        last_error = RuntimeError(f"Stream connection failed with status {response.status_code}")
+                        print(f"Stream connection failed on {host}: {response.status_code}")
+                        continue
+
+                    print("Stream connection successful. Proxying audio...")
+                    async for chunk in response.aiter_bytes(chunk_size=65536):
+                        if chunk:
                             yield chunk
-                        # If the stream ends, we break the loop and the function finishes.
-                        return 
+                    return
             except httpx.RequestError as e:
                 last_error = e
                 print(f"Failed to connect to {host}: {e}")
-                continue # Try the next host
+                continue
 
-    # If all hosts failed, raise an error
-    print(f"Fatal: Could not connect to Icecast stream on any host. Last error: {last_error}")
-    # This part will likely not be sent to the client if the stream fails to open,
-    # but it's good practice for debugging on the server side.
+    detail = f"Could not connect to audio stream. {last_error}" if last_error else "Could not connect to audio stream."
+    raise HTTPException(status_code=503, detail=detail)
 
 
 @router.get("/stream", summary="Proxy the Live Audio Stream")
@@ -55,4 +56,8 @@ async def get_audio_stream():
     This uses a `StreamingResponse` to efficiently send audio chunks to the client
     as they are received from Icecast, without loading the entire stream into memory.
     """
-    return StreamingResponse(stream_generator(), media_type="audio/mpeg")
+    return StreamingResponse(
+        stream_generator(),
+        media_type="audio/mpeg",
+        headers={"Cache-Control": "no-cache", "Connection": "keep-alive"}
+    )

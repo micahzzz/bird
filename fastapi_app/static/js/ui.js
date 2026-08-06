@@ -166,10 +166,16 @@ export async function openDetectionModal(url, species, sciName, conf, fname) {
     if(state.animationFrameId) cancelAnimationFrame(state.animationFrameId);
 }
 
-export async function searchAndPlay(species, sciName, date, time, pct) {
+export async function searchAndPlay(species, sciName, date, time, pct, mediaUrl = '') {
+    if (mediaUrl) {
+        const clean = mediaUrl.startsWith('/') ? mediaUrl : '/' + mediaUrl;
+        openDetectionModal(clean, species, sciName, pct, clean.split('/').pop());
+        return;
+    }
+
     if(state.galleryCacheRecent.length === 0) await api.fetchGallery();
-    const timeStr = time.replace(/:/g,'');
-    const found = state.galleryCacheRecent.find(f => f.species === species && f.filename.includes(date) && f.filename.replace(/:/g,'').includes(timeStr.substring(0,4)));
+    const timeStr = (time || '').replace(/:/g,'');
+    const found = state.galleryCacheRecent.find(f => f.species === species && f.filename && f.filename.includes(date) && f.filename.replace(/:/g,'').includes(timeStr.substring(0,4)));
     if(found) openDetectionModal(found.filepath, found.species, sciName, (found.confidence*100).toFixed(0), found.filename);
 }
 

@@ -37,7 +37,17 @@ let modalChart = null;
 
 function escapeAttr(str) {
     if (!str) return '';
-    return str.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    return str.replace(/'/g, "\\'").replace(/\"/g, '&quot;');
+}
+
+function normalizeMediaUrl(url) {
+    if (!url) return '';
+    let clean = url.trim();
+    if (!clean) return '';
+    if (clean.startsWith('/')) return clean;
+    if (clean.startsWith('By_Date/')) return `/${clean}`;
+    if (clean.startsWith('Extracted/By_Date/')) return `/${clean.substring('Extracted/'.length)}`;
+    return `/${clean}`;
 }
 
 let audioCtx;
@@ -212,7 +222,7 @@ function renderDashboard(data) {
         }
 
         feed.innerHTML += `
-            <div onclick="searchAndPlay('${escapeAttr(d.Com_Name)}', '${escapeAttr(d.Sci_Name)}', '${d.Date}', '${d.Time}', '${pct}')" class="flex justify-between items-center bg-[var(--bn-panel)] p-3 rounded-lg border border-[var(--bn-border)] cursor-pointer hover:bg-[var(--bn-bg)] transition-colors group">
+            <div onclick="searchAndPlay('${escapeAttr(d.Com_Name)}', '${escapeAttr(d.Sci_Name)}', '${d.Date}', '${d.Time}', '${pct}', '${escapeAttr(d.media_url || '')}')" class="flex justify-between items-center bg-[var(--bn-panel)] p-3 rounded-lg border border-[var(--bn-border)] cursor-pointer hover:bg-[var(--bn-bg)] transition-colors group">
                 <div class="flex items-center gap-3 overflow-hidden">
                     <div class="w-8 h-8 rounded-full bg-[var(--bn-card)] text-[var(--bn-highlight)] flex items-center justify-center border border-[var(--bn-border)] group-hover:bg-[var(--bn-highlight)] group-hover:text-[#122617] transition-colors shrink-0">
                         <svg class="w-4 h-4 ml-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path></svg>
@@ -323,7 +333,7 @@ function appendDbRows(data) {
             <td class="p-3 text-slate-400 italic">${d.Sci_Name}</td>
             <td class="p-3 text-[var(--bn-highlight)] font-mono">${pct}%</td>
             <td class="p-3 text-right">
-                <button onclick="searchAndPlay('${escapeAttr(d.Com_Name)}', '${escapeAttr(d.Sci_Name)}', '${d.Date}', '${d.Time}', '${pct}')" class="text-[var(--bn-highlight)] hover:text-white transition-colors" title="Play Audio">
+                <button onclick="searchAndPlay('${escapeAttr(d.Com_Name)}', '${escapeAttr(d.Sci_Name)}', '${d.Date}', '${d.Time}', '${pct}', '${escapeAttr(d.media_url || '')}')" class="text-[var(--bn-highlight)] hover:text-white transition-colors" title="Play Audio">
                     <svg class="w-6 h-6 inline" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path></svg>
                 </button>
             </td>
@@ -663,7 +673,7 @@ async function renderAnalytics() {
             if(d.Time > stats[d.Com_Name].last) stats[d.Com_Name].last = d.Time;
         });
         Object.entries(stats).sort((a,b)=>b[1].c - a[1].c).forEach(([sp, d]) => {
-            tbody.innerHTML += `<tr class="hover:bg-[var(--bn-bg)] transition-colors cursor-pointer border-b border-[var(--bn-border)]" onclick="searchAndPlay('${escapeAttr(sp)}', '${escapeAttr(d.sci)}', '${todayStr}', '${d.last}', '')"><td class="p-4 font-bold text-white">${sp}</td><td class="p-4 text-slate-300">${d.c}</td><td class="p-4 text-slate-300">${d.last}</td></tr>`;
+            tbody.innerHTML += `<tr class="hover:bg-[var(--bn-bg)] transition-colors cursor-pointer border-b border-[var(--bn-border)]" onclick="searchAndPlay('${escapeAttr(sp)}', '${escapeAttr(d.sci)}', '${todayStr}', '${d.last}', '', '')"><td class="p-4 font-bold text-white">${sp}</td><td class="p-4 text-slate-300">${d.c}</td><td class="p-4 text-slate-300">${d.last}</td></tr>`;
         });
     }
 
@@ -730,7 +740,7 @@ async function renderAnalytics() {
         if (btn) btn.click();
     }
 
-    async function searchAndPlay(species, sciName, date, time, pct) {
+    async function searchAndPlay(species, sciName, date, time, pct, mediaUrl = '') {
         console.log(`[DEBUG] 1. searchAndPlay TRIGGERED! Inputs:`, {species, sciName, date, time, pct});
         
         try {
@@ -744,6 +754,13 @@ async function renderAnalytics() {
             }
         } catch (e) {
             console.error("[DEBUG] Error during gallery check:", e);
+        }
+
+        if (mediaUrl) {
+            const normalizedUrl = normalizeMediaUrl(mediaUrl);
+            console.log(`[DEBUG] 3. Opening modal with explicit media_url: ${normalizedUrl}`);
+            await openDetectionModal(normalizedUrl, species, sciName, pct, normalizedUrl.split('/').pop() || 'audio.mp3');
+            return;
         }
 
         const timeStr = time ? time.replace(/:/g, '') : '';
@@ -762,7 +779,7 @@ async function renderAnalytics() {
             } else {
                 const sanitizedSpecies = species.replace(/\s+/g, '_');
                 const fallbackFilename = `${sanitizedSpecies}-${pct}-${date}-birdnet-${time}.mp3`;
-                const fallbackPath = `Extracted/By_Date/${date}/${sanitizedSpecies}/${fallbackFilename}`;
+                const fallbackPath = `/By_Date/${date}/${sanitizedSpecies}/${fallbackFilename}`;
                 console.log(`[DEBUG] 4b. Opening modal with FALLBACK path: ${fallbackPath}`);
                 await openDetectionModal(fallbackPath, species, sciName, pct, fallbackFilename);
             }
@@ -808,7 +825,7 @@ async function renderAnalytics() {
             });
         }
         
-        const cleanUrl = url.startsWith('/') ? url : '/' + url;
+        const cleanUrl = normalizeMediaUrl(url);
         const modalAudioEl = document.getElementById('modal-audio');
         if (modalAudioEl) modalAudioEl.src = cleanUrl;
         

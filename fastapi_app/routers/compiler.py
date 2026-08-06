@@ -1,6 +1,7 @@
 # routers/compiler.py
 from fastapi import APIRouter, BackgroundTasks, HTTPException
 from pydantic import BaseModel, Field
+from typing import Optional
 import os
 import re
 import time
@@ -15,8 +16,8 @@ class CompileRequest(BaseModel):
     species: str
     min_conf: float = Field(0.7, ge=0.0, le=1.0)
     limit: int = Field(25, le=50) # Set a reasonable upper limit
-    start_date: str | None = None
-    end_date: str | None = None
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
 
 # --- Background Task ---
 
@@ -24,8 +25,8 @@ def run_ffmpeg_compilation(
     target_species: str, 
     min_conf: float, 
     limit: int, 
-    start_date: str | None, 
-    end_date: str | None
+    start_date: Optional[str], 
+    end_date: Optional[str]
 ):
     """
     This function runs in the background. It finds relevant files
