@@ -58,7 +58,7 @@ app.add_middleware(
 
 # --- Routers ---
 app.include_router(system.router, prefix="/api", tags=["System & Config"])
-app.include_router(detections.router, prefix="/api/detections", tags=["Detections & Stats"])
+app.include_router(detections.router, prefix="/api", tags=["Detections & Stats"])
 app.include_router(gallery.router, prefix="/api", tags=["Media Gallery"])
 app.include_router(streaming.router, prefix="/api", tags=["Live Streaming"])
 app.include_router(compiler.router, prefix="/api", tags=["Audio Compiler"])

@@ -40,6 +40,11 @@ function escapeAttr(str) {
     return str.replace(/'/g, "\\'").replace(/\"/g, '&quot;');
 }
 
+function getTodayStr() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 function normalizeMediaUrl(url) {
     if (!url) return '';
     let clean = url.trim();
@@ -247,11 +252,14 @@ function renderDashboard(data) {
 
 let dbCurrentPage = 0;
 const dbPageSize = 50;
+let dbTotalCount = 0;
 let dbIsLoading = false;
 let dbHasMore = true;
 let currentDbQuery = {};
 
 function searchDatabase() {
+    dbCurrentPage = 1;
+    dbHasMore = true;
     currentDbQuery = {
         sp: document.getElementById('db-filter-species').value,
         dStart: document.getElementById('db-filter-date-start').value,
@@ -260,7 +268,9 @@ function searchDatabase() {
         tEnd: document.getElementById('db-filter-time-end').value,
         minConf: parseFloat(document.getElementById('db-filter-conf').value)
     };
-    fetchPaginatedDetections(true); 
+    const tbody = document.getElementById('db-table-body');
+    if (tbody) tbody.innerHTML = '';
+    fetchPaginatedDetections(true);
 }
 
 async function fetchPaginatedDetections(isNewSearch = false) {
@@ -295,11 +305,14 @@ async function fetchPaginatedDetections(isNewSearch = false) {
     try {
         const res = await fetch(API_BASE + `/api/detections?${params.toString()}`);
         const payload = await res.json();
-        const data = payload.detections;
-        const totalCount = payload.total_count;
+        const data = payload.detections || [];
+        const totalCount = payload.total_count || 0;
+        dbTotalCount = totalCount;
 
         if (data.length < dbPageSize) {
             dbHasMore = false;
+        } else {
+            dbHasMore = true;
         }
 
         appendDbRows(data);
@@ -308,6 +321,8 @@ async function fetchPaginatedDetections(isNewSearch = false) {
         const tbody = document.getElementById('db-table-body');
         const totalShowing = tbody ? tbody.rows.length : 0;
         if (countEl) countEl.innerText = `Showing ${totalShowing} of ${totalCount.toLocaleString()} results ${!dbHasMore ? '(End of List)' : ''}`;
+        updateDatabasePaginationInfo();
+        updateDatabasePaginationButtons();
 
     } catch (e) {
         console.error("Failed to load paginated detections", e);
@@ -350,12 +365,24 @@ function appendDbRows(data) {
     tbody.innerHTML += rowsHtml;
 }
 
-function populateDatabaseFilter() {
-    const speciesSet = new Set(dbData.map(d => d.Com_Name).filter(Boolean));
-    const dataList = document.getElementById('species-list-options');
-    const inputEl = document.getElementById('db-filter-species');
-    if (inputEl) inputEl.placeholder = `Search among ${speciesSet.size} species...`;
-    if (dataList) dataList.innerHTML = Array.from(speciesSet).sort().map(s => `<option value="${s.replace(/"/g, '&quot;')}"></option>`).join('');
+async function populateDatabaseFilter() {
+        const speciesSet = new Set(dbData.map(d => d.Com_Name).filter(Boolean));
+        const dataList = document.getElementById('species-list-options');
+        const inputEl = document.getElementById('db-filter-species');
+        if (inputEl) inputEl.placeholder = `Search among ${speciesSet.size} species...`;
+        if (dataList) dataList.innerHTML = Array.from(speciesSet).sort().map(s => `<option value="${s.replace(/"/g, '&quot;')}"></option>`).join('');
+
+        try {
+            const res = await fetch(API_BASE + '/api/species');
+            if (res.ok) {
+                const speciesList = await res.json();
+                const combined = new Set([...speciesSet, ...speciesList.filter(Boolean)]);
+                if (dataList) dataList.innerHTML = Array.from(combined).sort().map(s => `<option value="${s.replace(/"/g, '&quot;')}"></option>`).join('');
+                if (inputEl) inputEl.placeholder = `Search among ${combined.size} species...`;
+            }
+        } catch (e) {
+            console.warn('Failed to fetch all species list:', e);
+        }
 }
 
 function filterDatabase() {
@@ -381,23 +408,35 @@ function exportDatabaseCSV() {
     a.click();
 }
 
-let currentAnalyticsMode = 'acc';
-function switchAnalytics(mode, buttonEl) {
-    currentAnalyticsMode = mode;
-    document.querySelectorAll('#tab-analytics .toggle-btn').forEach(b => b.classList.remove('active'));
-    
-    const targetBtn = buttonEl || document.querySelector(`#tab-analytics .toggle-btn[onclick*="${mode}"]`);
-    if (targetBtn) targetBtn.classList.add('active');
-    
-    const uToggle = document.getElementById('weather-unit-toggle');
-    const hContainer = document.getElementById('analytics-health-container');
-    const cContainer = document.getElementById('analytics-chart-container');
+function updateDatabasePaginationInfo() {
+    const pageInfo = document.getElementById('db-page-info');
+    if (!pageInfo) return;
+    const totalPages = dbTotalCount ? Math.max(1, Math.ceil(dbTotalCount / dbPageSize)) : 1;
+    const currentPage = Math.max(1, Math.min(totalPages, dbCurrentPage));
+    pageInfo.innerText = `Page ${currentPage} of ${totalPages}`;
+}
 
-    if (uToggle) uToggle.classList.toggle('hidden', mode !== 'weather');
-    
-    if (mode === 'health') {
-        if (cContainer) cContainer.classList.add('hidden');
-        if (hContainer) hContainer.classList.remove('hidden');
+function updateDatabasePaginationButtons() {
+    const prevBtn = document.getElementById('btn-db-prev');
+    const nextBtn = document.getElementById('btn-db-next');
+    if (prevBtn) prevBtn.disabled = dbCurrentPage <= 1;
+    if (nextBtn) nextBtn.disabled = !dbHasMore;
+}
+
+function updateDatabasePaginationInfo() {
+    const pageInfo = document.getElementById('db-page-info');
+    if (!pageInfo) return;
+    const totalPages = dbTotalCount ? Math.ceil(dbTotalCount / dbPageSize) : 1;
+    const currentPage = Math.max(1, Math.min(totalPages, dbCurrentPage));
+    pageInfo.innerText = `Page ${currentPage} of ${totalPages}`;
+}
+
+function updateDatabasePaginationButtons() {
+    const prevBtn = document.getElementById('btn-db-prev');
+    const nextBtn = document.getElementById('btn-db-next');
+    if (prevBtn) prevBtn.disabled = dbCurrentPage <= 1;
+    if (nextBtn) nextBtn.disabled = !dbHasMore;
+}
         const globalFilter = document.getElementById('global-date-filter');
         const days = globalFilter ? globalFilter.value : 'all';
         const filtered = filterDataByDays(dbData, days);
@@ -1239,71 +1278,16 @@ async function renderAnalytics() {
     }
 
     function populateConfigForm() {
-        const container = document.getElementById('config-form-container');
-        if (!container) return;
-        if (!configData || Object.keys(configData).length === 0) {
-            container.innerHTML = '<p class="text-red-400">Failed to load birdnet.conf</p>';
-            return;
+        if (!configData || Object.keys(configData).length === 0) return;
+        for (const [key, value] of Object.entries(configData)) {
+            const el = document.getElementById(`config-${key}`) || document.getElementById(`conf-${key}`);
+            if (!el) continue;
+            if (el.type === 'checkbox') {
+                el.checked = (value === 'true' || value === '1' || value === true);
+            } else {
+                el.value = value;
+            }
         }
-        
-        let html = '';
-        const keyFields = ['CONFIDENCE', 'SENSITIVITY', 'OVERLAP', 'PRIVACY_THRESHOLD'];
-        
-        keyFields.forEach(k => {
-            const val = configData[k] || '';
-            html += `
-            <div>
-                <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">${k.replace(/_/g, ' ')}</label>
-                <input type="text" id="conf-${k}" value="${val}" class="w-full bg-[var(--bn-bg)] text-white border border-[var(--bn-border)] rounded px-3 py-2 font-mono text-sm focus:outline-none focus:border-[var(--bn-highlight)]">
-            </div>
-            `;
-        });
-        container.innerHTML = html;
-
-        const generalFields = ['SITE_NAME', 'LATITUDE', 'LONGITUDE', 'TIMEZONE', 'BIRDWEATHER_ID', 'DATABASE_LANG', 'CADDY_PWD', 'BIRDNETPI_URL'];
-        generalFields.forEach(key => {
-            const el = document.getElementById(`config-${key}`);
-            if (el && configData[key]) el.value = configData[key];
-        });
-
-        if (configData.FULL_DISK) {
-            const radio = document.getElementById(`config-FULL_DISK-${configData.FULL_DISK}`);
-            if (radio) radio.checked = true;
-        }
-        const purgeThreshold = document.getElementById('config-PURGE_THRESHOLD');
-        if (purgeThreshold && configData.PURGE_THRESHOLD) purgeThreshold.value = configData.PURGE_THRESHOLD;
-        
-        const maxFiles = document.getElementById('config-MAX_FILES_SPECIES');
-        if (maxFiles && configData.MAX_FILES_SPECIES) maxFiles.value = configData.MAX_FILES_SPECIES;
-
-        const audioFields = ['REC_CARD', 'CHANNELS', 'RECORDING_LENGTH', 'EXTRACTION_LENGTH', 'HIGHPASS_FREQ', 'AUDIOFMT'];
-        audioFields.forEach(key => {
-            const el = document.getElementById(`config-${key}`);
-            if (el && configData[key]) el.value = configData[key];
-        });
-
-        const analysisFields = ['MODEL', 'SF_THRESH', 'RARE_SPECIES_THRESHOLD', 'RAW_SPECTROGRAM'];
-        analysisFields.forEach(key => {
-            const el = document.getElementById(`config-${key}`);
-            if (el && configData[key]) el.value = configData[key];
-        });
-
-        const notificationFields = [
-            'APPRISE_SERVICES', 'APPRISE_NOTIFICATION_TITLE', 'APPRISE_NOTIFICATION_BODY', 'APPRISE_MINIMUM_SECONDS_BETWEEN_NOTIFICATIONS_PER_SPECIES',
-            'APPRISE_ONLY_NOTIFY_SPECIES_NAMES', 'APPRISE_ONLY_NOTIFY_SPECIES_NAMES_2'
-        ];
-        notificationFields.forEach(key => {
-            const el = document.getElementById(`config-${key}`);
-            if (el && configData[key]) el.value = configData[key];
-        });
-        const notificationCheckboxes = [
-            'APPRISE_NOTIFY_EACH_DETECTION', 'APPRISE_NOTIFY_NEW_SPECIES', 
-            'APPRISE_NOTIFY_NEW_SPECIES_EACH_DAY', 'APPRISE_WEEKLY_REPORT'
-        ];
-        notificationCheckboxes.forEach(key => {
-            const el = document.getElementById(`config-${key}`);
-            if (el && configData[key] === 'true') el.checked = true;
-        });
     }
 
     let currentSpeciesList = '';
@@ -1510,7 +1494,7 @@ async function renderAnalytics() {
         const loader = document.getElementById('loading-indicator');
         if (loader) loader.classList.remove('hidden');
         try {
-            const res = await fetch(API_BASE + '/api/detections');
+            const res = await fetch(API_BASE + '/api/detections?limit=50&offset=0');
             const payload = await res.json();
             dbData = payload.detections || [];
             window.currentDbExport = dbData;
@@ -1525,7 +1509,7 @@ async function renderAnalytics() {
             if (typeof applyGlobalFilter === 'function') applyGlobalFilter();
             if (typeof updateSystemStats === 'function') updateSystemStats();
             if (typeof updateCompilerSuggestions === 'function') updateCompilerSuggestions();
-            if (typeof populateDatabaseFilter === 'function') populateDatabaseFilter();
+            if (typeof populateDatabaseFilter === 'function') await populateDatabaseFilter();
             if (typeof filterDatabase === 'function') filterDatabase();
 
             setInterval(() => {
@@ -1579,6 +1563,43 @@ async function renderAnalytics() {
             attachSidebarNavigation();
         } catch (e) {
             console.error("attachSidebarNavigation() failed:", e);
+        }
+
+        const prevBtn = document.getElementById('btn-db-prev');
+        const nextBtn = document.getElementById('btn-db-next');
+        if (prevBtn) {
+            prevBtn.onclick = () => {
+                if (dbCurrentPage > 1) {
+                    dbCurrentPage -= 1;
+                    const tbody = document.getElementById('db-table-body');
+                    if (tbody) tbody.innerHTML = '';
+                    fetchPaginatedDetections(false);
+                }
+            };
+        }
+        if (nextBtn) {
+            nextBtn.onclick = () => {
+                if (dbHasMore) {
+                    dbCurrentPage += 1;
+                    const tbody = document.getElementById('db-table-body');
+                    if (tbody) tbody.innerHTML = '';
+                    fetchPaginatedDetections(false);
+                }
+            };
+        }
+
+        const statsBtn = document.getElementById('modal-stats-btn');
+        if (statsBtn) {
+            statsBtn.onclick = () => {
+                const popover = document.getElementById('history-popover');
+                if (popover) {
+                    popover.classList.toggle('hidden');
+                    const speciesName = document.getElementById('modal-title')?.innerText || '';
+                    if (!popover.classList.contains('hidden') && typeof drawModalHistoryChart === 'function') {
+                        drawModalHistoryChart(speciesName, '30');
+                    }
+                }
+            };
         }
     }
 
