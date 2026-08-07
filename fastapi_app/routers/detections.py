@@ -186,7 +186,6 @@ def get_detections(
         cursor.execute(count_query, params)
         total_count = cursor.fetchone()[0]
         
-        # Get the paginated data
         query = f"SELECT Date, Time, Sci_Name, Com_Name, Confidence, File_Name FROM detections {where_sql} ORDER BY Date DESC, Time DESC LIMIT ? OFFSET ?"
         cursor.execute(query, params + [limit, offset])
         rows = cursor.fetchall()

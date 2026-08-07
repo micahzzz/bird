@@ -89,17 +89,9 @@ function switchTools(view) {
         if (el) el.classList.toggle('hidden', v !== view);
     });
     
-    if (view === 'services') loadServiceStatus();
-    if (view === 'files') loadFileManager();
-}
-
-function getTodayStr() { 
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; 
-}
-
-async function init() {
-    const loader = document.getElementById('loading-indicator');
+        if (view === 'config') {
+            populateConfigForm();
+        }
     if (loader) loader.classList.remove('hidden');
     try {
         const res = await fetch(API_BASE + '/api/detections');
@@ -1104,6 +1096,15 @@ async function renderAnalytics() {
             settingsBtn.addEventListener('click', (event) => {
                 event.stopPropagation();
                 settingsPopup.classList.toggle('hidden');
+            });
+        }
+
+        const modalOverlay = document.getElementById('detection-modal');
+        if (modalOverlay) {
+            modalOverlay.addEventListener('click', (e) => {
+                if (e.target && e.target.id === 'detection-modal') {
+                    closeModal();
+                }
             });
         }
 

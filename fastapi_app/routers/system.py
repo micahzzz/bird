@@ -1,10 +1,12 @@
 import os
 import re
 import shutil
+import sqlite3
 import subprocess
 import tempfile
 from fastapi import APIRouter, HTTPException, Body, Query
 from fastapi.responses import FileResponse
+from fastapi_app.database import get_db_path
 
 router = APIRouter(tags=["System & Config"])
 
@@ -251,6 +253,43 @@ async def get_config():
     and notification settings from apprise.txt and body.txt.
     """
     return get_config_full()
+
+@router.get("/collage-stats")
+def get_collage_stats(days: str = Query('30', description='Timeframe for collage stats.')):
+    db_path = get_db_path()
+    if not db_path or not os.path.exists(db_path):
+        raise HTTPException(status_code=404, detail="Database not found")
+
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+
+    where_clause = ""
+    params = []
+    if days and days != 'all':
+        if days == 'today':
+            where_clause = "WHERE Date = date('now')"
+        elif days.isdigit():
+            where_clause = "WHERE Date >= date('now', ?)"
+            params.append(f'-{days} days')
+
+    query = (
+        f"SELECT Sci_Name, Com_Name, COUNT(*) as n, MAX(Date || ' ' || Time) as last_seen "
+        f"FROM detections {where_clause} GROUP BY Sci_Name, Com_Name ORDER BY n DESC"
+    )
+    cursor.execute(query, params)
+    rows = cursor.fetchall()
+    conn.close()
+
+    species_data = [
+        {
+            'sci': row[0],
+            'com': row[1],
+            'n': row[2],
+            'last_seen': row[3]
+        }
+        for row in rows
+    ]
+    return {'species': species_data}
 
 @router.post("/config/update")
 async def update_config(payload: dict = Body(...)):
