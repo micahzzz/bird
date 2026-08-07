@@ -78,7 +78,7 @@ Chart.defaults.color = '#cbd5e1';
 Chart.defaults.scale.grid.color = 'rgba(255, 255, 255, 0.1)';
 Chart.defaults.scale.ticks.color = '#cbd5e1';
 
-function switchTools(view) {
+async function switchTools(view) {
     document.querySelectorAll('#tab-tools > div > .toggle-btn').forEach(b => b.classList.remove('active'));
     
     const activeBtn = document.querySelector(`#tab-tools .toggle-btn[onclick*="${view}"]`);
@@ -1524,10 +1524,18 @@ async function renderAnalytics() {
         });
     }
 
-    const onReady = () => {
-        init();
-        attachSidebarNavigation();
-    };
+    async function onReady() {
+        try {
+            await init();
+        } catch (e) {
+            console.error("init() failed:", e);
+        }
+        try {
+            attachSidebarNavigation();
+        } catch (e) {
+            console.error("attachSidebarNavigation() failed:", e);
+        }
+    }
 
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', onReady);
