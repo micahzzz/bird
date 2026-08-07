@@ -8,6 +8,14 @@ from fastapi.responses import FileResponse
 
 router = APIRouter(tags=["System & Config"])
 
+
+def run_command(command, timeout=2):
+    try:
+        return subprocess.check_output(command, text=True, timeout=timeout).strip()
+    except (subprocess.TimeoutExpired, FileNotFoundError, subprocess.CalledProcessError):
+        return None
+
+
 CONF_FILE = os.path.expanduser("~/BirdNET-Pi/birdnet.conf")
 APPRISE_FILE = os.path.expanduser("~/BirdNET-Pi/apprise.txt")
 BODY_FILE = os.path.expanduser("~/BirdNET-Pi/body.txt")
@@ -99,14 +107,50 @@ def update_config_full(updates: dict):
         return False, str(e)
 
 
+def parse_temp_output(output: str) -> float:
+    try:
+        if not output:
+            return 0.0
+        if output.startswith("temp="):
+            output = output.split("=", 1)[1]
+        output = output.replace("'C", "").replace("°C", "").strip()
+        return round(float(output), 1)
+    except Exception:
+        return 0.0
+
+
 def get_cpu_temp():
+    try:
+        output = run_command(["vcgencmd", "measure_temp"], timeout=2)
+        temp = parse_temp_output(output)
+        if temp > 0.0:
+            return temp
+    except Exception:
+        pass
+
     try:
         with open("/sys/class/thermal/thermal_zone0/temp", "r") as f:
             return round(float(f.read().strip()) / 1000.0, 1)
     except Exception:
         return 0.0
 
+
 def get_memory_usage():
+    try:
+        output = run_command(["free", "-m"], timeout=2)
+        if output:
+            lines = output.splitlines()
+            for line in lines:
+                if line.lower().startswith("mem:") or line.lower().startswith("memtotal"):
+                    parts = re.split(r"\s+", line.strip())
+                    if len(parts) >= 3:
+                        total = float(parts[1])
+                        used = float(parts[2])
+                        if total > 0:
+                            return round((used / total) * 100.0, 1)
+    except Exception:
+        pass
+
     try:
         mem = {}
         with open("/proc/meminfo", "r") as f:
@@ -121,6 +165,7 @@ def get_memory_usage():
     except Exception:
         return 0.0
 
+
 def get_disk_usage():
     try:
         usage = shutil.disk_usage("/")
@@ -128,7 +173,15 @@ def get_disk_usage():
     except Exception:
         return 0.0
 
+
 def get_uptime_str():
+    try:
+        output = run_command(["uptime", "-p"], timeout=2)
+        if output:
+            return output.strip()
+    except Exception:
+        pass
+
     try:
         with open("/proc/uptime", "r") as f:
             uptime_seconds = float(f.readline().split()[0])
@@ -141,7 +194,7 @@ def get_uptime_str():
         parts.append(f"{minutes} minute{'s' if minutes != 1 else ''}")
         return ", ".join(parts)
     except Exception:
-        return "Unknown"
+        return "Active"
 
 @router.get("/system")
 async def get_system_telemetry():

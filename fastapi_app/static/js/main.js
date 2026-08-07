@@ -28,23 +28,39 @@ Chart.defaults.color = '#cbd5e1';
 Chart.defaults.scale.grid.color = 'rgba(255, 255, 255, 0.1)';
 Chart.defaults.scale.ticks.color = '#cbd5e1';
 
-document.querySelectorAll('.nav-item').forEach(el => {
+const navItems = Array.from(document.querySelectorAll('.nav-item'));
+const tabContents = Array.from(document.querySelectorAll('.tab-content'));
+
+navItems.forEach(el => {
     el.addEventListener('click', async (e) => {
-        document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
-        document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
-        
         const target = e.currentTarget;
-        target.classList.add('active');
         const tabId = target.getAttribute('data-tab');
-        document.getElementById(`tab-${tabId}`).classList.add('active');
+        const targetTab = document.getElementById(`tab-${tabId}`);
+
+        if (!targetTab) {
+            console.warn(`Sidebar tab target not found: tab-${tabId}`);
+            return;
+        }
+
+        navItems.forEach(nav => nav.classList.remove('active'));
+        tabContents.forEach(tab => {
+            tab.classList.remove('active');
+            tab.classList.add('hidden');
+            tab.style.display = 'none';
+        });
+
+        target.classList.add('active');
+        targetTab.classList.remove('hidden');
+        targetTab.classList.add('active');
+        targetTab.style.display = '';
         document.getElementById('current-tab-title').innerText = target.innerText.trim();
-        
+
         const filter = document.getElementById('global-date-filter');
         if (['dashboard', 'analytics'].includes(tabId)) filter.classList.remove('hidden');
         else filter.classList.add('hidden');
 
         if (tabId === 'analytics') switchAnalytics('acc', document.querySelector('#tab-analytics .toggle-btn'));
-        
+
         if (tabId === 'gallery' && galleryCacheRecent.length === 0) {
             await fetchGallery();
         } else if (tabId === 'gallery') {

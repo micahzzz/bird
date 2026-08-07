@@ -6,6 +6,7 @@ import os
 import urllib.parse
 
 from fastapi_app.config import EXTRACTED_AUDIO_DIR
+from fastapi_app.database import setup_database
 
 # Import your routers here
 from fastapi_app.routers import system, detections, gallery, compiler, streaming
@@ -21,9 +22,14 @@ app = FastAPI(
 @app.on_event("startup")
 async def startup_event():
     """
-    On startup, build the species history cache to provide insights
-    on 'new' or 'rare' species detections.
+    On startup, ensure the database is indexed and build the species
+    history cache for 'new' or 'rare' species detections.
     """
+    try:
+        setup_database()
+    except Exception as e:
+        print(f"Error setting up database indexes on startup: {e}")
+
     try:
         detections.build_species_history_cache()
     except Exception as e:
