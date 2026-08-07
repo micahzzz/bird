@@ -1,37 +1,28 @@
-const API_BASE = 'http://' + (window.location.hostname || 'localhost') + ':9999';
-let dbData = [];
-let configData = {};
-let activeChart = null;
-let isMetric = false; 
-let galleryCacheRecent = [];
-let galleryCacheBest = [];
-let currentBestSort = 'name';
-window.currentDbExport = [];
-
-let modalChart = null;
+window.currentDbExport = window.currentDbExport || [];
 
 function escapeAttr(str) {
     if (!str) return '';
     return str.replace(/'/g, "\\'").replace(/"/g, '&quot;');
 }
 
-let audioCtx;
-let trackNode;
-let gainNode;
-let highpassNode;
-let lowpassNode;
-let isAudioSetup = false;
-let animationFrameId;
+window.audioCtx = window.audioCtx || null;
+window.trackNode = window.trackNode || null;
+window.gainNode = window.gainNode || null;
+window.highpassNode = window.highpassNode || null;
+window.lowpassNode = window.lowpassNode || null;
+window.isAudioSetup = typeof window.isAudioSetup !== 'undefined' ? window.isAudioSetup : false;
+window.animationFrameId = window.animationFrameId || null;
 
 Chart.defaults.font.family = "'Inter', sans-serif";
 Chart.defaults.color = '#cbd5e1';
 Chart.defaults.scale.grid.color = 'rgba(255, 255, 255, 0.1)';
 Chart.defaults.scale.ticks.color = '#cbd5e1';
 
-const navItems = Array.from(document.querySelectorAll('.nav-item'));
-const tabContents = Array.from(document.querySelectorAll('.tab-content'));
+document.addEventListener('DOMContentLoaded', () => {
+    const navItems = Array.from(document.querySelectorAll('.nav-item'));
+    const tabContents = Array.from(document.querySelectorAll('.tab-content'));
 
-navItems.forEach(el => {
+    navItems.forEach(el => {
     el.addEventListener('click', async (e) => {
         const target = e.currentTarget;
         const tabId = target.getAttribute('data-tab');
@@ -70,6 +61,7 @@ navItems.forEach(el => {
         }
         if (tabId === 'tools') populateConfigForm();
     });
+  });
 });
 
 function switchTools(view) {
