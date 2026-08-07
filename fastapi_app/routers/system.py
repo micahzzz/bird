@@ -22,6 +22,25 @@ BODY_FILE = os.path.expanduser("~/BirdNET-Pi/body.txt")
 SPECIES_DIR = os.path.expanduser("~/BirdNET-Pi/")
 STORAGE_DIR = os.path.expanduser("~/BirdSongs/")
 
+DEFAULT_CONFIG_VALUES = {
+    'CONFIDENCE': '0.5',
+    'SENSITIVITY': '0.5',
+    'OVERLAP': '0.5',
+    'PRIVACY_THRESHOLD': '0.5',
+    'SITE_NAME': '',
+    'LATITUDE': '',
+    'LONGITUDE': '',
+    'TIMEZONE': '',
+    'BIRDWEATHER_ID': '',
+    'DATABASE_LANG': 'en',
+    'CADDY_PWD': '',
+    'BIRDNETPI_URL': '',
+    'FULL_DISK': 'false',
+    'PURGE_THRESHOLD': '30',
+    'MAX_FILES_SPECIES': '100',
+    'BIRDNETPI_PASSWORD': '',
+}
+
 def get_config_full():
     """Parses birdnet.conf and related notification files."""
     config = {}
@@ -31,7 +50,7 @@ def get_config_full():
                 if '=' in line and not line.strip().startswith('#'):
                     key, val = line.strip().split('=', 1)
                     config[key.strip()] = val.strip(' "\'')
-    
+
     if os.path.exists(APPRISE_FILE):
         with open(APPRISE_FILE, 'r', encoding='utf-8') as f:
             config['APPRISE_SERVICES'] = f.read()
@@ -43,6 +62,9 @@ def get_config_full():
             config['APPRISE_NOTIFICATION_BODY'] = f.read()
     else:
         config['APPRISE_NOTIFICATION_BODY'] = ''
+
+    for key, value in DEFAULT_CONFIG_VALUES.items():
+        config.setdefault(key, value)
         
     return config
 
@@ -299,13 +321,19 @@ async def test_notification(payload: dict = Body(...)):
             os.remove(t_body_path)
 
 @router.get("/log")
-async def get_system_log():
+def get_system_log():
     try:
         output = subprocess.check_output(
-            ["journalctl", "-u", "birdnet_analysis.service", "-n", "100", "--no-pager"],
-            text=True
+            ["journalctl", "-u", "birdnet_analysis.service", "-n", "50", "--no-pager"],
+            text=True,
+            stderr=subprocess.STDOUT,
+            timeout=10
         )
         return output
+    except subprocess.CalledProcessError as e:
+        return f"Error retrieving logs: {e.output.strip()}"
+    except subprocess.TimeoutExpired:
+        return "Error retrieving logs: command timed out."
     except Exception as e:
         return f"Error retrieving logs: {str(e)}"
 

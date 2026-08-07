@@ -70,6 +70,7 @@ let gainNode;
 let highpassNode;
 let lowpassNode;
 let isAudioSetup = false;
+let isModalAudioEventsInitialized = false;
 let animationFrameId;
 
 Chart.defaults.font.family = "'Inter', sans-serif";
@@ -841,8 +842,18 @@ async function renderAnalytics() {
         
         const cleanUrl = normalizeMediaUrl(url);
         const modalAudioEl = document.getElementById('modal-audio');
-        if (modalAudioEl) modalAudioEl.src = cleanUrl;
+        if (modalAudioEl) {
+            modalAudioEl.src = cleanUrl;
+            modalAudioEl.load();
+            setupModalAudioControls();
+        }
         
+        const audioBar = document.getElementById('audio-control-bar');
+        if (audioBar) {
+            audioBar.style.opacity = '1';
+            audioBar.style.pointerEvents = 'auto';
+        }
+
         const dl = document.getElementById('modal-download');
         if (dl) dl.href = cleanUrl;
         
@@ -962,6 +973,11 @@ async function renderAnalytics() {
         if(p) p.classList.add('hidden');
         const a = document.getElementById('modal-audio');
         if(a) a.pause();
+        const audioBar = document.getElementById('audio-control-bar');
+        if (audioBar) {
+            audioBar.style.opacity = '0';
+            audioBar.style.pointerEvents = 'none';
+        }
         cancelAnimationFrame(animationFrameId);
     }
 
@@ -986,25 +1002,103 @@ async function renderAnalytics() {
         if (isAudioSetup) return;
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         audioCtx = new AudioContext();
-        
+
         trackNode = audioCtx.createMediaElementSource(modalAudioEl);
-        
+
         highpassNode = audioCtx.createBiquadFilter();
         highpassNode.type = 'highpass';
         highpassNode.frequency.value = 0;
-        
+
         lowpassNode = audioCtx.createBiquadFilter();
         lowpassNode.type = 'lowpass';
         lowpassNode.frequency.value = 24000;
-        
+
         gainNode = audioCtx.createGain();
-        
+
         trackNode.connect(highpassNode);
         highpassNode.connect(lowpassNode);
-        highpassNode.connect(gainNode);
+        lowpassNode.connect(gainNode);
         gainNode.connect(audioCtx.destination);
         
         isAudioSetup = true;
+    }
+
+    function setupModalAudioControls() {
+        if (isModalAudioEventsInitialized) return;
+        const modalAudioEl = document.getElementById('modal-audio');
+        const playBtn = document.getElementById('modal-play-btn');
+        const progressContainer = document.getElementById('modal-progress-container');
+        const playIcon = document.getElementById('modal-icon-play');
+        const pauseIcon = document.getElementById('modal-icon-pause');
+        const audioControlBar = document.getElementById('audio-control-bar');
+
+        if (!modalAudioEl || !playBtn) return;
+        if (audioControlBar) {
+            audioControlBar.style.opacity = '1';
+            audioControlBar.style.pointerEvents = 'auto';
+        }
+
+        playBtn.addEventListener('click', async (event) => {
+            event.preventDefault();
+            if (!isAudioSetup) initWebAudioAPI();
+            if (audioCtx && audioCtx.state === 'suspended') {
+                await audioCtx.resume().catch(() => {});
+            }
+            if (modalAudioEl.paused) {
+                try {
+                    await modalAudioEl.play();
+                } catch (e) {
+                    console.warn('Unable to play modal audio automatically:', e);
+                }
+            } else {
+                modalAudioEl.pause();
+            }
+        });
+
+        modalAudioEl.addEventListener('play', () => {
+            if (playIcon) playIcon.classList.add('hidden');
+            if (pauseIcon) pauseIcon.classList.remove('hidden');
+            if (audioControlBar) {
+                audioControlBar.style.opacity = '1';
+                audioControlBar.style.pointerEvents = 'auto';
+            }
+            updatePlayhead();
+        });
+
+        modalAudioEl.addEventListener('pause', () => {
+            if (playIcon) playIcon.classList.remove('hidden');
+            if (pauseIcon) pauseIcon.classList.add('hidden');
+            cancelAnimationFrame(animationFrameId);
+        });
+
+        modalAudioEl.addEventListener('ended', () => {
+            if (playIcon) playIcon.classList.remove('hidden');
+            if (pauseIcon) pauseIcon.classList.add('hidden');
+            const prog = document.getElementById('modal-progress');
+            const pHead = document.getElementById('modal-playhead');
+            const mTime = document.getElementById('modal-time');
+            if (prog) prog.style.width = '0%';
+            if (pHead) pHead.style.left = '0%';
+            if (mTime) mTime.innerText = '0:00';
+            cancelAnimationFrame(animationFrameId);
+        });
+
+        if (progressContainer) {
+            progressContainer.addEventListener('click', (e) => {
+                const rect = progressContainer.getBoundingClientRect();
+                const clickX = e.clientX - rect.left;
+                const pct = Math.max(0, Math.min(100, (clickX / rect.width) * 100));
+                if (modalAudioEl.duration) {
+                    modalAudioEl.currentTime = (pct / 100) * modalAudioEl.duration;
+                    const prog = document.getElementById('modal-progress');
+                    const pHead = document.getElementById('modal-playhead');
+                    if (prog) prog.style.width = `${pct}%`;
+                    if (pHead) pHead.style.left = `${pct}%`;
+                }
+            });
+        }
+
+        isModalAudioEventsInitialized = true;
     }
 
     let liveAudioCtx, liveAnalyser, liveSource, liveDataArray;
@@ -1097,8 +1191,13 @@ async function renderAnalytics() {
     }
 
     function toggleModalAudioPlayback() {
-        const btn = document.getElementById('modal-play-btn');
-        if(btn) btn.click();
+        const modalAudioEl = document.getElementById('modal-audio');
+        if (!modalAudioEl) return;
+        if (modalAudioEl.paused) {
+            modalAudioEl.play().catch(() => {});
+        } else {
+            modalAudioEl.pause();
+        }
     }
 
     async function updateSystemStats() {
