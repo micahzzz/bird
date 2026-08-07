@@ -437,16 +437,6 @@ function updateDatabasePaginationButtons() {
     if (prevBtn) prevBtn.disabled = dbCurrentPage <= 1;
     if (nextBtn) nextBtn.disabled = !dbHasMore;
 }
-        const globalFilter = document.getElementById('global-date-filter');
-        const days = globalFilter ? globalFilter.value : 'all';
-        const filtered = filterDataByDays(dbData, days);
-        renderDiagnostics(filtered);
-    } else {
-        if (hContainer) hContainer.classList.add('hidden');
-        if (cContainer) cContainer.classList.remove('hidden');
-        renderAnalytics();
-    }
-}
 
 async function renderAnalytics() {
     try {
