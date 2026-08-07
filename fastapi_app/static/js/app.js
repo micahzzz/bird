@@ -1506,6 +1506,51 @@ async function renderAnalytics() {
     }
 
     // Initialize the app logic on ready
+    async function init() {
+        const loader = document.getElementById('loading-indicator');
+        if (loader) loader.classList.remove('hidden');
+        try {
+            const res = await fetch(API_BASE + '/api/detections');
+            const payload = await res.json();
+            dbData = payload.detections || [];
+            window.currentDbExport = dbData;
+            
+            try {
+                const confRes = await fetch(API_BASE + '/api/config');
+                configData = await confRes.json();
+            } catch (err) {
+                console.warn("Config fetch failed:", err);
+            }
+            
+            if (typeof applyGlobalFilter === 'function') applyGlobalFilter();
+            if (typeof updateSystemStats === 'function') updateSystemStats();
+            if (typeof updateCompilerSuggestions === 'function') updateCompilerSuggestions();
+            if (typeof populateDatabaseFilter === 'function') populateDatabaseFilter();
+            if (typeof filterDatabase === 'function') filterDatabase();
+
+            setInterval(() => {
+                const filterEl = document.getElementById('global-date-filter');
+                const currentFilter = filterEl ? filterEl.value : 'all';
+                if (typeof updateLiveStats === 'function') updateLiveStats(currentFilter);
+            }, 30000);
+            
+            setInterval(() => {
+                if (typeof updateSystemStats === 'function') updateSystemStats();
+            }, 15000);
+            
+            setInterval(() => {
+                if (typeof pollLog === 'function') pollLog();
+            }, 15000);
+
+        } catch (e) { 
+            const feed = document.getElementById('dash-feed');
+            if (feed) feed.innerHTML = `<p class="text-red-400 font-bold p-4">Failed to load data.</p>`;
+            console.error("Init failed:", e);
+        } finally {
+            if (loader) loader.classList.add('hidden');
+        }
+    }
+
     function attachSidebarNavigation() {
         document.querySelectorAll('.nav-item').forEach(el => {
             el.addEventListener('click', (e) => {
