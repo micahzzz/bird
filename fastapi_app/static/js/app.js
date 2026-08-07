@@ -23,7 +23,7 @@ window.serviceControl = controlService;
 window.loadFileManager = loadFileManager;
 window.deleteFile = deleteFile;
 
-const API_BASE = 'http://' + (window.location.hostname || 'localhost') + ':9999';
+const API_BASE = '';
 let dbData = [];
 let configData = {};
 let activeChart = null;
