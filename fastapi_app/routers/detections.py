@@ -232,7 +232,7 @@ def get_all_species():
 
 @router.get("/detections/stats", response_model=Stats, summary="Get Aggregate Statistics")
 def get_stats(
-    days: Optional[str] = Query(None, description="Timeframe to filter stats (e.g., '7', '30', 'today', 'all')."),
+    days: str = Query("30", description="Timeframe to filter stats (e.g., '7', '30', 'today', 'all')."),
     species_of_interest: Optional[str] = Query(None, description="Get daily counts for a specific species.")
 ):
     """
@@ -250,7 +250,7 @@ def get_stats(
             if days == 'today':
                 where_clause = "WHERE Date = date('now', 'localtime')"
             elif days.isdigit():
-                where_clause = "WHERE Date >= date('now', 'localtime', ?)"
+                where_clause = "WHERE Date >= date('now', ?)"
                 params.append(f'-{int(days)} days')
 
         # --- Aggregate stats for dashboard cards ---

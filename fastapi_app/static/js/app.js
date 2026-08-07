@@ -1153,6 +1153,25 @@ async function renderAnalytics() {
             });
         }
 
+        document.getElementById('modal-settings-popup')?.addEventListener('click', (e) => {
+            const btn = e.target.closest('.filter-btn');
+            if (!btn) return;
+            
+            const val = parseFloat(btn.dataset.val);
+            const parent = btn.parentElement;
+            if (parent) {
+                parent.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            }
+            
+            initWebAudioAPI();
+            if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+
+            if (parent?.id === 'gain-controls' && gainNode) gainNode.gain.value = val;
+            if (parent?.id === 'hp-controls' && highpassNode) highpassNode.frequency.value = val;
+            if (parent?.id === 'lp-controls' && lowpassNode) lowpassNode.frequency.value = val;
+        });
+
         isModalAudioEventsInitialized = true;
     }
 
@@ -1283,15 +1302,24 @@ async function renderAnalytics() {
         } catch(e) {}
     }
 
-    function populateConfigForm() {
-        if (!configData || Object.keys(configData).length === 0) return;
+    async function populateConfigForm() {
+        if (!configData || Object.keys(configData).length === 0) {
+            try {
+                const res = await fetch(API_BASE + '/api/config');
+                configData = await res.json();
+            } catch (e) {
+                console.error("Failed to load config:", e);
+                return;
+            }
+        }
         for (const [key, value] of Object.entries(configData)) {
             const el = document.getElementById(`config-${key}`) || document.getElementById(`conf-${key}`);
-            if (!el) continue;
-            if (el.type === 'checkbox') {
-                el.checked = (value === 'true' || value === '1' || value === true);
-            } else {
-                el.value = value;
+            if (el) {
+                if (el.type === 'checkbox') {
+                    el.checked = (value === 'true' || value === '1' || value === true);
+                } else {
+                    el.value = value;
+                }
             }
         }
     }

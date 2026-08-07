@@ -1,33 +1,38 @@
 # routers/streaming.py
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
-import httpx
+import urllib.request
+import os
 
 router = APIRouter()
 
-async def stream_generator():
+def stream_generator():
     """
     Proxies the local Icecast audio stream from localhost:8000.
     """
-    stream_url = "http://127.0.0.1:8000/stream"
-    last_error = None
+    password = ""
+    conf_path = "/home/birder/BirdNET-Pi/birdnet.conf"
+    if not os.path.exists(conf_path):
+        conf_path = os.path.expanduser("~/BirdNET-Pi/birdnet.conf")
+        
+    if os.path.exists(conf_path):
+        with open(conf_path, "r") as f:
+            for line in f:
+                if line.startswith("BIRDNETPI_PASSWORD="):
+                    password = line.strip().split("=", 1)[1].strip('"\'')
+                    break
+                    
+    stream_url = f"http://birdnet:{password}@127.0.0.1:8000/stream" if password else "http://127.0.0.1:8000/stream"
 
-    async with httpx.AsyncClient(timeout=None) as client:
-        try:
-            async with client.stream("GET", stream_url, timeout=10.0) as response:
-                if response.status_code != 200:
-                    last_error = RuntimeError(f"Stream connection failed with status {response.status_code}")
-                    raise HTTPException(status_code=503, detail=str(last_error))
-
-                async for chunk in response.aiter_bytes(chunk_size=65536):
-                    if chunk:
-                        yield chunk
-                return
-        except httpx.RequestError as e:
-            last_error = e
-
-    detail = f"Could not connect to audio stream. {last_error}" if last_error else "Could not connect to audio stream."
-    raise HTTPException(status_code=503, detail=detail)
+    try:
+        with urllib.request.urlopen(stream_url) as response:
+            while True:
+                chunk = response.read(65536)
+                if not chunk:
+                    break
+                yield chunk
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"Could not connect to audio stream. {e}")
 
 
 @router.get("/stream", summary="Proxy the Live Audio Stream")
