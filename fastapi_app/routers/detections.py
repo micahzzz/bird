@@ -195,17 +195,18 @@ def get_detections(
         # Only return the requested detection fields, plus insight.
         detections_with_insights = []
         for row in rows:
-            file_name = row['File_Name'] if 'File_Name' in row.keys() else None
+            row_dict = dict(row)
+            file_name = row_dict.get('File_Name')
             detection = {
-                "Date": row.get('Date'),
-                "Time": row.get('Time'),
-                "Sci_Name": row.get('Sci_Name'),
-                "Com_Name": row.get('Com_Name'),
-                "Confidence": row.get('Confidence'),
-                "insight": get_insight(row.get('Com_Name'), row.get('Date'))
+                "Date": row_dict.get('Date'),
+                "Time": row_dict.get('Time'),
+                "Sci_Name": row_dict.get('Sci_Name'),
+                "Com_Name": row_dict.get('Com_Name'),
+                "Confidence": row_dict.get('Confidence'),
+                "insight": get_insight(row_dict.get('Com_Name'), row_dict.get('Date'))
             }
             if file_name:
-                media_url = resolve_detection_media_url(row['Date'], row['Com_Name'], file_name)
+                media_url = resolve_detection_media_url(row_dict.get('Date'), row_dict.get('Com_Name'), file_name)
                 detection["media_url"] = media_url
             detections_with_insights.append(detection)
         
