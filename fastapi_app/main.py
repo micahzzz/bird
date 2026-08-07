@@ -3,9 +3,21 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 import os
+import sys
 import urllib.parse
+from pathlib import Path
 
-from fastapi_app.config import EXTRACTED_AUDIO_DIR
+# Ensure project root directory is on sys.path so imports work from any working directory
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+# Safe fallback imports
+try:
+    from fastapi_app.config import EXTRACTED_AUDIO_DIR
+except ModuleNotFoundError:
+    from config import EXTRACTED_AUDIO_DIR
+
 from fastapi_app.database import setup_database
 
 # Import your routers here
@@ -60,11 +72,11 @@ home_dir = os.path.expanduser('~')
 extracted_path = os.path.join(home_dir, 'BirdSongs', 'Extracted', 'By_Date')
 by_date_path = os.path.join(home_dir, 'BirdSongs', 'By_Date')
 
-if os.path.exists(extracted_path):
+if os.path.isdir(extracted_path):
     app.mount("/By_Date", StaticFiles(directory=extracted_path), name="by_date")
-elif os.path.exists(by_date_path):
+elif os.path.isdir(by_date_path):
     app.mount("/By_Date", StaticFiles(directory=by_date_path), name="by_date")
-elif EXTRACTED_AUDIO_DIR.exists():
+elif EXTRACTED_AUDIO_DIR.exists() and EXTRACTED_AUDIO_DIR.is_dir():
     app.mount("/By_Date", StaticFiles(directory=str(EXTRACTED_AUDIO_DIR)), name="by_date")
 
 # --- Root/Media Fallback Serving ---
