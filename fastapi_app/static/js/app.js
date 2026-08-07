@@ -1506,8 +1506,6 @@ async function renderAnalytics() {
     }
 
     // Initialize the app logic on ready
-    init();
-
     function attachSidebarNavigation() {
         document.querySelectorAll('.nav-item').forEach(el => {
             el.addEventListener('click', (e) => {
@@ -1526,10 +1524,15 @@ async function renderAnalytics() {
         });
     }
 
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', attachSidebarNavigation);
-    } else {
+    const onReady = () => {
+        init();
         attachSidebarNavigation();
+    };
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', onReady);
+    } else {
+        onReady();
     }
 
     // -------------------------------------------------------------
