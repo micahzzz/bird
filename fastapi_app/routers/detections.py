@@ -192,12 +192,21 @@ def get_detections(
         rows = cursor.fetchall()
         conn.close()
 
-        # Add insights and media URLs to each detection
+        # Only return the requested detection fields, plus insight.
         detections_with_insights = []
         for row in rows:
             file_name = row['File_Name'] if 'File_Name' in row.keys() else None
-            media_url = resolve_detection_media_url(row['Date'], row['Com_Name'], file_name)
-            detection = dict(row, insight=get_insight(row['Com_Name'], row['Date']), media_url=media_url)
+            detection = {
+                "Date": row.get('Date'),
+                "Time": row.get('Time'),
+                "Sci_Name": row.get('Sci_Name'),
+                "Com_Name": row.get('Com_Name'),
+                "Confidence": row.get('Confidence'),
+                "insight": get_insight(row.get('Com_Name'), row.get('Date'))
+            }
+            if file_name:
+                media_url = resolve_detection_media_url(row['Date'], row['Com_Name'], file_name)
+                detection["media_url"] = media_url
             detections_with_insights.append(detection)
         
         return {"detections": detections_with_insights, "total_count": total_count}

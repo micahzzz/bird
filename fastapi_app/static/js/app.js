@@ -1098,6 +1098,15 @@ async function renderAnalytics() {
             });
         }
 
+        const settingsBtn = document.getElementById('modal-settings-btn');
+        const settingsPopup = document.getElementById('modal-settings-popup');
+        if (settingsBtn && settingsPopup) {
+            settingsBtn.addEventListener('click', (event) => {
+                event.stopPropagation();
+                settingsPopup.classList.toggle('hidden');
+            });
+        }
+
         isModalAudioEventsInitialized = true;
     }
 

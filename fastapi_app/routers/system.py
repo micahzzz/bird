@@ -27,45 +27,62 @@ DEFAULT_CONFIG_VALUES = {
     'SENSITIVITY': '0.5',
     'OVERLAP': '0.5',
     'PRIVACY_THRESHOLD': '0.5',
+    'PURGE_THRESHOLD': '30',
+    'MAX_FILES_SPECIES': '100',
+    'REC_CARD': '',
+    'CHANNELS': '',
+    'RECORDING_LENGTH': '',
+    'EXTRACTION_LENGTH': '',
+    'HIGHPASS_FREQ': '',
+    'AUDIOFMT': '',
+    'MODEL': '',
+    'SF_THRESH': '',
+    'RARE_SPECIES_THRESHOLD': '',
+    'RAW_SPECTROGRAM': '',
     'SITE_NAME': '',
     'LATITUDE': '',
     'LONGITUDE': '',
     'TIMEZONE': '',
     'BIRDWEATHER_ID': '',
     'DATABASE_LANG': 'en',
-    'CADDY_PWD': '',
-    'BIRDNETPI_URL': '',
-    'FULL_DISK': 'false',
-    'PURGE_THRESHOLD': '30',
-    'MAX_FILES_SPECIES': '100',
-    'BIRDNETPI_PASSWORD': '',
+    'APPRISE_SERVICES': '',
+    'APPRISE_NOTIFICATION_BODY': '',
 }
+
+ALLOWED_CONFIG_KEYS = set(DEFAULT_CONFIG_VALUES.keys())
+
 
 def get_config_full():
     """Parses birdnet.conf and related notification files."""
     config = {}
-    if os.path.exists(CONF_FILE):
-        with open(CONF_FILE, 'r') as f:
+    conf_path = os.path.expanduser('~/BirdNET-Pi/birdnet.conf')
+    apprise_path = os.path.expanduser('~/BirdNET-Pi/apprise.txt')
+    body_path = os.path.expanduser('~/BirdNET-Pi/body.txt')
+
+    if os.path.exists(conf_path):
+        with open(conf_path, 'r') as f:
             for line in f:
                 if '=' in line and not line.strip().startswith('#'):
                     key, val = line.strip().split('=', 1)
-                    config[key.strip()] = val.strip(' "\'')
+                    normalized_key = key.strip().upper()
+                    if normalized_key in ALLOWED_CONFIG_KEYS:
+                        config[normalized_key] = val.strip(' "\'')
 
-    if os.path.exists(APPRISE_FILE):
-        with open(APPRISE_FILE, 'r', encoding='utf-8') as f:
+    if os.path.exists(apprise_path):
+        with open(apprise_path, 'r', encoding='utf-8') as f:
             config['APPRISE_SERVICES'] = f.read()
     else:
         config['APPRISE_SERVICES'] = ''
 
-    if os.path.exists(BODY_FILE):
-        with open(BODY_FILE, 'r', encoding='utf-8') as f:
+    if os.path.exists(body_path):
+        with open(body_path, 'r', encoding='utf-8') as f:
             config['APPRISE_NOTIFICATION_BODY'] = f.read()
     else:
         config['APPRISE_NOTIFICATION_BODY'] = ''
 
     for key, value in DEFAULT_CONFIG_VALUES.items():
         config.setdefault(key, value)
-        
+
     return config
 
 def update_config_full(updates: dict):

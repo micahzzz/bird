@@ -42,57 +42,40 @@ def get_gallery():
         recent = []
         best_map = {}
         valid_exts = {'.wav', '.mp3', '.flac', '.m4a'}
-        base_dir = EXTRACTED_AUDIO_DIR if EXTRACTED_AUDIO_DIR.exists() else Path(os.path.expanduser('~/BirdSongs'))
+        base_dir = Path(os.path.expanduser('~/BirdSongs'))
 
         if not base_dir.is_dir():
             raise HTTPException(status_code=404, detail=f"Base directory '{base_dir}' not found.")
 
         for root, _, files in os.walk(str(base_dir)):
-            # Skip directories that are unlikely to contain valid recordings
-            if "streamdata" in root.lower() or "mixes" in root.lower() or root == base_dir:
-                continue
-
             for file in files:
                 if os.path.splitext(file)[1].lower() in valid_exts and "birdnet" in file.lower():
                     filepath = os.path.join(root, file)
                     try:
                         stat = os.stat(filepath)
-                        # Regex to parse 'Species_Name-CONF-YYYY-MM-DD-HH-MM-SS.mp3'
-                        match = re.search(r"^(.*?)-(\d{2,3})-\d{4}-\d{2}-\d{2}", file)
+                        match = re.search(r"^(.*?)-(\d{2,3})-(\d{4}-\d{2}-\d{2})", file)
                         species = match.group(1).replace("_", " ") if match else "Unknown"
-                        conf = float(match.group(2)) / 100.0 if match else 0.5
-                        
-                        # Make the web path relative to the base directory
-                        rel_path = os.path.relpath(filepath, base_dir)
-                        if base_dir == EXTRACTED_AUDIO_DIR:
-                            rel_path = rel_path.replace(os.sep, '/')
-                            web_path = f"/By_Date/{rel_path}"
-                        else:
-                            web_path = rel_path
-                        
+                        confidence = float(match.group(2)) / 100.0 if match else 0.0
+                        date_str = match.group(3) if match else (re.search(r"\d{4}-\d{2}-\d{2}", file).group(0) if re.search(r"\d{4}-\d{2}-\d{2}", file) else "Unknown")
+
+                        rel_path = Path(root, file).relative_to(base_dir).as_posix()
                         file_obj = {
-                            "filepath": web_path,
+                            "filepath": rel_path,
                             "filename": file,
                             "species": species,
-                            "confidence": conf,
+                            "confidence": confidence,
                             "size_kb": stat.st_size // 1024,
                             "mtime": stat.st_mtime,
-                            "date_str": re.search(r"\d{4}-\d{2}-\d{2}", file).group(0) if re.search(r"\d{4}-\d{2}-\d{2}", file) else "Unknown"
+                            "date_str": date_str
                         }
-                        
+
                         recent.append(file_obj)
-                        
-                        # If this species isn't in our 'best' map, or if this file has higher confidence, update it.
-                        if species not in best_map or conf > best_map[species]["confidence"]:
+                        if species not in best_map or confidence > best_map[species]["confidence"]:
                             best_map[species] = file_obj
-                    
                     except (AttributeError, IndexError, ValueError):
-                        # Ignore files with malformed names that don't match the regex
                         continue
-        
-        # Sort recent files by modification time, newest first, and limit to 200
+
         recent.sort(key=lambda x: x["mtime"], reverse=True)
-        
         return {"recent": recent[:200], "best": list(best_map.values())}
 
     except Exception as e:
