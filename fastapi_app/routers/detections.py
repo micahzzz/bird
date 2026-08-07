@@ -140,7 +140,7 @@ def resolve_detection_media_url(date: str, common_name: str, file_name: str) -> 
 # --- API Endpoints ---
 
 @router.get("", response_model=DetectionsResponse, summary="Get Paginated Detections")
-async def get_detections(
+def get_detections(
     limit: int = 50,
     offset: int = 0,
     sp: Optional[str] = Query(None, description="Filter by common name (e.g., 'American Robin')."),
@@ -209,7 +209,7 @@ async def get_detections(
 
 
 @router.get("/stats", response_model=Stats, summary="Get Aggregate Statistics")
-async def get_stats(
+def get_stats(
     days: Optional[str] = Query(None, description="Timeframe to filter stats (e.g., '7', '30', 'today', 'all')."),
     species_of_interest: Optional[str] = Query(None, description="Get daily counts for a specific species.")
 ):
@@ -307,7 +307,7 @@ async def get_stats(
 
 
 @router.get("/stats/hourly", summary="Get Hourly Detection Stats for the Last 24 Hours")
-async def get_hourly_stats():
+def get_hourly_stats():
     """
     Provides the number of detections for each of the last 24 hours.
     The keys of the returned dictionary are hours from 0 to 23.
@@ -346,7 +346,7 @@ async def get_hourly_stats():
 
 
 @router.get("/collage-stats", response_model=CollageResponse, summary="Get species stats for collage view")
-async def get_collage_stats(
+def get_collage_stats(
     days: Optional[str] = Query("7", description="Timeframe to filter stats (e.g., '7', '30', 'today', 'all').")
 ):
     """

@@ -104,8 +104,8 @@ async function init() {
             const globalFilter = document.getElementById('global-date-filter');
             if (globalFilter) updateLiveStats(globalFilter.value);
         }, 30000); 
-        setInterval(updateSystemStats, 10000);
-        setInterval(pollLog, 3000);
+        setInterval(updateSystemStats, 30000);
+        setInterval(pollLog, 15000);
 
     } catch (e) { 
         const feed = document.getElementById('dash-feed');
