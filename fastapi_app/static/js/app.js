@@ -50,6 +50,20 @@ function normalizeMediaUrl(url) {
     return `/${clean}`;
 }
 
+async function fetchBirdImage(species) {
+    try {
+        const url = `https://en.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(species)}&prop=pageimages&format=json&pithumbsize=800&redirects=1&origin=*`;
+        const res = await fetch(url);
+        const data = await res.json();
+        const pages = data.query.pages;
+        const pageId = Object.keys(pages)[0];
+        if (pageId !== "-1" && pages[pageId].thumbnail) return pages[pageId].thumbnail.source;
+    } catch (e) {
+        console.error('fetchBirdImage failed', e);
+    }
+    return null;
+}
+
 let audioCtx;
 let trackNode;
 let gainNode;
@@ -1384,6 +1398,30 @@ async function renderAnalytics() {
 
     // Initialize the app logic on ready
     init();
+
+    function attachSidebarNavigation() {
+        document.querySelectorAll('.nav-item').forEach(el => {
+            el.addEventListener('click', (e) => {
+                document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+
+                const target = e.currentTarget;
+                target.classList.add('active');
+                const tabId = target.getAttribute('data-tab');
+                const section = document.getElementById(`tab-${tabId}`);
+                if (section) section.classList.add('active');
+
+                const titleEl = document.getElementById('current-tab-title');
+                if (titleEl) titleEl.innerText = target.innerText.trim();
+            });
+        });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', attachSidebarNavigation);
+    } else {
+        attachSidebarNavigation();
+    }
 
     // -------------------------------------------------------------
     // COLLAGE LOGIC
