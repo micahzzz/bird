@@ -6,6 +6,22 @@ window.addEventListener('unhandledrejection', function(e) {
     console.error('[CRITICAL UNHANDLED PROMISE]', e.reason);
 });
 
+let currentAnalyticsMode = 'acc';
+
+function switchAnalytics(view = 'acc', btn = null) {
+    currentAnalyticsMode = view;
+    document.querySelectorAll('#tab-analytics .toggle-btn').forEach(b => b.classList.remove('active'));
+    if (btn) {
+        btn.classList.add('active');
+    } else {
+        const defaultBtn = document.querySelector(`#tab-analytics .toggle-btn[onclick*="switchAnalytics('${view}')"]`);
+        if (defaultBtn) defaultBtn.classList.add('active');
+    }
+    if (typeof renderAnalytics === 'function') {
+        renderAnalytics();
+    }
+}
+
 window.switchAnalytics = switchAnalytics;
 window.switchGallery = switchGallery;
 window.switchTools = switchTools;
@@ -1553,6 +1569,13 @@ async function renderAnalytics() {
             attachSidebarNavigation();
         } catch (e) {
             console.error("attachSidebarNavigation() failed:", e);
+        }
+
+        try {
+            const initialAnalyticsBtn = document.querySelector(`#tab-analytics .toggle-btn[onclick*="switchAnalytics('${currentAnalyticsMode}')"]`);
+            switchAnalytics(currentAnalyticsMode, initialAnalyticsBtn);
+        } catch (e) {
+            console.error('Initial analytics setup failed:', e);
         }
 
         const prevBtn = document.getElementById('btn-db-prev');
