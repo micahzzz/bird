@@ -56,7 +56,15 @@ app.include_router(compiler.router, prefix="/api", tags=["Audio Compiler"])
 static_dir = os.path.join(os.path.dirname(__file__), "static")
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
-if EXTRACTED_AUDIO_DIR.exists():
+home_dir = os.path.expanduser('~')
+extracted_path = os.path.join(home_dir, 'BirdSongs', 'Extracted', 'By_Date')
+by_date_path = os.path.join(home_dir, 'BirdSongs', 'By_Date')
+
+if os.path.exists(extracted_path):
+    app.mount("/By_Date", StaticFiles(directory=extracted_path), name="by_date")
+elif os.path.exists(by_date_path):
+    app.mount("/By_Date", StaticFiles(directory=by_date_path), name="by_date")
+elif EXTRACTED_AUDIO_DIR.exists():
     app.mount("/By_Date", StaticFiles(directory=str(EXTRACTED_AUDIO_DIR)), name="by_date")
 
 # --- Root/Media Fallback Serving ---
