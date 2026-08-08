@@ -97,6 +97,10 @@ elif os.path.isdir(by_date_path):
 elif EXTRACTED_AUDIO_DIR.exists() and EXTRACTED_AUDIO_DIR.is_dir():
     app.mount("/By_Date", StaticFiles(directory=str(EXTRACTED_AUDIO_DIR)), name="by_date")
 
+homepage_images = os.path.join(home_dir, 'BirdNET-Pi', 'homepage', 'images')
+if os.path.exists(homepage_images):
+    app.mount("/homepage/images", StaticFiles(directory=homepage_images), name="homepage_images")
+
 # --- Root/Media Fallback Serving ---
 @app.get("/{path:path}", include_in_schema=False)
 async def serve_root_or_media(path: str):

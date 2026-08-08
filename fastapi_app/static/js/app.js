@@ -39,6 +39,8 @@ window.serviceControl = controlService;
 window.loadFileManager = loadFileManager;
 window.deleteFile = deleteFile;
 window.updateDbPageSize = updateDbPageSize;
+window.initCollage = initCollage;
+window.renderCollage = renderCollage;
 
 const API_BASE = '';
 let dbData = [];
@@ -1608,8 +1610,28 @@ async function renderAnalytics() {
                 if (tabId === 'tools') {
                     populateConfigForm();
                 }
+                
+                if (tabId === 'collage') {
+                    if (typeof window.initCollage === 'function') {
+                        setTimeout(() => { window.initCollage(); }, 50);
+                    }
+                }
+                
+                if (tabId === 'files') {
+                    loadFileManagerIframe();
+                }
             });
         });
+    }
+
+    function loadFileManagerIframe() {
+        const iframe = document.getElementById('filemanager-iframe');
+        if (iframe) {
+            const caddyUrl = 'http://' + (window.location.hostname || 'localhost') + '/tools/filemanager';
+            if (iframe.src !== caddyUrl) {
+                iframe.src = caddyUrl;
+            }
+        }
     }
 
     async function onReady() {
