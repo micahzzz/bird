@@ -1624,10 +1624,118 @@ async function renderAnalytics() {
         });
     }
 
-    function loadFileManager() {
-        const btn = document.getElementById('btn-open-filemanager');
-        if (btn) {
-            btn.href = 'http://' + (window.location.hostname || 'localhost') + '/tools/filemanager';
+    function formatBytes(bytes, decimals = 2) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const dm = decimals < 0 ? 0 : decimals;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+    }
+
+    async function loadFileManager(path = '') {
+        const tbody = document.getElementById('file-manager-body');
+        if (!tbody) return;
+        tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-slate-400">Loading files...</td></tr>`;
+
+        try {
+            const res = await fetch(API_BASE + `/api/files/list?path=${encodeURIComponent(path)}`);
+            const data = await res.json();
+
+            const breadcrumbs = document.getElementById('file-manager-breadcrumbs');
+            if (breadcrumbs) {
+                let bcHtml = `<a href="#" onclick="loadFileManager(''); return false;" class="hover:underline text-[var(--bn-highlight)]">home</a> / `;
+                let currentPath = '';
+                if (data.current_path) {
+                    const parts = data.current_path.split('/').filter(p => p);
+                    parts.forEach((part, i) => {
+                        currentPath += (i === 0 ? '' : '/') + part;
+                        bcHtml += `<a href="#" onclick="loadFileManager('${escapeAttr(currentPath)}'); return false;" class="hover:underline text-[var(--bn-highlight)]">${part}</a> / `;
+                    });
+                }
+                breadcrumbs.innerHTML = bcHtml.replace(/ \/ $/, '');
+            }
+
+            if (!data.items || data.items.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-slate-400">Empty directory.</td></tr>`;
+                return;
+            }
+
+            let html = '';
+            if (data.current_path !== '') {
+                const parentPath = data.current_path.substring(0, data.current_path.lastIndexOf('/'));
+                html += `
+                    <tr class="hover:bg-[var(--bn-bg)] transition-colors cursor-pointer" onclick="loadFileManager('${escapeAttr(parentPath)}')">
+                        <td class="p-3 font-semibold text-white flex items-center gap-2">
+                            <svg class="w-5 h-5 text-slate-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clip-rule="evenodd"></path></svg>
+                            .. (Up a directory)
+                        </td>
+                        <td class="p-3"></td>
+                        <td class="p-3"></td>
+                        <td class="p-3"></td>
+                    </tr>
+                `;
+            }
+
+            data.items.forEach(item => {
+                const isDir = item.is_dir;
+                const icon = isDir 
+                    ? `<svg class="w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20"><path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"></path></svg>`
+                    : `<svg class="w-5 h-5 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>`;
+                
+                const size = isDir ? '-' : formatBytes(item.size);
+                const modTime = new Date(item.mtime * 1000).toLocaleString();
+
+                const onClick = isDir ? `onclick="loadFileManager('${escapeAttr(item.rel_path)}'); return false;"` : '';
+                const cursorCls = isDir ? 'cursor-pointer hover:underline text-[var(--bn-highlight)]' : 'text-white';
+                const rowHover = isDir ? 'hover:bg-[var(--bn-bg)] transition-colors' : 'hover:bg-[#1f2937] transition-colors';
+
+                html += `
+                    <tr class="${rowHover}">
+                        <td class="p-3 flex items-center gap-2">
+                            ${icon}
+                            <a href="#" ${onClick} class="${cursorCls}">${item.name}</a>
+                        </td>
+                        <td class="p-3 text-slate-300">${size}</td>
+                        <td class="p-3 text-slate-400 text-xs">${modTime}</td>
+                        <td class="p-3 text-right">
+                            ${!isDir ? `
+                            <a href="${API_BASE}/api/files/download?path=${encodeURIComponent(item.rel_path)}" download class="text-blue-400 hover:text-blue-300 mr-3" title="Download">
+                                <svg class="w-5 h-5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                            </a>
+                            <button onclick="deleteFile('${escapeAttr(item.rel_path)}')" class="text-red-400 hover:text-red-300" title="Delete">
+                                <svg class="w-5 h-5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            </button>
+                            ` : ''}
+                        </td>
+                    </tr>
+                `;
+            });
+            tbody.innerHTML = html;
+        } catch (e) {
+            console.error("Failed to load file manager:", e);
+            tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-red-400">Failed to load files.</td></tr>`;
+        }
+    }
+
+    async function deleteFile(path) {
+        if (!confirm(`Are you sure you want to delete ${path}? This cannot be undone.`)) return;
+        try {
+            const res = await fetch(API_BASE + `/api/files/delete?path=${encodeURIComponent(path)}`, { method: 'DELETE' });
+            if (res.ok) {
+                const bc = document.getElementById('file-manager-breadcrumbs');
+                const links = bc ? bc.querySelectorAll('a') : [];
+                const currentPathParts = [];
+                for(let i=1; i<links.length; i++) {
+                    currentPathParts.push(links[i].innerText);
+                }
+                loadFileManager(currentPathParts.join('/'));
+            } else {
+                const error = await res.json();
+                alert(`Failed to delete file: ${error.detail}`);
+            }
+        } catch (e) {
+            alert('An error occurred while trying to delete the file.');
         }
     }
 
@@ -1943,22 +2051,11 @@ async function renderAnalytics() {
         var promises = layout.map(d => {
             return new Promise((resolve) => {
                 let artUrl = getBirdImageUrl(d, d.item ? d.item.pose : 1);
-                if (!artUrl) return resolve(null);
+                if (!artUrl) return resolve({ ...d, img: null });
 
                 const img = new Image();
-                img.crossOrigin = 'Anonymous';
                 img.onload = () => resolve({ ...d, img: img });
-                img.onerror = () => {
-                    if (d.item && d.item.pose && d.item.pose > 1) {
-                        const fallbackImg = new Image();
-                        fallbackImg.crossOrigin = 'Anonymous';
-                        fallbackImg.onload = () => resolve({ ...d, img: fallbackImg });
-                        fallbackImg.onerror = () => resolve(d);
-                        fallbackImg.src = getBirdImageUrl(d, 1);
-                    } else {
-                        resolve(d);
-                    }
-                };
+                img.onerror = () => resolve({ ...d, img: null });
                 img.src = artUrl;
             });
         });
@@ -1981,14 +2078,27 @@ async function renderAnalytics() {
                             ctx.drawImage(d.img, x, y, w, h);
                         } catch (e) {
                             console.error('Draw failed for', d.sci, e);
+                            drawFallbackCard(ctx, d, x, y, w, h);
                         }
                     } else {
-                        ctx.fillStyle = 'rgba(255, 0, 0, 0.4)';
-                        ctx.fillRect(x, y, w, h);
+                        drawFallbackCard(ctx, d, x, y, w, h);
                     }
                 }
             });
         });
+    }
+
+    function drawFallbackCard(ctx, d, x, y, w, h) {
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(x, y, w, h);
+        ctx.strokeStyle = '#334155';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(x, y, w, h);
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = 'bold ' + Math.max(10, Math.floor(w/10)) + 'px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(d.com || d.sci || 'Unknown', x + w/2, y + h/2, w - 10);
     }
     
     function tuning(n) {

@@ -835,13 +835,23 @@
             </div>
 
             <!-- File Manager -->
-            <div id="tools-files" class="hidden bird-card p-6 flex flex-col items-center justify-center min-h-[300px]">
+            <div id="tools-files" class="hidden bird-card p-6">
                 <h3 class="text-lg font-bold text-white mb-2">File Manager</h3>
-                <p class="text-sm text-slate-300 mb-6 text-center max-w-md">Open TinyFileManager in a new tab for full filesystem browsing, file editing, uploads, and zip management.</p>
-                <a id="btn-open-filemanager" href="/tools/filemanager" target="_blank" class="bg-[var(--bn-highlight)] hover:bg-[#3d7a4b] text-[#111a14] font-bold py-3 px-6 rounded-lg transition-colors flex items-center gap-2">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
-                    Open TinyFileManager
-                </a>
+                <div id="file-manager-breadcrumbs" class="text-sm text-slate-400 mb-4"></div>
+                <div class="overflow-auto border border-[var(--bn-border)] rounded-lg max-h-[60vh]">
+                    <table class="w-full text-left text-sm whitespace-nowrap">
+                        <thead class="bg-[var(--bn-panel)] text-white sticky top-0">
+                            <tr>
+                                <th class="p-3 font-semibold">Name</th>
+                                <th class="p-3 font-semibold">Size</th>
+                                <th class="p-3 font-semibold">Modified</th>
+                                <th class="p-3 font-semibold text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="file-manager-body" class="divide-y divide-[var(--bn-border)]">
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </main>
