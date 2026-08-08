@@ -157,8 +157,8 @@ def get_detections(
     params = []
 
     if sp and sp != 'all':
-        where_clauses.append("Com_Name = ?")
-        params.append(sp)
+        where_clauses.append("LOWER(Com_Name) LIKE LOWER(?)")
+        params.append(f"%{sp}%")
     if dStart:
         where_clauses.append("Date >= ?")
         params.append(dStart)
@@ -217,6 +217,7 @@ def get_detections(
         raise HTTPException(status_code=500, detail=f"Database query failed: {e}")
 
 
+@router.get("/species")
 @router.get("/detections/species", response_model=List[str], summary="Get all species list")
 def get_all_species():
     db_path = get_db_path()

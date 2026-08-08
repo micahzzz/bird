@@ -87,6 +87,11 @@ def get_config_full():
 
     return config
 
+@router.get("/config")
+def get_config_endpoint():
+    """Returns the parsed configuration file."""
+    return get_config_full()
+
 def update_config_full(updates: dict):
     """
     Safely updates birdnet.conf using regex to preserve comments and structure.

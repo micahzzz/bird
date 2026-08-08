@@ -111,7 +111,7 @@ async function switchTools(view) {
     });
     
         if (view === 'config') {
-            populateConfigForm();
+            await populateConfigForm();
         }
     if (loader) loader.classList.remove('hidden');
     try {
@@ -1638,6 +1638,15 @@ async function renderAnalytics() {
                 }
             };
         }
+
+        document.querySelectorAll('.sort-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                currentBestSort = e.target.getAttribute('data-sort');
+                renderBestRecordings();
+            });
+        });
     }
 
     if (document.readyState === 'loading') {
