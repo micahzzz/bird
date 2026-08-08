@@ -1618,19 +1618,16 @@ async function renderAnalytics() {
                 }
                 
                 if (tabId === 'files') {
-                    loadFileManagerIframe();
+                    loadFileManager();
                 }
             });
         });
     }
 
-    function loadFileManagerIframe() {
-        const iframe = document.getElementById('filemanager-iframe');
-        if (iframe) {
-            const caddyUrl = 'http://' + (window.location.hostname || 'localhost') + '/tools/filemanager';
-            if (iframe.src !== caddyUrl) {
-                iframe.src = caddyUrl;
-            }
+    function loadFileManager() {
+        const btn = document.getElementById('btn-open-filemanager');
+        if (btn) {
+            btn.href = 'http://' + (window.location.hostname || 'localhost') + '/tools/filemanager';
         }
     }
 
@@ -1946,14 +1943,21 @@ async function renderAnalytics() {
         var promises = layout.map(d => {
             return new Promise((resolve) => {
                 let artUrl = getBirdImageUrl(d, d.item ? d.item.pose : 1);
-                if (!artUrl) return resolve(null); 
+                if (!artUrl) return resolve(null);
 
                 const img = new Image();
                 img.crossOrigin = 'Anonymous';
                 img.onload = () => resolve({ ...d, img: img });
                 img.onerror = () => {
-                    console.warn('Local art missing, skipping collage drawing for:', d.sci);
-                    resolve(d); 
+                    if (d.item && d.item.pose && d.item.pose > 1) {
+                        const fallbackImg = new Image();
+                        fallbackImg.crossOrigin = 'Anonymous';
+                        fallbackImg.onload = () => resolve({ ...d, img: fallbackImg });
+                        fallbackImg.onerror = () => resolve(d);
+                        fallbackImg.src = getBirdImageUrl(d, 1);
+                    } else {
+                        resolve(d);
+                    }
                 };
                 img.src = artUrl;
             });
