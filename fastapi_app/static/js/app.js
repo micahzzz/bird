@@ -1300,17 +1300,15 @@ async function renderAnalytics() {
     }
 
     async function populateConfigForm() {
-        try {
-            const res = await fetch(API_BASE + '/api/config');
-            if (res.ok) {
+        if (!configData || Object.keys(configData).length === 0) {
+            try {
+                const res = await fetch(API_BASE + '/api/config');
                 configData = await res.json();
+            } catch (e) {
+                console.error("Failed to load config:", e);
+                return;
             }
-        } catch (e) {
-            console.error("Failed to load config:", e);
         }
-
-        if (!configData) return;
-
         for (const [key, value] of Object.entries(configData)) {
             const el = document.getElementById(`config-${key}`) || document.getElementById(`conf-${key}`);
             if (el) {
@@ -1582,6 +1580,10 @@ async function renderAnalytics() {
 
                 const titleEl = document.getElementById('current-tab-title');
                 if (titleEl) titleEl.innerText = target.innerText.trim();
+
+                if (tabId === 'tools') {
+                    populateConfigForm();
+                }
             });
         });
     }
