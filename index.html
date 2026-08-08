@@ -835,8 +835,22 @@
             </div>
 
             <!-- File Manager -->
-            <div id="tools-files" class="hidden bird-card p-2 h-[80vh] w-full">
-                <iframe id="filemanager-iframe" class="w-full h-full rounded-lg border-0 bg-white" title="TinyFileManager"></iframe>
+            <div id="tools-files" class="hidden bird-card p-6">
+                <h3 class="text-lg font-bold text-white mb-2">File Manager</h3>
+                <div id="file-manager-breadcrumbs" class="text-sm text-slate-400 mb-4"></div>
+                <div class="overflow-auto border border-[var(--bn-border)] rounded-lg">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-[var(--bn-panel)] text-white">
+                            <tr>
+                                <th class="p-3 font-semibold">Name</th>
+                                <th class="p-3 font-semibold">Size</th>
+                                <th class="p-3 font-semibold">Modified</th>
+                                <th class="p-3 font-semibold text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="file-manager-body" class="divide-y divide-[var(--bn-border)]"></tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </main>

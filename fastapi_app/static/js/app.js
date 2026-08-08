@@ -119,7 +119,7 @@ async function switchTools(view) {
     try {
         if (view === 'config') await populateConfigForm();
         if (view === 'services' && typeof loadServiceStatus === 'function') await loadServiceStatus();
-        if (view === 'files' && typeof loadFileManager === 'function') await loadFileManager();
+        if (view === 'files' && typeof loadFileManager === 'function') await loadFileManager('');
     } catch (e) {
         console.error("Error switching tools view:", e);
     } finally {
@@ -1454,13 +1454,80 @@ async function renderAnalytics() {
         } catch(e) {}
     }
 
-    function loadFileManager() {
-        const iframe = document.getElementById('filemanager-iframe');
-        if (iframe) {
-            const caddyUrl = 'http://' + (window.location.hostname || 'localhost') + '/tools/filemanager/';
-            if (iframe.src !== caddyUrl) {
-                iframe.src = caddyUrl;
+    async function loadFileManager(path = '') {
+        const tbody = document.getElementById('file-manager-body');
+        if (!tbody) return;
+        tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-slate-400">Loading files...</td></tr>`;
+
+        try {
+            const res = await fetch(API_BASE + `/api/files/list?path=${encodeURIComponent(path)}`);
+            const data = await res.json();
+            
+            const breadcrumbs = document.getElementById('file-manager-breadcrumbs');
+            if (breadcrumbs) {
+                let bcHtml = `<a href="#" onclick="loadFileManager(''); return false;" class="hover:underline text-[var(--bn-highlight)]">root</a> / `;
+                let currentPath = '';
+                if (data.current_path) {
+                    const parts = data.current_path.split('/').filter(p => p);
+                    parts.forEach((part, i) => {
+                        currentPath += (currentPath ? '/' : '') + part;
+                        if (i < parts.length - 1) {
+                            bcHtml += `<a href="#" onclick="loadFileManager('${escapeAttr(currentPath)}'); return false;" class="hover:underline text-[var(--bn-highlight)]">${part}</a> / `;
+                        } else {
+                            bcHtml += `<span class="text-white">${part}</span>`;
+                        }
+                    });
+                }
+                breadcrumbs.innerHTML = bcHtml;
             }
+
+            tbody.innerHTML = '';
+            if (data.items.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-slate-400">Directory is empty.</td></tr>`;
+                return;
+            }
+            
+            if (data.current_path !== '') {
+                const parentPath = data.current_path.substring(0, data.current_path.lastIndexOf('/'));
+                tbody.innerHTML += `
+                    <tr class="hover:bg-[var(--bn-bg)] transition-colors cursor-pointer" onclick="loadFileManager('${escapeAttr(parentPath)}')">
+                        <td class="p-3 font-semibold text-white flex items-center gap-2" colspan="4">
+                            <svg class="w-5 h-5 text-slate-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clip-rule="evenodd"></path></svg>
+                            .. (Up a directory)
+                        </td>
+                    </tr>
+                `;
+            }
+
+            data.items.forEach(item => {
+                const isDir = item.is_dir;
+                const icon = isDir 
+                    ? `<svg class="w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20"><path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"></path></svg>`
+                    : `<svg class="w-5 h-5 text-slate-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9 2a2 2 0 00-2 2v8a2 2 0 002 2h2a2 2 0 002-2V4a2 2 0 00-2-2H9z"></path></svg>`;
+                
+                const nameCell = isDir
+                    ? `<a href="#" onclick="loadFileManager('${escapeAttr(item.rel_path)}'); return false;" class="font-bold text-white hover:underline">${item.name}</a>`
+                    : `<span class="text-slate-200">${item.name}</span>`;
+
+                const row = `
+                    <tr class="hover:bg-[var(--bn-bg)] transition-colors">
+                        <td class="p-3 flex items-center gap-2">${icon}${nameCell}</td>
+                        <td class="p-3 text-slate-400 font-mono">${isDir ? '--' : formatFileSize(item.size)}</td>
+                        <td class="p-3 text-slate-400 font-mono text-xs">${new Date(item.mtime * 1000).toLocaleString()}</td>
+                        <td class="p-3 text-right">
+                            ${!isDir ? `
+                            <div class="flex gap-2 justify-end">
+                                <a href="${API_BASE}/api/files/download?path=${encodeURIComponent(item.rel_path)}" download class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-1 px-3 rounded-md text-xs transition-colors">Download</a>
+                                <button onclick="deleteFile('${escapeAttr(item.rel_path)}', '${escapeAttr(item.name)}')" class="bg-red-800 hover:bg-red-700 text-white font-bold py-1 px-3 rounded-md text-xs transition-colors">Delete</button>
+                            </div>
+                            ` : ''}
+                        </td>
+                    </tr>`;
+                tbody.innerHTML += row;
+            });
+
+        } catch (e) {
+            tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-red-400">Error loading files.</td></tr>`;
         }
     }
 
