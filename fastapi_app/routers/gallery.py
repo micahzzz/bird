@@ -59,6 +59,9 @@ def get_gallery():
                         date_str = match.group(3) if match else (re.search(r"\d{4}-\d{2}-\d{2}", file).group(0) if re.search(r"\d{4}-\d{2}-\d{2}", file) else "Unknown")
 
                         rel_path = Path(root, file).relative_to(base_dir).as_posix()
+                        if rel_path.startswith("Extracted/"):
+                            rel_path = rel_path[len("Extracted/"):]
+                        
                         file_obj = {
                             "filepath": rel_path,
                             "filename": file,

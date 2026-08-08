@@ -220,15 +220,19 @@ def get_detections(
 @router.get("/species")
 @router.get("/detections/species", response_model=List[str], summary="Get all species list")
 def get_all_species():
-    db_path = get_db_path()
-    if not db_path or not os.path.exists(db_path):
+    try:
+        db_path = get_db_path()
+        if not db_path or not os.path.exists(db_path):
+            return []
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        cursor.execute("SELECT DISTINCT Com_Name FROM detections WHERE Com_Name IS NOT NULL AND Com_Name != '' ORDER BY Com_Name;")
+        species = [r[0] for r in cursor.fetchall()]
+        conn.close()
+        return species
+    except Exception as e:
+        print(f"Error fetching species: {e}")
         return []
-    conn = sqlite3.connect(db_path)
-    cursor = conn.cursor()
-    cursor.execute("SELECT DISTINCT Com_Name FROM detections WHERE Com_Name IS NOT NULL AND Com_Name != '' ORDER BY Com_Name;")
-    species_list = [r[0] for r in cursor.fetchall()]
-    conn.close()
-    return species_list
 
 
 @router.get("/detections/stats", response_model=Stats, summary="Get Aggregate Statistics")

@@ -1300,16 +1300,17 @@ async function renderAnalytics() {
     }
 
     async function populateConfigForm() {
-        if (!configData || Object.keys(configData).length === 0) {
-            try {
-                const res = await fetch(API_BASE + '/api/config');
-                if (!res.ok) return;
+        try {
+            const res = await fetch(API_BASE + '/api/config');
+            if (res.ok) {
                 configData = await res.json();
-            } catch (e) {
-                console.error("Failed to load config:", e);
-                return;
             }
+        } catch (e) {
+            console.error("Failed to load config:", e);
         }
+
+        if (!configData) return;
+
         for (const [key, value] of Object.entries(configData)) {
             const el = document.getElementById(`config-${key}`) || document.getElementById(`conf-${key}`);
             if (el) {
