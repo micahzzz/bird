@@ -1970,22 +1970,38 @@ async function renderAnalytics() {
             const finalHeight = targetHeight;
 
             loadedLayout.forEach(function(d) {
-                if (d) {
-                    const x = (d.x / 100) * finalWidth;
-                    const y = (d.y / 100) * finalHeight;
-                    const w = (d.w / 100) * finalWidth;
-                    const h = (d.h / 100) * finalHeight;
+                if (!d) return;
+                const x = (d.x / 100) * finalWidth;
+                const y = (d.y / 100) * finalHeight;
+                const w = (d.w / 100) * finalWidth;
+                const h = (d.h / 100) * finalHeight;
 
-                    if (d.img) {
-                        try { ctx.drawImage(d.img, x, y, w, h); } catch (e) {}
-                    } else {
-                        ctx.fillStyle = 'rgba(21, 56, 34, 0.9)';
-                        ctx.fillRect(x, y, w, h);
-                        ctx.strokeStyle = '#4ade80';
-                        ctx.strokeRect(x, y, w, h);
-                        ctx.fillStyle = '#ffffff';
-                        ctx.font = 'bold 12px Inter, sans-serif';
-                        ctx.fillText(d.com || d.sci || 'Bird', x + 8, y + 20);
+                if (d.img) {
+                    try {
+                        ctx.drawImage(d.img, x, y, w, h);
+                    } catch (e) {
+                        console.error('Draw failed for', d.sci, e);
+                    }
+                } else {
+                    // High-contrast fallback card for species without local PNG artwork
+                    const speciesName = d.item?.com || d.item?.sci || d.sci || 'Bird';
+                    const count = d.item?.n || 0;
+
+                    ctx.fillStyle = '#1b452b';
+                    ctx.fillRect(x + 2, y + 2, w - 4, h - 4);
+                    
+                    ctx.strokeStyle = '#4ade80';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(x + 2, y + 2, w - 4, h - 4);
+
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = 'bold 14px Inter, sans-serif';
+                    ctx.fillText(speciesName, x + 12, y + Math.max(24, h / 2 - 6));
+
+                    if (count > 0) {
+                        ctx.fillStyle = '#4ade80';
+                        ctx.font = '11px Inter, sans-serif';
+                        ctx.fillText(`${count} Detections`, x + 12, y + Math.max(40, h / 2 + 12));
                     }
                 }
             });

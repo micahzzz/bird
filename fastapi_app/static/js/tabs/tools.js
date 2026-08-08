@@ -205,7 +205,7 @@ export function switchTools(view) {
         document.getElementById(`tools-${v}`).style.display = (v === view) ? (v === 'services' || v === 'config' ? 'grid' : 'block') : 'none';
     });
     if (view === 'services') loadServiceStatus();
-    if (view === 'files') loadFileManager();
+    if (view === 'files') loadFileManager('');
 }
 
 export function setupTools() {
