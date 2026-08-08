@@ -1677,6 +1677,45 @@ async function renderAnalytics() {
             });
         });
 
+        document.getElementById('compile-btn')?.addEventListener('click', async () => {
+            const species = document.getElementById('compile-species').value;
+            const conf = parseFloat(document.getElementById('compile-conf').value || 0.8);
+            if (!species) return alert('Select a species first');
+
+            const btn = document.getElementById('compile-btn');
+            const status = document.getElementById('compile-status');
+
+            if (btn) { btn.disabled = true; btn.innerText = 'Compiling...'; }
+            if (status) {
+                status.classList.remove('hidden', 'text-green-400', 'text-red-400');
+                status.classList.add('text-yellow-400');
+                status.innerText = 'Stitching audio files via FFmpeg...';
+            }
+
+            try {
+                const res = await fetch(API_BASE + '/api/compile', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ species, min_conf: conf, limit: 25 })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    status.className = 'mt-4 text-sm font-semibold text-green-400';
+                    status.innerHTML = `Successfully mixed ${data.count} recordings! <a href="${data.file}" download class="text-[var(--bn-highlight)] underline ml-2">Download Mix</a>`;
+                } else {
+                    status.className = 'mt-4 text-sm font-semibold text-red-400';
+                    status.innerText = data.detail || 'Compilation failed.';
+                }
+            } catch (e) {
+                if (status) {
+                    status.className = 'mt-4 text-sm font-semibold text-red-400';
+                    status.innerText = 'Server error during compilation.';
+                }
+            } finally {
+                if (btn) { btn.disabled = false; btn.innerText = 'Compile Audio'; }
+            }
+        });
+
         document.getElementById('sidebar-audio-btn')?.addEventListener('click', () => {
             const audio = document.getElementById('sidebar-audio');
             const btn = document.getElementById('sidebar-audio-btn');
