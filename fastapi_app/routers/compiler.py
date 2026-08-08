@@ -1,5 +1,5 @@
 # routers/compiler.py
-from fastapi import APIRouter, BackgroundTasks, HTTPException
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 from typing import Optional
 import os
@@ -15,24 +15,23 @@ router = APIRouter()
 class CompileRequest(BaseModel):
     species: str
     min_conf: float = Field(0.7, ge=0.0, le=1.0)
-    limit: int = Field(25, le=50) # Set a reasonable upper limit
+    limit: int = Field(25, le=50)
     start_date: Optional[str] = None
     end_date: Optional[str] = None
 
-# --- Background Task ---
+# --- API Endpoint ---
 
-def run_ffmpeg_compilation(
-    target_species: str, 
-    min_conf: float, 
-    limit: int, 
-    start_date: Optional[str], 
-    end_date: Optional[str]
-):
+@router.post("/compile", summary="Compile an Audio Mix")
+async def compile_audio_mix(req: CompileRequest):
     """
-    This function runs in the background. It finds relevant files
-    and uses ffmpeg to compile them into a single audio mix.
+    Synchronously compiles an audio mix and returns the result.
     """
-    print(f"BACKGROUND: Starting compilation for '{target_species}'...")
+    target_species = req.species
+    min_conf = req.min_conf
+    limit = req.limit
+    start_date = req.start_date
+    end_date = req.end_date
+
     try:
         base_dir = os.path.expanduser('~/BirdSongs')
         mix_dir = os.path.join(base_dir, 'mixes')
@@ -43,7 +42,7 @@ def run_ffmpeg_compilation(
             if "streamdata" in root.lower() or "mixes" in root.lower() or root == base_dir:
                 continue
             for file in files:
-                if file.endswith('.mp3') and "birdnet" in file.lower():
+                if file.endswith('.mp3'):
                     # Filter by date range if provided
                     if start_date or end_date:
                         date_match = re.search(r"\d{4}-\d{2}-\d{2}", file)
@@ -52,31 +51,32 @@ def run_ffmpeg_compilation(
                             if start_date and f_date < start_date: continue
                             if end_date and f_date > end_date: continue
                         else:
-                            continue # Skip files without a date if filtering is active
+                            continue
 
-                    # Filter by species and confidence
-                    match = re.search(r"^(.*?)-(\d{2,3})-\d{4}-\d{2}-\d{2}", file)
+                    # Attempt to parse filename to extract species and confidence
+                    # Typically formats are like: Target_Species-0.89-2023-10-31... or Target_Species-89-2023-10-31
+                    match = re.search(r"^(.*?)-(\d{1,3}(?:\.\d+)?)-\d{4}-\d{2}-\d{2}", file)
                     if match:
                         species = match.group(1).replace("_", " ")
-                        conf = float(match.group(2)) / 100.0
+                        conf_str = match.group(2)
+                        
+                        # Handle confidence scaled as 0-100 or 0-1
+                        conf = float(conf_str)
+                        if conf > 1.0:
+                            conf = conf / 100.0
+                            
                         if species == target_species and conf >= min_conf:
                             valid_files.append(os.path.join(root, file))
         
-        # Take the most recent files up to the limit
         valid_files.sort(key=os.path.getmtime, reverse=True)
         files_to_compile = valid_files[:limit]
 
         if not files_to_compile:
-            print(f"BACKGROUND: No files found for '{target_species}'. Aborting.")
-            return
-
-        print(f"BACKGROUND: Found {len(files_to_compile)} files. Starting ffmpeg...")
+            raise HTTPException(status_code=404, detail=f"No files found for '{target_species}' matching criteria.")
         
         out_filename = f"{target_species.replace(' ', '_')}_Mix_{int(time.time())}.mp3"
         out_filepath = os.path.join(mix_dir, out_filename)
         
-        # Create a temporary file list for ffmpeg's concat demuxer.
-        # This is high-performance and doesn't re-encode the audio.
         list_fd, list_filepath = tempfile.mkstemp(suffix=".txt", prefix="ffmpeg_list_")
         try:
             with os.fdopen(list_fd, 'w') as f:
@@ -89,33 +89,14 @@ def run_ffmpeg_compilation(
             ]
 
             subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
-            print(f"BACKGROUND: Compilation complete! Output at: {out_filepath}")
+            
+            web_path = f"/mixes/{out_filename}"
+            return {"success": True, "file": web_path, "count": len(files_to_compile)}
         finally:
-            # Clean up the temporary file list
             if os.path.exists(list_filepath):
                 os.remove(list_filepath)
 
+    except subprocess.CalledProcessError as e:
+        raise HTTPException(status_code=500, detail=f"FFmpeg compilation failed: {e}")
     except Exception as e:
-        print(f"BACKGROUND: Error during compilation for '{target_species}': {e}")
-
-
-# --- API Endpoint ---
-
-@router.post("/compile", status_code=202, summary="Compile an Audio Mix")
-async def compile_audio_mix(req: CompileRequest, background_tasks: BackgroundTasks):
-    """
-    Accepts a request to compile an audio mix from existing recordings.
-    
-    This endpoint immediately returns a 202 'Accepted' response and
-    starts the ffmpeg compilation process in the background to avoid
-    blocking the server.
-    """
-    background_tasks.add_task(
-        run_ffmpeg_compilation,
-        req.species,
-        req.min_conf,
-        req.limit,
-        req.start_date,
-        req.end_date
-    )
-    return {"message": "Accepted: Audio compilation job started in the background.", "species": req.species}
+        raise HTTPException(status_code=500, detail=f"Error compiling mix: {e}")

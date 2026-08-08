@@ -1796,23 +1796,23 @@ async function renderAnalytics() {
     function getBirdImageUrl(speciesObj, pose = 1) {
         let sciName = '';
         let comName = '';
-        
+
         if (typeof speciesObj === 'string') {
             sciName = speciesObj;
         } else if (speciesObj && typeof speciesObj === 'object') {
             sciName = speciesObj.sci || speciesObj.Sci_Name || '';
             comName = speciesObj.com || speciesObj.Com_Name || '';
         }
-        
+
         sciName = sciName ? String(sciName).trim() : '';
         comName = comName ? String(comName).trim() : '';
-        
+
         if (!sciName && !comName) return null;
         if (!sciName) return null;
-        
+
         const formattedSci = sciName.toLowerCase().replace(/\s+/g, '-');
         const poseSuffix = (pose && parseInt(pose) > 1) ? `-${pose}` : '';
-        return `${API_BASE}/static/bird_art/${formattedSci}${poseSuffix}.png`;
+        return `/static/bird_art/${formattedSci}${poseSuffix}.png`;
     }
 
     async function fetchWikipediaImage(species) {
