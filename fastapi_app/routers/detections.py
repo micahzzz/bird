@@ -252,25 +252,28 @@ def get_stats(
             if days == 'today':
                 where_clause = "WHERE Date = date('now', 'localtime')"
             elif days.isdigit():
-                where_clause = "WHERE Date >= date('now', ?)"
+                where_clause = "WHERE Date >= date('now', 'localtime', ?)"
                 params.append(f'-{int(days)} days')
 
         # --- Aggregate stats for dashboard cards ---
         cursor.execute(f"SELECT COUNT(*) FROM detections {where_clause}", params)
-        total_detections = cursor.fetchone()[0]
+        total_detections = cursor.fetchone()[0] or 0
         
         cursor.execute(f"SELECT COUNT(DISTINCT Com_Name) FROM detections {where_clause}", params)
-        total_species = cursor.fetchone()[0]
+        total_species = cursor.fetchone()[0] or 0
 
         # --- Specific stats for sidebar/dashboard ---
-        cursor.execute("SELECT COUNT(*) FROM detections WHERE Date = date('now', 'localtime')")
-        today_detections = cursor.fetchone()[0]
+        today_str = datetime.now().strftime('%Y-%m-%d')
         
-        cursor.execute("SELECT COUNT(DISTINCT Com_Name) FROM detections WHERE Date = date('now', 'localtime')")
-        today_species = cursor.fetchone()[0]
+        cursor.execute("SELECT COUNT(*) FROM detections WHERE Date = ?", (today_str,))
+        today_detections = cursor.fetchone()[0] or 0
+        
+        cursor.execute("SELECT COUNT(DISTINCT Com_Name) FROM detections WHERE Date = ?", (today_str,))
+        today_species = cursor.fetchone()[0] or 0
 
-        cursor.execute("SELECT COUNT(*) FROM detections WHERE Date = date('now', 'localtime') AND STRFTIME('%H', Time) = STRFTIME('%H', 'now', 'localtime')")
-        hour_detections = cursor.fetchone()[0]
+        last_hour_str = datetime.now().strftime('%H')
+        cursor.execute("SELECT COUNT(*) FROM detections WHERE Date = ? AND SUBSTR(Time, 1, 2) = ?", (today_str, last_hour_str))
+        hour_detections = cursor.fetchone()[0] or 0
 
         # --- Data for charts ---
         detections_by_date = {}

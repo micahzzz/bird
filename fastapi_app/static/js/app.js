@@ -110,35 +110,15 @@ async function switchTools(view) {
         if (el) el.classList.toggle('hidden', v !== view);
     });
     
-        if (view === 'config') {
-            await populateConfigForm();
-        }
+    const loader = document.getElementById('loading-indicator');
     if (loader) loader.classList.remove('hidden');
-    try {
-        const res = await fetch(API_BASE + '/api/detections');
-        const payload = await res.json();
-        dbData = payload.detections || [];
-        window.currentDbExport = dbData;
-        
-        const confRes = await fetch(API_BASE + '/api/config');
-        configData = await confRes.json();
-        
-        applyGlobalFilter(); 
-        updateSystemStats();
-        updateCompilerSuggestions();
-        populateDatabaseFilter();
-        
-        setInterval(() => {
-            const globalFilter = document.getElementById('global-date-filter');
-            if (globalFilter) updateLiveStats(globalFilter.value);
-        }, 30000); 
-        setInterval(updateSystemStats, 30000);
-        setInterval(pollLog, 15000);
 
-    } catch (e) { 
-        const feed = document.getElementById('dash-feed');
-        if (feed) feed.innerHTML = `<p class="text-red-400 font-bold p-4">Failed to load data. Is backend running?</p>`;
-        console.error(e);
+    try {
+        if (view === 'config') await populateConfigForm();
+        if (view === 'services' && typeof loadServiceStatus === 'function') await loadServiceStatus();
+        if (view === 'files' && typeof loadFileManager === 'function') await loadFileManager();
+    } catch (e) {
+        console.error("Error switching tools view:", e);
     } finally {
         if (loader) loader.classList.add('hidden');
     }
