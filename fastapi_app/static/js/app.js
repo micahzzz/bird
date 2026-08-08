@@ -602,7 +602,7 @@ async function renderAnalytics() {
         const total = data.length;
         const days = new Set(data.map(d => d.Date)).size || 1;
         const avgDaily = (total / days).toFixed(1);
-        
+
         const hourCounts = Array(24).fill(0);
         data.forEach(d => {
             if (d.Time) {
@@ -615,6 +615,15 @@ async function renderAnalytics() {
         const displayHour = peakHour % 12 || 12;
 
         container.innerHTML = `
+            <div class="bg-[var(--bn-bg)] p-4 rounded border border-[var(--bn-border)] flex items-center justify-between">
+                <div>
+                    <h3 class="font-bold text-slate-300">Live Telemetry Available</h3>
+                    <p class="text-xs text-slate-400">System health is now displayed on the Dashboard.</p>
+                </div>
+                <button onclick="document.querySelector('[data-tab=dashboard]').click();" class="px-4 py-2 bg-[var(--bn-card)] hover:bg-[#3d7a4b] text-white text-xs font-bold rounded border border-[var(--bn-border)] transition-colors">
+                    View Dashboard
+                </button>
+            </div>
             <div class="bg-[var(--bn-bg)] p-4 rounded border border-[var(--bn-border)]">
                 <div class="flex justify-between items-center mb-1">
                     <span class="font-bold text-slate-300">Average Daily Volume</span>
@@ -1700,6 +1709,13 @@ async function renderAnalytics() {
             }
         });
     }
+
+    document.getElementById('db-filter-species')?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            searchDatabase();
+        }
+    });
 
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', onReady);

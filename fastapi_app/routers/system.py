@@ -498,10 +498,12 @@ async def update_species_list(payload: dict = Body(...)):
     return {"status": "success", "message": f"{list_name} species list saved successfully"}
 
 # --- NATIVE FILE MANAGER ENDPOINTS ---
+FILE_MANAGER_ROOT = os.path.expanduser('~')
+
 @router.get("/files/list")
 async def list_files(path: str = ""):
-    target_path = os.path.abspath(os.path.join(STORAGE_DIR, path))
-    if not target_path.startswith(os.path.abspath(STORAGE_DIR)):
+    target_path = os.path.abspath(os.path.join(FILE_MANAGER_ROOT, path))
+    if not target_path.startswith(os.path.abspath(FILE_MANAGER_ROOT)):
         raise HTTPException(status_code=403, detail="Access denied")
     if not os.path.exists(target_path):
         raise HTTPException(status_code=404, detail="Directory not found")
@@ -509,7 +511,7 @@ async def list_files(path: str = ""):
     items = []
     for item in sorted(os.listdir(target_path)):
         full_p = os.path.join(target_path, item)
-        rel_p = os.path.relpath(full_p, STORAGE_DIR)
+        rel_p = os.path.relpath(full_p, FILE_MANAGER_ROOT)
         is_dir = os.path.isdir(full_p)
         size = os.path.getsize(full_p) if not is_dir else 0
         mtime = os.path.getmtime(full_p)
@@ -524,15 +526,15 @@ async def list_files(path: str = ""):
 
 @router.get("/files/download")
 async def download_file(path: str = Query(...)):
-    target_path = os.path.abspath(os.path.join(STORAGE_DIR, path))
-    if not target_path.startswith(os.path.abspath(STORAGE_DIR)) or not os.path.isfile(target_path):
+    target_path = os.path.abspath(os.path.join(FILE_MANAGER_ROOT, path))
+    if not target_path.startswith(os.path.abspath(FILE_MANAGER_ROOT)) or not os.path.isfile(target_path):
         raise HTTPException(status_code=404, detail="File not found")
     return FileResponse(target_path, filename=os.path.basename(target_path))
 
 @router.delete("/files/delete")
 async def delete_file(path: str = Query(...)):
-    target_path = os.path.abspath(os.path.join(STORAGE_DIR, path))
-    if not target_path.startswith(os.path.abspath(STORAGE_DIR)):
+    target_path = os.path.abspath(os.path.join(FILE_MANAGER_ROOT, path))
+    if not target_path.startswith(os.path.abspath(FILE_MANAGER_ROOT)):
         raise HTTPException(status_code=403, detail="Access denied")
     if os.path.isdir(target_path):
         shutil.rmtree(target_path)
