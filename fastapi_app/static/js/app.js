@@ -384,6 +384,7 @@ function appendDbRows(data) {
 async function populateDatabaseFilter() {
     try {
         const res = await fetch(API_BASE + '/api/detections/species');
+        if (!res.ok) return;
         const speciesList = await res.json();
         const dataList = document.getElementById('species-list-options');
         const inputEl = document.getElementById('db-filter-species');
@@ -1302,6 +1303,7 @@ async function renderAnalytics() {
         if (!configData || Object.keys(configData).length === 0) {
             try {
                 const res = await fetch(API_BASE + '/api/config');
+                if (!res.ok) return;
                 configData = await res.json();
             } catch (e) {
                 console.error("Failed to load config:", e);

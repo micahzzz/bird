@@ -63,6 +63,24 @@ app.include_router(gallery.router, prefix="/api", tags=["Media Gallery"])
 app.include_router(streaming.router, prefix="/api", tags=["Live Streaming"])
 app.include_router(compiler.router, prefix="/api", tags=["Audio Compiler"])
 
+# --- Explicit API Routes to prevent 404s ---
+from fastapi_app.routers.detections import get_all_species
+from fastapi_app.routers.system import get_config_full
+from fastapi_app.routers.streaming import get_audio_stream
+
+@app.get("/api/species")
+@app.get("/api/detections/species")
+def api_species():
+    return get_all_species()
+
+@app.get("/api/config")
+def api_config():
+    return get_config_full()
+
+@app.get("/api/stream")
+async def api_stream():
+    return await get_audio_stream()
+
 # --- Safe Static File Mounting ---
 # Using absolute path resolution so FastAPI always finds the directory
 static_dir = os.path.join(os.path.dirname(__file__), "static")
