@@ -382,23 +382,19 @@ function appendDbRows(data) {
 }
 
 async function populateDatabaseFilter() {
-        const speciesSet = new Set(dbData.map(d => d.Com_Name).filter(Boolean));
+    try {
+        const res = await fetch(API_BASE + '/api/detections/species');
+        const speciesList = await res.json();
         const dataList = document.getElementById('species-list-options');
         const inputEl = document.getElementById('db-filter-species');
-        if (inputEl) inputEl.placeholder = `Search among ${speciesSet.size} species...`;
-        if (dataList) dataList.innerHTML = Array.from(speciesSet).sort().map(s => `<option value="${s.replace(/"/g, '&quot;')}"></option>`).join('');
 
-        try {
-            const res = await fetch(API_BASE + '/api/species');
-            if (res.ok) {
-                const speciesList = await res.json();
-                const combined = new Set([...speciesSet, ...speciesList.filter(Boolean)]);
-                if (dataList) dataList.innerHTML = Array.from(combined).sort().map(s => `<option value="${s.replace(/"/g, '&quot;')}"></option>`).join('');
-                if (inputEl) inputEl.placeholder = `Search among ${combined.size} species...`;
-            }
-        } catch (e) {
-            console.warn('Failed to fetch all species list:', e);
+        if (dataList && Array.isArray(speciesList)) {
+            if (inputEl) inputEl.placeholder = `Search among ${speciesList.length} species...`;
+            dataList.innerHTML = speciesList.map(s => `<option value="${s.replace(/"/g, '&quot;')}"></option>`).join('');
         }
+    } catch (e) {
+        console.error("Failed to populate species filter:", e);
+    }
 }
 
 function filterDatabase() {
