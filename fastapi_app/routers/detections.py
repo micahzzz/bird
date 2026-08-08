@@ -217,18 +217,19 @@ def get_detections(
         raise HTTPException(status_code=500, detail=f"Database query failed: {e}")
 
 
-@router.get("/species", response_model=List[str])
-@router.get("/detections/species", response_model=List[str])
+@router.get("/species")
+@router.get("/detections/species")
 def get_all_species():
-    db_path = get_db_path()
-    if not db_path or not os.path.exists(db_path):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT DISTINCT Com_Name FROM detections WHERE Com_Name IS NOT NULL AND Com_Name != '' ORDER BY Com_Name;")
+        species = [r[0] for r in cursor.fetchall()]
+        conn.close()
+        return species
+    except Exception as e:
+        print(f"Error in get_all_species: {e}")
         return []
-    conn = sqlite3.connect(db_path)
-    cursor = conn.cursor()
-    cursor.execute("SELECT DISTINCT Com_Name FROM detections WHERE Com_Name IS NOT NULL AND Com_Name != '' ORDER BY Com_Name;")
-    species = [r[0] for r in cursor.fetchall()]
-    conn.close()
-    return species
 
 
 @router.get("/detections/stats", response_model=Stats, summary="Get Aggregate Statistics")

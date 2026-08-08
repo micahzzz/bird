@@ -44,7 +44,7 @@ let dbData = [];
 let configData = {};
 let activeChart = null;
 let isMetric = false; 
-let galleryCacheRecent = [];
+let galleryCacheRecent = null;
 let galleryCacheBest = [];
 let currentBestSort = 'name';
 window.currentDbExport = [];
@@ -664,7 +664,10 @@ async function renderAnalytics() {
         }
     }
 
-    function switchGallery(mode, buttonEl) {
+    async function switchGallery(mode, buttonEl) {
+        if (galleryCacheRecent === null && mode !== 'init_fetch') {
+            await fetchGallery();
+        }
         document.querySelectorAll('#tab-gallery > div > .toggle-btn:not(.sort-btn)').forEach(b => b.classList.remove('active'));
         if(buttonEl) buttonEl.classList.add('active');
         
@@ -676,7 +679,7 @@ async function renderAnalytics() {
         const modeEl = document.getElementById(`gallery-${mode}`);
         if (modeEl) modeEl.classList.remove('hidden');
 
-        if (mode === 'recent') renderGalleryGrid(galleryCacheRecent, 'gallery-recent');
+        if (mode === 'recent') renderGalleryGrid(galleryCacheRecent || [], 'gallery-recent');
         if (mode === 'today') renderGalleryToday();
         if (mode === 'best') renderBestRecordings();
     }
@@ -1303,12 +1306,29 @@ async function renderAnalytics() {
         if (!configData || Object.keys(configData).length === 0) {
             try {
                 const res = await fetch(API_BASE + '/api/config');
-                configData = await res.json();
+                if (res.ok) configData = await res.json();
             } catch (e) {
                 console.error("Failed to load config:", e);
                 return;
             }
         }
+        
+        const container = document.getElementById('config-form-container');
+        if (container && configData) {
+            const keyFields = ['CONFIDENCE', 'SENSITIVITY', 'OVERLAP', 'PRIVACY_THRESHOLD'];
+            let html = '';
+            keyFields.forEach(k => {
+                const val = configData[k] || '';
+                html += `
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">${k.replace(/_/g, ' ')}</label>
+                    <input type="text" id="conf-${k}" value="${val}" class="w-full bg-[var(--bn-bg)] text-white border border-[var(--bn-border)] rounded px-3 py-2 font-mono text-sm focus:outline-none focus:border-[var(--bn-highlight)]">
+                </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
         for (const [key, value] of Object.entries(configData)) {
             const el = document.getElementById(`config-${key}`) || document.getElementById(`conf-${key}`);
             if (el) {
