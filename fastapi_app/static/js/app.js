@@ -1180,25 +1180,31 @@ async function renderAnalytics() {
     let liveAnimId;
 
     function initLiveSpectrogram() {
-        if (isLiveAudioSetup) return;
+        if (isLiveAudioSetup) {
+            if (liveAudioCtx && liveAudioCtx.state === 'suspended') {
+                liveAudioCtx.resume();
+            }
+            return;
+        }
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         liveAudioCtx = new AudioContext();
         liveAnalyser = liveAudioCtx.createAnalyser();
-        liveAnalyser.fftSize = 512; 
+        liveAnalyser.fftSize = 512;
+
         const sbAudio = document.getElementById('sidebar-audio');
-        if (!sbAudio) return;
-        
-        liveSource = liveAudioCtx.createMediaElementSource(sbAudio);
-        liveSource.connect(liveAnalyser);
-        liveAnalyser.connect(liveAudioCtx.destination);
-        
+        if (sbAudio) {
+            liveSource = liveAudioCtx.createMediaElementSource(sbAudio);
+            liveSource.connect(liveAnalyser);
+            liveAnalyser.connect(liveAudioCtx.destination);
+        }
+
         liveDataArray = new Uint8Array(liveAnalyser.frequencyBinCount);
         isLiveAudioSetup = true;
-        
+
         const liveCanvas = document.getElementById('live-spectro-canvas');
-        if(liveCanvas) {
-            liveCanvas.width = liveCanvas.offsetWidth;
-            liveCanvas.height = liveCanvas.offsetHeight;
+        if (liveCanvas) {
+            liveCanvas.width = liveCanvas.offsetWidth || 200;
+            liveCanvas.height = liveCanvas.offsetHeight || 60;
         }
     }
 
@@ -1671,6 +1677,47 @@ async function renderAnalytics() {
                 currentBestSort = e.target.getAttribute('data-sort');
                 renderBestRecordings();
             });
+        });
+
+        document.getElementById('sidebar-audio-btn')?.addEventListener('click', () => {
+            const audio = document.getElementById('sidebar-audio');
+            const btn = document.getElementById('sidebar-audio-btn');
+            const dot = document.getElementById('stream-status-dot');
+
+            if (audio.paused || !audio.src || audio.src === '') {
+                audio.src = API_BASE + '/api/stream';
+                audio.play().then(() => {
+                    if (btn) {
+                        btn.innerText = 'Disconnect';
+                        btn.classList.add('bg-red-600', 'text-white');
+                    }
+                    if (dot) {
+                        dot.classList.remove('bg-slate-500');
+                        dot.classList.add('bg-[#4ade80]', 'animate-pulse');
+                    }
+                    initLiveSpectrogram();
+                    drawLiveSpectrogram();
+                }).catch(e => {
+                    console.error("Live stream play failed:", e);
+                });
+            } else {
+                audio.pause();
+                audio.removeAttribute('src');
+                if (btn) {
+                    btn.innerText = 'Connect Audio';
+                    btn.classList.remove('bg-red-600', 'text-white');
+                }
+                if (dot) {
+                    dot.classList.remove('bg-[#4ade80]', 'animate-pulse');
+                    dot.classList.add('bg-slate-500');
+                }
+                if (typeof cancelAnimationFrame === 'function') cancelAnimationFrame(liveAnimId);
+                const liveCanvas = document.getElementById('live-spectro-canvas');
+                if (liveAudioCtx && liveCanvas) {
+                    const liveCtx = liveCanvas.getContext('2d');
+                    if (liveCtx) liveCtx.clearRect(0, 0, liveCanvas.width, liveCanvas.height);
+                }
+            }
         });
     }
 
