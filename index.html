@@ -292,7 +292,19 @@
             <div class="bird-card overflow-hidden flex flex-col">
                 <div class="p-4 border-b border-[var(--bn-border)] bg-[var(--bn-panel)] flex justify-between items-center">
                     <h3 class="text-sm font-bold text-white uppercase tracking-wider">Detection Records</h3>
-                    <span id="db-results-count" class="text-xs font-mono text-[var(--bn-highlight)]">0 Results</span>
+                    <div class="flex items-center gap-4">
+                        <div class="flex items-center gap-2">
+                            <label for="db-page-size" class="text-xs font-bold text-slate-400 uppercase">Per Page</label>
+                            <select id="db-page-size" onchange="updateDbPageSize(this.value)" class="bg-[var(--bn-bg)] text-white text-xs border border-[var(--bn-border)] rounded px-2 py-1 focus:outline-none focus:border-[var(--bn-highlight)]">
+                                <option value="25">25</option>
+                                <option value="50" selected>50</option>
+                                <option value="100">100</option>
+                                <option value="250">250</option>
+                                <option value="500">500</option>
+                            </select>
+                        </div>
+                        <span id="db-results-count" class="text-xs font-mono text-[var(--bn-highlight)]">0 Results</span>
+                    </div>
                 </div>
                 <div class="overflow-x-auto">
                     <table class="w-full text-left text-sm whitespace-nowrap">

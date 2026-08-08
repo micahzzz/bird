@@ -38,6 +38,7 @@ window.controlService = controlService;
 window.serviceControl = controlService;
 window.loadFileManager = loadFileManager;
 window.deleteFile = deleteFile;
+window.updateDbPageSize = updateDbPageSize;
 
 const API_BASE = '';
 let dbData = [];
@@ -247,7 +248,7 @@ function renderDashboard(data) {
 }
 
 let dbCurrentPage = 0;
-const dbPageSize = 50;
+let dbPageSize = 50;
 let dbTotalCount = 0;
 let dbIsLoading = false;
 let dbHasMore = true;
@@ -267,6 +268,14 @@ function searchDatabase() {
     const tbody = document.getElementById('db-table-body');
     if (tbody) tbody.innerHTML = '';
     fetchPaginatedDetections(true);
+}
+
+function updateDbPageSize(size) {
+    const newSize = parseInt(size, 10);
+    if (newSize > 0 && newSize !== dbPageSize) {
+        dbPageSize = newSize;
+        searchDatabase();
+    }
 }
 
 async function fetchPaginatedDetections(isNewSearch = false) {
